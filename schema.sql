@@ -1,11 +1,11 @@
 -- Run this once in Supabase: SQL Editor > New query > Run
-create table users (
+create table if not exists users (
   id uuid primary key default gen_random_uuid(),
   username text not null check (char_length(username) between 3 and 20),
   username_key text not null unique,
   created_at timestamptz default now()
 );
-create table messages (
+create table if not exists messages (
   id uuid primary key default gen_random_uuid(),
   to_name text not null,
   to_key text not null,
@@ -16,8 +16,8 @@ create table messages (
   preview text,
   created_at timestamptz default now()
 );
-create index on messages (to_key);
-create index on messages (created_at desc);
+create index if not exists messages_to_key on messages (to_key);
+create index if not exists messages_created on messages (created_at desc);
 alter table users enable row level security;
 alter table messages enable row level security;
 -- Anyone can read and add. Nobody can edit or delete.
@@ -25,3 +25,8 @@ create policy "read users" on users for select using (true);
 create policy "add users" on users for insert with check (true);
 create policy "read messages" on messages for select using (true);
 create policy "add messages" on messages for insert with check (true);
+
+-- Needed on new Supabase projects (since 2026, tables are not exposed to the API by default).
+-- Without these two lines you cannot create a username or send a message.
+grant usage on schema public to anon;
+grant select, insert on public.users, public.messages to anon;

@@ -80,3 +80,12 @@ a.btn{display:inline-block}
 .faq summary{font-weight:600;cursor:pointer}.faq p{margin:8px 0 0;color:#43536A}
 .foot{margin-top:34px;text-align:center}.flinks{display:flex;gap:18px;justify-content:center}.flinks .link{margin:0}
 .song span,.res span,.dinfo span,.pick span,.pick button{color:#43536A}
+
+.tabs{justify-content:space-between;gap:6px}.tabs button{font-size:.92rem;padding:8px 2px 6px}
+
+/* contrast fixes: text on paper must stay dark in dark mode; dark buttons need a light edge on the dark desk */
+.box .sub,.box .link{color:#43536A;opacity:1}
+.btn.dark{border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.pick b{display:block}
+.tabs{overflow:visible}
+@media (max-width:340px){.tabs button{font-size:.82rem}}

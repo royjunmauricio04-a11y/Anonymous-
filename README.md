@@ -26,3 +26,9 @@ Supabase > SQL Editor > run:
     delete from messages;
     delete from users;
 You can only send to a username that someone has already claimed, and the Inbox search needs the exact username.
+
+## Can't create a username or send? Run this once
+New Supabase projects hide tables from the API until you grant access. In Supabase > SQL Editor, run:
+    grant usage on schema public to anon;
+    grant select, insert on public.users, public.messages to anon;
+(It is also at the bottom of schema.sql.)

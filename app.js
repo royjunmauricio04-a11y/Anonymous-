@@ -14,9 +14,18 @@
   function lset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
   /* ---------- data layer (Supabase REST, or local demo mode) ---------- */
+  function dbHint(e) {
+    if (!e || !e.status) return 'Could not reach the database. Check your connection.';
+    var code = ''; try { code = JSON.parse(e.text).code; } catch (x) {}
+    if (code === '42501' || e.status === 401 || e.status === 403) return 'The database is blocking access. In Supabase, run the GRANT lines from schema.sql, then try again.';
+    if (code === 'PGRST205' || code === '42P01' || e.status === 404) return 'Tables not found. Run schema.sql in the Supabase SQL Editor.';
+    return 'Database error (' + e.status + ').';
+  }
   function api(path, opt) {
     opt = opt || {};
-    opt.headers = Object.assign({ apikey: C.SUPABASE_KEY, Authorization: 'Bearer ' + C.SUPABASE_KEY, 'Content-Type': 'application/json' }, opt.headers);
+    var hd = { apikey: C.SUPABASE_KEY, 'Content-Type': 'application/json' };
+    if (/^eyJ/.test(C.SUPABASE_KEY)) hd.Authorization = 'Bearer ' + C.SUPABASE_KEY;
+    opt.headers = Object.assign(hd, opt.headers);
     return fetch(C.SUPABASE_URL + '/rest/v1/' + path, opt).then(function (r) {
       if (!r.ok) return r.text().then(function (t) { throw { status: r.status, text: t }; });
       return r.json().catch(function () { return null; });
@@ -47,7 +56,7 @@
     var done = function () { lset(US, u); };
     if (!REMOTE) { done(); return Promise.resolve(); }
     return api('users', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ username: u, username_key: norm(u) }) })
-      .then(done, function (e) { throw { msg: e.status === 409 ? 'That username is taken. Try another.' : e.status ? 'Could not claim it (error ' + e.status + '). Check the keys in config.js and that schema.sql was run.' : 'Could not reach the database. Check your connection.' }; });
+      .then(done, function (e) { throw e.status === 409 ? { msg: 'That username is taken. Pick another, or continue below if it is yours.', taken: true } : { msg: dbHint(e) }; });
   }
 
   /* ---------- tabs ---------- */
@@ -58,7 +67,7 @@
   function tab(t) {
     if (!lget(US, '') && t !== 'gate') { showGate(); return; }
     if (typeof au !== 'undefined') { au.pause(); rst(); }
-    cur = t;
+    cur = t; window.scrollTo(0, 0);
     SECS.forEach(function (x) { $(x).hidden = x !== t; });
     $('tabs').hidden = false;
     [].forEach.call($('tabs').children, function (b) { b.setAttribute('aria-selected', b.dataset.t === t); });
@@ -134,7 +143,7 @@
       m.className = 'msg'; m.textContent = 'Sent. It is now in the Inbox for ' + to + '.';
       $('to').value = ''; $('text').value = ''; pick = null; $('picked').innerHTML = ''; $('q').hidden = false;
     }).catch(function (e) {
-      m.className = 'msg err'; m.textContent = (e && e.msg) || 'Could not send. Check your connection and send again.';
+      m.className = 'msg err'; m.textContent = (e && e.msg) || dbHint(e);
     }).then(function () { $('send').disabled = false; });
   };
 
@@ -160,7 +169,7 @@
       if (feedReady && top === feedTop) return;
       feedTop = top; feedReady = true;
       show($('feed'), a, 'No messages yet. Send the first one.', false);
-    }).catch(function () { $('feed').innerHTML = '<div class="empty">Could not load messages. Try again in a moment.</div>'; });
+    }).catch(function (e) { $('feed').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>'; });
   }
   setInterval(function () { if (cur === 'browse' && !document.hidden) loadFeed(); }, 20000);
 
@@ -170,7 +179,7 @@
     if (!q) { $('mine').innerHTML = '<div class="empty">Type a name first.</div>'; return; }
     $('mine').innerHTML = '<div class="empty">Searching...</div>';
     fetchMsgs(q).then(function (a) { show($('mine'), a, own === true ? 'No messages yet. When someone sends you a song, it shows up here.' : 'No messages for "' + esc(q) + '".', false); })
-      .catch(function () { $('mine').innerHTML = '<div class="empty">Could not search. Try again.</div>'; });
+      .catch(function (e) { $('mine').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>'; });
   }
   $('sgo').onclick = function () { search(); };
   $('sq').onkeydown = function (e) { if (e.key === 'Enter') search(); };
@@ -195,9 +204,10 @@
   $('claimBtn').onclick = function () {
     $('claimBtn').disabled = true;
     claim($('un').value).then(function () { $('cmsg').textContent = ''; tab(location.hash.indexOf('to=') > -1 ? 'submit' : 'home'); })
-      .catch(function (e) { $('cmsg').className = 'msg err'; $('cmsg').textContent = e.msg || 'Something went wrong.'; })
+      .catch(function (e) { $('cmsg').className = 'msg err'; $('cmsg').textContent = e.msg || 'Something went wrong.'; $('reuse').hidden = !e.taken; })
       .then(function () { $('claimBtn').disabled = false; });
   };
+  $('reuse').onclick = function () { lset(US, $('un').value.trim()); $('cmsg').textContent = ''; $('reuse').hidden = true; tab(location.hash.indexOf('to=') > -1 ? 'submit' : 'home'); };
   $('un').onkeydown = function (e) { if (e.key === 'Enter') $('claimBtn').click(); };
   $('swap').onclick = function () { lset(US, ''); $('un').value = ''; showGate(); };
   $('un').onkeydown = function (e) { if (e.key === 'Enter') $('claimBtn').click(); };
