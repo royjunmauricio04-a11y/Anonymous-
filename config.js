@@ -2,7 +2,7 @@
 // Leave empty to run in demo mode (data saved on this device only).
 window.APP_CONFIG = {
   SUPABASE_URL: "https://rulwnrsxcqvvltfaosjw.supabase.co",
-  SUPABASE_KEY: "sb_publishable_lrSOPTqb8cvEcvaEqdQhFg_Jo1AbglB",
+  SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1bHducnN4Y3F2dmx0ZmFvc2p3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NjY3MjYsImV4cCI6MjEwNjU0MjcyNn0.VsCj7bIfdop6Y-hn9cGkTqmLW3uUnOpFMzgF0rxjEG0",
   SITE_URL: "https://anonymous-ztsp.onrender.com", // after hosting, paste your public link, e.g. https://anonymous.onrender.com
   SUPPORT_EMAIL: "royjunmauricio04@gmail.com" // optional: shows a Send feedback link
 };
