@@ -1,0 +1,82 @@
+/* Anonymous: passed-around notes on a locker-blue desk. Paper stays paper in dark mode. */
+:root{--bg:#B9CCDB;--ink:#17202E;--mute:#43536A;--card:#FDFDF8;--pt:#17202E;--pen:#1E3FB4;--line:#A9C4EA;--margin:#E2616B;--pink:#D63A35;--sun:#FFE066;--chip:#E6ECF2;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#18222F;--ink:#E8EDF3;--mute:#9FB0C3}}
+:root[data-theme="dark"]{--bg:#18222F;--ink:#E8EDF3;--mute:#9FB0C3}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Archivo',system-ui,sans-serif;line-height:1.4}
+main{max-width:480px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:2.2rem;margin:0;font-weight:800;letter-spacing:-.025em;display:flex;align-items:center;gap:10px;line-height:1}
+.logo{width:48px;height:29px;flex:none}
+.sub{font-family:'Caveat',cursive;font-size:1.35rem;line-height:1.2;color:var(--ink);opacity:.85;margin:6px 0 16px}
+/* tabs: highlighter on the active one */
+.tabs{display:flex;gap:20px;border-bottom:2px solid var(--ink);margin-bottom:22px}
+.tabs button{border:0;background:none;color:var(--ink);font:600 1.05rem 'Archivo',sans-serif;padding:8px 4px 6px;margin-bottom:-2px;cursor:pointer;opacity:.7}
+.tabs button[aria-selected="true"]{opacity:1;color:#17202E;background:linear-gradient(transparent 52%,var(--sun) 52%)}
+/* paper */
+.box{background:var(--card);color:var(--pt);border:2px solid var(--pt);border-radius:4px;padding:20px;box-shadow:0 7px 0 -3px rgba(23,32,46,.18)}
+label{display:block;font-weight:600;margin:14px 0 6px}label:first-child{margin-top:0}
+input,textarea{width:100%;font:inherit;color:var(--pt);background:#fff;border:2px solid var(--pt);border-radius:4px;padding:11px 12px}
+textarea{height:130px;resize:none}
+input:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:3px solid var(--pen);outline-offset:2px}
+.btn{border:2px solid var(--pt);background:var(--pink);color:#fff;font:800 1rem 'Archivo',sans-serif;padding:13px 18px;border-radius:4px;cursor:pointer;box-shadow:3px 3px 0 var(--pt)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--pt)}
+.btn.dark{background:var(--pt)}.btn.full{width:100%;margin-top:18px}.btn:disabled{opacity:.6}
+.row{display:flex;gap:10px}.row input{flex:1;min-width:0}
+.res{background:#fff;color:var(--pt);border:2px solid var(--pt);border-radius:4px;margin-top:6px;max-height:240px;overflow:auto}
+.res button{display:flex;gap:12px;align-items:center;width:100%;border:0;border-bottom:1px solid var(--chip);background:none;color:var(--pt);text-align:left;padding:10px 12px;cursor:pointer;font:inherit}
+.res button:hover{background:var(--chip)}
+.art{width:46px;height:46px;border-radius:3px;flex:none;object-fit:cover;display:block}
+.res b,.song b{display:block}.res span,.song span{color:var(--mute);font-size:.9rem}
+.pick{display:flex;gap:12px;align-items:center;background:var(--chip);border-radius:4px;padding:10px;margin-top:8px}
+.pick button{margin-left:auto;border:0;background:none;color:var(--mute);font-size:1.4rem;cursor:pointer}
+.msg{min-height:1.4em;margin:12px 0 0;font-weight:600;text-align:center}.err{color:var(--pink)}
+/* sticky note warning */
+.warn{background:var(--sun);color:#17202E;border-radius:2px;padding:10px 14px;margin:0 0 18px;font-family:'Caveat',cursive;font-size:1.3rem;line-height:1.2;transform:rotate(-.6deg);box-shadow:0 3px 0 rgba(23,32,46,.25)}
+/* message note */
+.card{position:relative;background:var(--card);color:var(--pt);margin:20px 0 24px;border:1px solid rgba(23,32,46,.35);cursor:pointer;box-shadow:0 1px 0 rgba(23,32,46,.3),0 7px 0 -3px rgba(23,32,46,.18),0 12px 0 -6px rgba(23,32,46,.1)}
+.card:nth-child(odd){transform:rotate(-.5deg)}.card:nth-child(even){transform:rotate(.6deg)}
+.tape{position:absolute;top:-10px;left:50%;width:74px;height:20px;margin-left:-37px;background:rgba(255,224,102,.8);transform:rotate(-3deg);box-shadow:0 1px 0 rgba(0,0,0,.12)}
+.top{padding:18px 16px 14px}
+.to{display:inline-block;font-weight:600;background:linear-gradient(transparent 55%,var(--sun) 55%);padding:0 3px}
+.stamp{display:inline-block;color:var(--pink);border:2px solid var(--pink);border-radius:3px;padding:0 8px;margin-left:10px;font-weight:800;font-size:.78rem;letter-spacing:.05em;transform:rotate(-4deg);opacity:.9}
+.hand{font-family:'Caveat',cursive;font-weight:500;font-size:1.5rem;line-height:32px;margin:10px 0 0;padding:0 0 0 46px;color:var(--pen);white-space:pre-wrap;word-break:break-word;background-color:var(--card);
+background-image:linear-gradient(90deg,transparent 34px,var(--margin) 34px 36px,transparent 36px),repeating-linear-gradient(transparent 0 31px,var(--line) 31px 32px)}
+.clip{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}
+.song{display:flex;gap:12px;align-items:center;background:var(--chip);color:var(--pt);padding:10px 14px;border-top:2px dashed var(--pt)}
+.song .play{border:0;cursor:pointer;margin-left:auto;font:700 .85rem 'Archivo',sans-serif;background:var(--pt);color:#fff;border-radius:4px;padding:8px 14px}
+.empty{text-align:center;font-family:'Caveat',cursive;font-size:1.5rem;opacity:.75;padding:28px 8px}
+.share{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.share a,.share button{border:2px solid var(--pt);background:none;color:var(--pt);font:600 .9rem 'Archivo',sans-serif;padding:8px 14px;border-radius:4px;cursor:pointer;text-decoration:none}
+.fine{font-size:.8rem;text-align:center;margin-top:20px;opacity:.65}
+.who{font-weight:800;font-size:1.15rem;margin:0 0 8px}
+.link{background:none;border:0;color:var(--ink);text-decoration:underline;font:inherit;cursor:pointer;padding:0;margin-top:12px;opacity:.75}
+h2.sec{margin:26px 0 10px;font-size:1.2rem}
+/* opened message */
+.back{border:0;background:none;color:var(--ink);font:600 1rem 'Archivo',sans-serif;padding:6px 0;cursor:pointer;margin-bottom:6px}
+.hi{font-size:1.7rem;margin:6px 0 2px;text-align:center}
+.dcard{display:grid;grid-template-columns:128px 1fr;gap:16px;align-items:start;background:var(--card);color:var(--pt);padding:14px;border:2px solid var(--pt);box-shadow:0 7px 0 -3px rgba(23,32,46,.18)}
+.bigart{width:128px;height:128px;border-radius:3px;border:2px solid var(--pt);object-fit:cover;display:block}
+.dinfo b{display:block;font-size:1.4rem;line-height:1.15}.dinfo span{color:var(--mute)}
+.pv{display:inline-block;margin-top:8px;font-style:normal;font-size:.8rem;font-weight:600;border:1.5px solid var(--pt);padding:1px 8px;border-radius:4px}
+.circle{width:56px;height:56px;border-radius:50%;background:var(--pt);color:#fff;border:0;font-size:1.25rem;cursor:pointer;display:grid;place-items:center;padding:0;justify-self:end;grid-column:2}
+#detail .hand{padding-top:2px;padding-bottom:6px;margin-top:10px;border:1px solid rgba(23,32,46,.35)}
+[hidden]{display:none!important}
+
+.tabs{overflow-x:auto;gap:14px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tabs button{white-space:nowrap;flex:none}
+.headline{font-family:'Caveat',cursive;font-weight:700;font-size:2.6rem;line-height:1.02;margin:6px 0 8px;color:var(--ink)}
+.btn.ghost{background:none;color:var(--ink);border-color:var(--ink);box-shadow:none}
+a.btn{display:inline-block}
+.how{margin-top:26px}.how .box{padding:16px;margin-bottom:14px}.how h3{margin:0 0 4px;font-size:1.05rem}.how p{margin:0}
+.mq{overflow:hidden;margin:0 -16px;padding:4px 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.mq .track{display:flex;width:max-content;animation:mqL 40s linear infinite}
+.mq .track.rev{animation-name:mqR}
+.mq:active .track{animation-play-state:paused}
+@keyframes mqL{to{transform:translateX(-50%)}}@keyframes mqR{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+.mq .card{width:250px;flex:none;margin:14px 9px 18px;transform:none!important}
+.mq .clip{-webkit-line-clamp:2}.mq .hand{font-size:1.35rem}.mq .top{padding:16px 14px 12px}
+@media (prefers-reduced-motion:reduce){.mq{overflow-x:auto}.mq .track{animation:none}}
+.faq details{border-bottom:1px solid var(--chip);padding:10px 0}.faq details:last-child{border:0}
+.faq summary{font-weight:600;cursor:pointer}.faq p{margin:8px 0 0;color:#43536A}
+.foot{margin-top:34px;text-align:center}.flinks{display:flex;gap:18px;justify-content:center}.flinks .link{margin:0}
+.song span,.res span,.dinfo span,.pick span,.pick button{color:#43536A}
