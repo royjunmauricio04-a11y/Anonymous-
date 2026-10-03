@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Anonymous</title>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head><body><main>
 <h1 id="homeLink" role="link" tabindex="0" aria-label="Home" style="cursor:pointer"><svg class="logo" viewBox="0 0 40 24" aria-hidden="true"><path d="M2 8c6-4 12-4 18-1 6-3 12-3 18 1 0 8-5 13-10 13-4 0-6-3-8-3s-4 3-8 3C7 21 2 16 2 8z" fill="var(--pink)"/><ellipse cx="12.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/><ellipse cx="27.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/></svg>Anonymous</h1>
@@ -15,33 +15,43 @@
 </div>
 
 <section id="gate" hidden>
- <h2 class="headline">pick a name first.</h2>
- <p class="sub" id="gateSub">Choose a username to come in. No password, no email.</p>
- <div class="box">
-  <label for="un">Username</label>
-  <input id="un" maxlength="20" placeholder="3 to 20 letters or numbers" autocomplete="off" autocapitalize="none">
-  <button class="btn full" id="claimBtn">Enter</button><p class="msg" id="cmsg" role="status"></p>
-  <button class="link" id="reuse" hidden>This is my username. Continue as it.</button>
+ <h2 class="headline">your account first.</h2>
+ <p class="sub" id="gateSub">Sign in to send anonymously, receive messages, and keep your personal link.</p>
+ <div class="gate-switch" role="tablist" aria-label="Account mode">
+  <button id="gateLogin" class="gate-tab" role="tab" aria-selected="true">Sign in</button>
+  <button id="gateCreate" class="gate-tab" role="tab" aria-selected="false">Create account</button>
  </div>
- <p class="fine">Your username is how people send you songs. Your name is never shown on what you send.</p>
+ <div class="box">
+  <label for="email">Email</label>
+  <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+  <label for="password">Password</label>
+  <input id="password" type="password" minlength="6" placeholder="6+ characters" autocomplete="current-password">
+  <div id="unWrap" hidden>
+   <label for="un">Username</label>
+   <input id="un" maxlength="20" placeholder="3 to 20 letters, numbers, dot or underscore" autocomplete="off" autocapitalize="none">
+  </div>
+  <button class="btn full" id="claimBtn">Sign in</button><p class="msg" id="cmsg" role="status"></p>
+  <button class="link" id="reuse" hidden></button>
+ </div>
+ <p class="fine">Your account is used only to control your Inbox and posting access. Your identity is still hidden from the recipient when you send anonymously.</p>
 </section>
 
 <section id="home" hidden>
  <h2 class="headline">say what you never said, with a song.</h2>
- <p class="sub">Send an anonymous song and message. They will never know it was you.</p>
+ <p class="sub">Use your account to send anonymously. Post on Browse for a public anonymous note, or use someone’s personal link to send directly to their private Inbox.</p>
  <button class="btn full" data-go="submit" style="margin-top:6px">Send a song</button>
  <button class="btn ghost full" data-go="browse" style="margin-top:12px">Browse the stories</button>
  <div class="how">
-  <div class="box"><h3>Send a message</h3><p>Pick a song, write what you feel, and send it to their username. Your name stays hidden.</p></div>
-  <div class="box"><h3>Find your messages</h3><p>Open the Inbox and tap Show my messages to see what people wrote for you.</p></div>
+  <div class="box"><h3>Send a message</h3><p>Post anonymously on Browse with a name or nickname, or use a personal link for a direct Inbox message.</p></div>
+  <div class="box"><h3>Get your messages</h3><p>Create a username to make your personal link. Messages sent through that link go only to your Inbox.</p></div>
   <div class="box"><h3>Open the full story</h3><p>Tap any note to read the whole message and play the song behind it.</p></div>
  </div>
  <div id="mqs"></div>
 </section>
 
-<section id="submit" hidden><div class="warn" id="warn">Messages cannot be deleted once posted. Check before you send.</div>
+<section id="submit" hidden><div id="directHead" hidden class="box"><h2 class="headline" id="directTitle">Send an anonymous message</h2><p class="sub">Your identity will stay hidden from the recipient.</p><button class="link" id="backMain" type="button">Back to main page</button></div><div class="warn" id="warn">Messages cannot be deleted once posted. Check before you send.</div>
 <div class="box">
- <label for="to">Recipient's username</label><input id="to" maxlength="40" placeholder="Their username" autocomplete="off">
+ <label for="to" id="toLabel">Name or nickname (public post)</label><input id="to" maxlength="40" placeholder="Who is this message about?" autocomplete="off"><p class="sub" id="sendHint">This appears anonymously in Browse. It will not go to anyone’s Inbox.</p>
  <label for="text">Message</label><textarea id="text" maxlength="5000" placeholder="Write it here. Your name stays hidden."></textarea>
  <label for="q">Song</label><input id="q" placeholder="Search and select your song" autocomplete="off">
  <div class="res" id="res" hidden></div><div id="picked"></div>
@@ -59,10 +69,9 @@
   <div class="share" id="share"></div>
   <button class="link" id="swap">Use a different username</button>
  </div>
- <h2 class="sec">Find messages</h2>
- <div class="row"><input id="sq" placeholder="Search a username" aria-label="Search a name"><button class="btn dark" id="sgo">Search</button></div>
- <button class="link" id="mymsgs" hidden>Show my messages</button>
- <div id="mine" style="margin-top:14px"><div class="empty">Messages show up here after you search.</div></div>
+ <h2 class="sec">Your messages</h2>
+ <p class="sub">Only messages sent through your personal link appear here. Public Browse posts are separate and are not delivered to your Inbox.</p>
+ <div id="mine" style="margin-top:14px"><div class="empty">Your private messages will appear here.</div></div>
 </section>
 
 <section id="history" hidden>
@@ -72,12 +81,27 @@
 
 <section id="support" hidden>
  <div class="box faq">
-  <details open><summary>Is it really anonymous?</summary><p>No name, account or username is saved with a message you send. The note only shows "From: ???".</p></details>
+  <details open><summary>Is it really anonymous?</summary><p>Your account is used to prevent spam and protect your Inbox, but your username is not shown to the recipient when you send anonymously.</p></details>
   <details><summary>Can I delete a message?</summary><p>No. Once it is posted it cannot be removed, so check it before you send.</p></details>
   <details><summary>Why only 30 seconds of the song?</summary><p>The player uses the free 30-second preview. Tap the arrow to open the full song in Spotify.</p></details>
-  <details><summary>How do I get my messages?</summary><p>Open the Inbox, claim a username if you want a share link, then search your username.</p></details>
+  <details><summary>How do I get my messages?</summary><p>Claim a username to create a personal link. Messages sent through that link appear in your Inbox. Public Browse posts are not delivered to anyone’s Inbox.</p></details>
  </div>
  <a class="btn dark full" id="fb2" hidden style="display:none;text-align:center;text-decoration:none">Send feedback</a>
+</section>
+
+<section id="maint" hidden>
+ <h2 class="headline">back soon.</h2>
+ <p class="sub" id="maintNote"></p>
+</section>
+
+<section id="admin" hidden>
+ <h2 class="headline">maintenance center.</h2>
+ <div id="alogin" class="box">
+  <label for="apass">Admin passcode</label>
+  <input id="apass" type="password" autocomplete="off">
+  <button class="btn full" id="aOpen">Open</button><p class="msg" id="amsg" role="status"></p>
+ </div>
+ <div id="apanel" hidden></div>
 </section>
 
 <section id="detail" hidden></section>

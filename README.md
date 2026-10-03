@@ -1,34 +1,48 @@
 # Anonymous
 
-## 1. Database (Supabase, free)
-1. supabase.com > New project.
-2. SQL Editor > New query > paste schema.sql > Run.
-3. Project Settings > API: copy the Project URL and the anon public key.
-4. Paste both into config.js (SUPABASE_URL, SUPABASE_KEY).
+This version adds a real account layer while keeping anonymous sending behavior.
 
-## 2. Host on Render (free Static Site)
-1. Upload ALL files (index.html, style.css, app.js, config.js, schema.sql, README.md) to a GitHub repo, in the root.
-2. render.com > sign up with GitHub > New + > Static Site > pick your repo.
-3. Name: anything. Branch: main. Build Command: leave blank. Publish Directory: .  (a single dot).
-4. Create Static Site. In 1 to 2 minutes you get https://your-name.onrender.com
+## Sending behavior
 
-## 3. Fix the share link
-1. Open config.js in GitHub (pencil icon).
-2. Set SITE_URL to your Render link, e.g. "https://your-name.onrender.com"
-3. Commit. Render redeploys by itself.
-Now the link under Inbox looks like https://your-name.onrender.com/#to=username
+### Public anonymous post from the main app
+- The sender must be signed in to an account.
+- The sender can type any name or nickname in **Name or nickname**.
+- The post appears in **Browse**.
+- The named person does **not** receive it in their Inbox.
+- The sender's username/email is not displayed on the post.
 
-## Files
-index.html (layout) / style.css (design) / app.js (logic) / config.js (your keys and link) / schema.sql (database)
+### Private anonymous message through a personal link
+- The recipient must have an account and a username.
+- The sender must be signed in, but their identity stays hidden from the recipient.
+- The personal link identifies the recipient on the server.
+- The message is stored as `delivery_type = direct` and linked internally to the recipient's Supabase Auth user.
+- RLS allows only that recipient to read the direct message.
 
-## Start fresh (clear test data)
-Supabase > SQL Editor > run:
-    delete from messages;
-    delete from users;
-You can only send to a username that someone has already claimed, and the Inbox search needs the exact username.
+A direct link that does not belong to a registered account is rejected.
 
-## Can't create a username or send? Run this once
-New Supabase projects hide tables from the API until you grant access. In Supabase > SQL Editor, run:
-    grant usage on schema public to anon;
-    grant select, insert on public.users, public.messages to anon;
-(It is also at the bottom of schema.sql.)
+## Supabase setup
+
+For an existing project, run these in this order:
+
+1. `schema.sql` is for a fresh database only.
+2. For the current database, run `account-delivery-migration.sql`.
+3. Run the updated `bot.sql` if you use the Maintenance Center / posting bot.
+4. In Supabase Authentication, enable the Email provider.
+5. Create an account in the site, choose a username, and copy the personal link from Inbox.
+
+If email confirmation is enabled in Supabase, confirm the signup email before signing in.
+
+## Test flow
+
+1. Account A: create username `alice`.
+2. Copy Alice's personal link.
+3. Account B: sign in as `bob`, open Alice's personal link, send a message. It should appear only in Alice's Inbox.
+4. As Bob, go back to the main app and send a message with `Kaye` in the name field. It should appear in Browse and should not arrive in Kaye's Inbox.
+5. Try a direct link for a username that does not exist. The message should not be saved.
+
+## Security notes
+
+- The browser never receives `recipient_auth_id` from normal REST queries.
+- Direct messages are protected with Supabase Row Level Security.
+- Client-side code never uses the Supabase service-role key.
+- The sender remains visually anonymous, while account authentication is used to control posting and private Inbox access.
