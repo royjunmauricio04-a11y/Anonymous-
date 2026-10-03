@@ -4,7 +4,7 @@
   var REMOTE = !!(C.SUPABASE_URL && C.SUPABASE_KEY);
   var $ = function (i) { return document.getElementById(i); };
   var LS = 'anon-msgs', US = 'anon-user', SENT = 'anon-sent';
-  var SECS = ['gate', 'maint', 'admin', 'home', 'submit', 'browse', 'mybox', 'history', 'support', 'detail'];
+  var SECS = ['gate', 'maint', 'home', 'submit', 'browse', 'mybox', 'history', 'support', 'detail'];
   var cache = {}, cur = 'submit', pick = null, last = [], tmr, seen = {}, feedReady = false;
   var CAT = [["Tingin", "Cup of Joe, Janine", "#3F6B55"], ["Sana", "I Belong to the Zoo", "#2C3E75"], ["Lucky", "Jason Mraz, Colbie Caillat", "#9C8F7A"], ["stranger", "Olivia Rodrigo", "#5B3A8C"], ["Binibini", "Zack Tabudlo", "#D4547A"], ["Perfect", "Ed Sheeran", "#D9A441"]];
 
@@ -29,10 +29,23 @@
     return 'Database error (' + e.status + ').';
   }
 
-  function sessionGet() { try { return JSON.parse(sessionStorage.getItem(AUTH)) || null; } catch (e) { return null; } }
-  function sessionSet(v) { try { if (v) sessionStorage.setItem(AUTH, JSON.stringify(v)); else sessionStorage.removeItem(AUTH); } catch (e) {} }
+  function sessionGet() { try { return JSON.parse(localStorage.getItem(AUTH)) || JSON.parse(sessionStorage.getItem(AUTH)) || null; } catch (e) { return null; } }
+  function sessionSet(v) { try { if (v) localStorage.setItem(AUTH, JSON.stringify(v)); else { localStorage.removeItem(AUTH); sessionStorage.removeItem(AUTH); } } catch (e) {} }
+  function storeSess(d) {
+    var old = sessionGet() || {};
+    sessionSet({ access_token: d.access_token, refresh_token: d.refresh_token, user: d.user || old.user, exp: Math.floor(Date.now() / 1000) + (d.expires_in || 3600) });
+  }
+  /* keep the login alive: refresh the access token shortly before it expires */
+  function fresh() {
+    var s = sessionGet();
+    if (!s || !s.refresh_token || (s.exp && s.exp - 60 > Date.now() / 1000)) return Promise.resolve();
+    return fetch(C.SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: C.SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }) })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(); }).then(storeSess).catch(function () { sessionSet(null); });
+  }
 
-  function api(path, opt) {
+  function api(path, opt) { return fresh().then(function () { return api0(path, opt); }); }
+  function rpc(name, args) { return api('rpc/' + name, { method: 'POST', body: JSON.stringify(args) }); }
+  function api0(path, opt) {
     opt = opt || {};
     var hd = { apikey: C.SUPABASE_KEY, 'Content-Type': 'application/json' };
     var sess = sessionGet();
@@ -91,6 +104,12 @@
   function authSignIn(email, password) {
     return authApi('token?grant_type=password', { method: 'POST', body: JSON.stringify({ email: email, password: password }) });
   }
+  function authSignUpAnon() {
+    return authApi('signup', { method: 'POST', body: JSON.stringify({ data: {} }) }).then(function (d) {
+      if (!d.access_token) throw { msg: 'Username login is not switched on yet. Turn on Anonymous sign-ins in Supabase.' };
+      return d;
+    });
+  }
   function authUser() { return authApi('user', { method: 'GET' }); }
   function authSignOut() {
     var p = sessionGet();
@@ -117,6 +136,8 @@
     }).catch(function (e) {
       var msg = '';
       try { msg = JSON.parse(e.text).message || ''; } catch (x) {}
+      if (msg === 'username_taken') msg = 'That username is taken. Pick another one.';
+      else if (msg === 'invalid_username') msg = 'Use 3 to 20 letters, numbers, dot or underscore.';
       throw { msg: msg || dbHint(e), taken: true };
     });
   }
@@ -145,6 +166,7 @@
     if (t === 'history') showHistory();
     if (t === 'browse') loadFeed();
     if (t === 'mybox') inbox();
+    if (t === 'support') refreshTix();
   }
   $('tabs').onclick = function (e) { var b = e.target.closest('button'); if (b) tab(b.dataset.t); };
 
@@ -164,15 +186,43 @@
     });
   }
 
-  function art(c) {
-    return /^https:\/\//.test(c || '') ? '<img class="art" alt="" src="' + esc(c) + '">' : '<span class="art" style="background:' + esc(/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#999') + '"></span>';
+  var ARTC = lget('anon-art', {}), artTried = {}, artBusy = false;
+  function art(c, q) {
+    var u = /^https:\/\//.test(c || '') ? c : (q && ARTC[q]) || '';
+    if (u) return '<img class="art" alt="" src="' + esc(u) + '">';
+    return '<span class="art"' + (q ? ' data-q="' + esc(q) + '"' : '') + ' style="background:' + esc(/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#999') + '"></span>';
+  }
+  function swapArt(n, u) {
+    var big = n.classList.contains('bigart'), i = document.createElement('img');
+    i.className = big ? 'bigart' : 'art'; i.alt = ''; i.src = big ? u.replace('100x100', '600x600') : u; n.replaceWith(i);
+  }
+  /* sample and bot messages only have a colour: look up the real album cover from iTunes */
+  function hydrateArt() {
+    var nodes = [].slice.call(document.querySelectorAll('span[data-q].art, span[data-q].bigart')), qs = [];
+    nodes.forEach(function (n) {
+      var q = n.dataset.q;
+      if (ARTC[q]) swapArt(n, ARTC[q]); else if (!artTried[q] && qs.indexOf(q) < 0) qs.push(q);
+    });
+    if (artBusy || !qs.length) return;
+    qs = qs.slice(0, 24); artBusy = true;
+    (function next() {
+      var q = qs.shift(); if (!q) { artBusy = false; return; }
+      artTried[q] = 1;
+      itunes(q, 1).then(function (d) {
+        var u = d.results && d.results[0] && d.results[0].artworkUrl100;
+        if (u) { ARTC[q] = u; lset('anon-art', ARTC); }
+      }).catch(function () {}).then(function () {
+        [].forEach.call(document.querySelectorAll('span[data-q]'), function (n) { if (n.dataset.q === q && ARTC[q]) swapArt(n, ARTC[q]); });
+        setTimeout(next, 120);
+      });
+    })();
   }
   function draw(items, raw) {
     last = items;
     $('res').innerHTML = items.map(function (s, i) {
-      return '<button data-i="' + i + '">' + art(s.c) + '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>';
+      return '<button data-i="' + i + '">' + art(s.c, s.t + ' ' + s.a) + '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>';
     }).join('') + '<button data-free="1">' + art('#999') + '<span><b>Use "' + esc(raw) + '"</b><span>Not listed? Add it as typed</span></span></button>';
-    $('res').hidden = false;
+    $('res').hidden = false; hydrateArt();
   }
   $('q').oninput = function () {
     var raw = $('q').value.trim(), v = norm(raw);
@@ -193,7 +243,7 @@
     if (b.dataset.free) { var t = $('q').value.trim().split(' - '); pick = [t[0], t[1] || 'Unknown artist', '#999', '']; }
     else { var o = last[+b.dataset.i]; pick = [o.t, o.a, o.c, o.p || '']; }
     $('res').hidden = true; $('q').value = ''; $('q').hidden = true;
-    $('picked').innerHTML = '<div class="pick">' + art(pick[2]) + '<span><b>' + esc(pick[0]) + '</b><span>' + esc(pick[1]) + '</span></span><button aria-label="Remove song" id="x">×</button></div>';
+    $('picked').innerHTML = '<div class="pick">' + art(pick[2], pick[0] + ' ' + pick[1]) + '<span><b>' + esc(pick[0]) + '</b><span>' + esc(pick[1]) + '</span></span><button aria-label="Remove song" id="x">×</button></div>';
     $('x').onclick = function () { pick = null; $('picked').innerHTML = ''; $('q').hidden = false; };
   };
 
@@ -225,13 +275,14 @@
   function cardH(m, isNew) {
     return '<div class="card' + (isNew ? ' new' : '') + '" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Open message to ' + esc(m.to) + '">' +
       '<div class="top"><span class="to">To: ' + esc(m.to) + '</span> <span class="stamp">' + (m.ex ? 'Sample' : m.bot ? 'Bot' : 'From: ???') + '</span><p class="hand clip">' + esc(m.text) + '</p></div>' +
-      '<div class="song">' + art(m.color) + '<span><b>' + esc(m.song) + '</b><span>' + esc(m.artist) + '</span></span>' + pbtn(m, '') + '</div></div>';
+      '<div class="song">' + art(m.color, m.song + ' ' + m.artist) + '<span><b>' + esc(m.song) + '</b><span>' + esc(m.artist) + '</span></span>' + pbtn(m, '') + '</div></div>';
   }
   function show(el, a, empty, animate) {
     a.forEach(function (m) { cache[m.id] = m; });
     el.innerHTML = a.length ? a.map(function (m) {
       return cardH(m, false);
     }).join('') : '<div class="empty">' + empty + '</div>';
+    hydrateArt();
   }
   var feedTop = null;
   function loadFeed() {
@@ -246,10 +297,11 @@
 
 
   function inbox() {
-    var u = profile && profile.username, base = (C.SITE_URL || location.href).split('#')[0];
+    var u = profile && profile.username;
     $('who').hidden = !u;
     if (!u) return;
-    var l = base.replace(/\/?$/, '/') + '#to=' + encodeURIComponent(u);
+    var base = C.SITE_URL ? C.SITE_URL.replace(/\/+$/, '') + '/' : location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
+    var l = base + 'send.html?to=' + encodeURIComponent(u);
     var local = !C.SITE_URL && !/^https:/.test(location.protocol);
     $('linkNote').hidden = !local;
     if (local) $('linkNote').textContent = 'This link only works on this device. After you host the app, set SITE_URL in config.js.';
@@ -273,66 +325,78 @@
     if (route === 'submit') tab('submit'); else tab('home');
   }
 
-  var gateMode = 'login', profileSetup = false;
+  var gateMode = 'name', profileSetup = false;
   function setGateMode(mode) {
     gateMode = mode;
+    $('gateName').setAttribute('aria-selected', mode === 'name');
     $('gateLogin').setAttribute('aria-selected', mode === 'login');
     $('gateCreate').setAttribute('aria-selected', mode === 'create');
-    $('gateSub').textContent = mode === 'login' ? 'Sign in to send anonymously, receive messages, and keep your personal link.' : 'Create an account. Your name stays hidden when you send anonymously.';
-    $('unWrap').hidden = mode !== 'create';
-    $('claimBtn').textContent = mode === 'login' ? 'Sign in' : 'Create account';
+    $('gateSub').textContent = mode === 'name' ? 'Pick a username to start. No email, no password.' : mode === 'login' ? 'Sign in with the email you used before.' : 'Create an account with email. Your name stays hidden when you send anonymously.';
+    $('emailWrap').hidden = mode === 'name';
+    $('unWrap').hidden = mode === 'login';
+    $('claimBtn').textContent = mode === 'name' ? 'Continue' : mode === 'login' ? 'Sign in' : 'Create account';
     $('reuse').hidden = true;
   }
+  $('gateName').onclick = function () { setGateMode('name'); };
   $('gateLogin').onclick = function () { setGateMode('login'); };
   $('gateCreate').onclick = function () { setGateMode('create'); };
+  function gateErr(t) { $('cmsg').className = 'msg err'; $('cmsg').textContent = t; $('claimBtn').disabled = false; }
   $('claimBtn').onclick = function () {
     var email = $('email').value.trim(), pass = $('password').value, un = $('un').value.trim();
-    var route = location.hash.indexOf('to=') > -1 ? 'submit' : 'home';
+    var route = 'home';
     $('claimBtn').disabled = true; $('cmsg').className = 'msg'; $('cmsg').textContent = 'Please wait...';
     if (!REMOTE) {
-      if (gateMode === 'create') { if (!un) { $('cmsg').className = 'msg err'; $('cmsg').textContent = 'Choose a username.'; $('claimBtn').disabled = false; return; } lset(US, un); profile = { username: un }; finishGate(route); }
-      else if (!lget(US, '')) { $('cmsg').className = 'msg err'; $('cmsg').textContent = 'Demo mode needs a username. Use Create account.'; $('claimBtn').disabled = false; return; }
+      if (gateMode !== 'login') { if (!un) return gateErr('Choose a username.'); lset(US, un); profile = { username: un }; finishGate(route); }
+      else if (!lget(US, '')) return gateErr('Demo mode needs a username. Use the Username tab.');
       else { profile = { username: lget(US, '') }; finishGate(route); }
       $('claimBtn').disabled = false; return;
     }
-    if (!email || !pass || pass.length < 6 || (gateMode === 'create' && !un)) {
-      $('cmsg').className = 'msg err'; $('cmsg').textContent = gateMode === 'create' ? 'Enter email, password (6+ characters), and username.' : 'Enter your email and password.';
-      $('claimBtn').disabled = false; return;
-    }
     var op;
-    if (profileSetup) {
-      if (!un) { $('cmsg').className = 'msg err'; $('cmsg').textContent = 'Choose a username to finish your profile.'; $('claimBtn').disabled = false; return; }
-      op = claim(un);
-    } else if (gateMode === 'create') {
-      op = authSignUp(email, pass).then(function (d) {
-        if (!d.access_token) throw { msg: 'Account created. Check your email to confirm the account, then sign in.' };
-        sessionSet({ access_token: d.access_token, refresh_token: d.refresh_token, user: d.user }); currentUser = d.user;
+    if (profileSetup || gateMode === 'name') {
+      if (!un) return gateErr('Choose a username.');
+      if (profileSetup) op = claim(un);
+      else op = rpc('username_available', { p_username: un }).then(function (ok) {
+        if (!/^[A-Za-z0-9._]{3,20}$/.test(un)) throw { msg: 'Use 3 to 20 letters, numbers, dot or underscore.' };
+        if (ok === false) throw { msg: 'That username is taken. Pick another one.' };
+        return sessionGet() ? null : authSignUpAnon();
+      }).then(function (d) {
+        if (d) { storeSess(d); currentUser = d.user; }
         return claim(un);
       });
     } else {
-      op = authSignIn(email, pass).then(function (d) {
-        sessionSet({ access_token: d.access_token, refresh_token: d.refresh_token, user: d.user }); currentUser = d.user;
-        return loadProfile().then(function (p) {
-          if (!p) {
-            profileSetup = true; setGateMode('create'); $('unWrap').hidden = false; $('gateSub').textContent = 'Signed in. Choose a username to finish your profile.'; $('claimBtn').textContent = 'Create profile';
-            throw { stop: true };
-          }
+      if (!email || !pass || pass.length < 6 || (gateMode === 'create' && !un)) return gateErr(gateMode === 'create' ? 'Enter email, password (6+ characters), and username.' : 'Enter your email and password.');
+      if (gateMode === 'create') {
+        op = authSignUp(email, pass).then(function (d) {
+          if (!d.access_token) throw { msg: 'Account created. Check your email to confirm the account, then sign in.' };
+          storeSess(d); currentUser = d.user;
+          return claim(un);
         });
-      });
+      } else {
+        op = authSignIn(email, pass).then(function (d) {
+          storeSess(d); currentUser = d.user;
+          return loadProfile().then(function (p) {
+            if (!p) { profileSetup = true; setGateMode('name'); $('gateSub').textContent = 'Signed in. Choose a username to finish your profile.'; throw { stop: true }; }
+          });
+        });
+      }
     }
     op.then(function () { finishGate(route); })
       .catch(function (e) {
         if (e && e.stop) return;
-        $('cmsg').className = 'msg err';
         var ad = e && e.data ? (e.data.msg || e.data.message || '') : '';
-        $('cmsg').textContent = e.msg || ad || (e.status === 400 ? 'Email or password is incorrect, or the account needs email confirmation.' : dbHint(e));
-        if (e && e.taken) $('reuse').hidden = false;
+        var t = e.msg || ad || (e.status === 400 ? 'Email or password is incorrect, or the account needs email confirmation.' : dbHint(e));
+        if (/anonymous/i.test(ad) || (e.data && e.data.error_code === 'anonymous_provider_disabled')) t = 'Username login is not switched on yet. In Supabase open Authentication > Sign In / Providers and turn on "Allow anonymous sign-ins".';
+        if (e && e.status === 429) t = 'Too many tries from this network. Please wait a few minutes and try again.';
+        gateErr(t);
       }).then(function () { $('claimBtn').disabled = false; });
   };
   $('password').onkeydown = function (e) { if (e.key === 'Enter') $('claimBtn').click(); };
   $('email').onkeydown = function (e) { if (e.key === 'Enter') $('claimBtn').click(); };
   $('un').onkeydown = function (e) { if (e.key === 'Enter') $('claimBtn').click(); };
-  $('swap').onclick = function () { authSignOut().then(showGate); };
+  $('swap').onclick = function () {
+    if (currentUser && currentUser.is_anonymous && !confirm('You signed in with a username only. If you sign out, you cannot get this username or its Inbox back. Sign out anyway?')) return;
+    authSignOut().then(function () { setGateMode('name'); showGate(); });
+  };
   $('copy').onclick = function () {
     var b = $('copy');
     navigator.clipboard.writeText($('link').value).then(function () { b.textContent = 'Copied'; }, function () { $('link').select(); b.textContent = 'Select, copy'; });
@@ -343,7 +407,7 @@
   function openD(id) {
     var m = cache[id]; if (!m) return;
     var hex = /^#[0-9a-f]{3,8}$/i.test(m.color), https = /^https:\/\//.test(m.color), col = hex ? m.color : '#27424F';
-    var big = https ? '<img class="bigart" alt="" src="' + esc(m.color.replace('100x100', '600x600')) + '">' : '<span class="bigart" style="background:' + col + '"></span>';
+    var big = https ? '<img class="bigart" alt="" src="' + esc(m.color.replace('100x100', '600x600')) + '">' : '<span class="bigart" data-q="' + esc(m.song + ' ' + m.artist) + '" style="background:' + col + '"></span>';
     $('detail').innerHTML = '<button class="back" id="back">&larr; Back</button><h2 class="hi">Hello, ' + esc(m.to) + '</h2>' +
       '<p class="sub" style="text-align:center">' + (m.bot ? 'A song picked by the Anonymous bot.' : 'Someone sent you a song. They want you to hear this one.') + '</p>' +
       '<div class="dcard">' + big +
@@ -351,7 +415,7 @@
       '<p id="pnote" class="sub" style="text-align:center;min-height:1.2em"></p>' +
       '<p class="sub" style="text-align:center;margin-top:22px">Also, here is a message from the sender:</p><p class="hand">' + esc(m.text) + '</p>';
     SECS.forEach(function (x) { $(x).hidden = true; });
-    $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0);
+    $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0); hydrateArt();
     $('back').onclick = function () { au.pause(); rst(); var t = cur; tab(t); };
   }
   document.addEventListener('click', function (e) {
@@ -401,7 +465,7 @@
       var rows = [[], [], []];
       all.forEach(function (m, i) { rows[i % 3].push(m); });
       rows = rows.map(function (r) { while (r.length < 4) r = r.concat(r); return r; });
-      $('mqs').innerHTML = mqRow(rows[0], false) + mqRow(rows[1], true) + mqRow(rows[2], false);
+      $('mqs').innerHTML = mqRow(rows[0], false) + mqRow(rows[1], true) + mqRow(rows[2], false); hydrateArt();
     });
   }
   function showHistory() { show($('hlist'), lget(SENT, []), 'Nothing sent from this device yet.', false); }
@@ -409,111 +473,116 @@
   $('homeLink').onclick = function () { tab('home'); };
   $('homeLink').onkeydown = function (e) { if (e.key === 'Enter') tab('home'); };
 
-  /* ---------- maintenance center (open the site with #admin) ---------- */
-  var AP = '';
-  function rpc(name, args) { return api('rpc/' + name, { method: 'POST', body: JSON.stringify(args) }); }
-  function aFlash(t, bad) { var f = $('aflash'); if (f) { f.className = 'msg' + (bad ? ' err' : ''); f.textContent = t; } }
-  function aErr(e) { aFlash(dbHint(e), true); }
-  function aRefresh(note) {
-    return rpc('admin_state', { p: AP }).then(function (st) {
-      if (!st.ok) { AP = ''; $('alogin').hidden = false; $('apanel').hidden = true; $('amsg').textContent = 'Passcode no longer accepted.'; return; }
-      adminRender(st); if (note) aFlash(note);
-    }).catch(aErr);
+  /* ---------- small helpers: toast + anon headers ---------- */
+  var toastT;
+  function toast(msg, bad) {
+    var t = $('toast'); t.textContent = msg; t.className = 'toast' + (bad ? ' bad' : ''); t.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 3500);
   }
-  function adminRender(st) {
-    var s = st.settings || {}, on = s.bot_enabled === 'true', mt = s.maintenance === 'true';
-    $('alogin').hidden = true; $('apanel').hidden = false;
-    $('apanel').innerHTML =
-      '<p id="aflash" class="msg" role="status"></p>' +
-      '<div class="box"><h3>Bot</h3><p class="who">' + (on ? 'Running' : 'Stopped') + '</p>' +
-      '<p class="sub">Posts one message from its pool every ' + esc(s.bot_interval_min) + ' min. Its posts carry a Bot stamp.</p>' +
-      '<label for="aiv">Post every</label><select id="aiv">' + [5, 15, 30, 60, 180, 720].map(function (m) { return '<option value="' + m + '"' + (String(m) === s.bot_interval_min ? ' selected' : '') + '>' + m + ' min</option>'; }).join('') + '</select>' +
-      '<div class="row" style="margin-top:14px"><button class="btn" id="abot">' + (on ? 'Stop bot' : 'Start bot') + '</button><button class="btn ghost" id="anow">Post one now</button></div>' +
-      '<button class="link" id="adel">Delete all bot posts (' + st.bots + ')</button></div>' +
-      '<div class="box" style="margin-top:16px"><h3>Maintenance mode</h3><p class="sub">' + (mt ? 'ON: visitors see the maintenance screen.' : 'OFF: the app is open to everyone.') + '</p>' +
-      '<label for="anote">Message for visitors</label><input id="anote" maxlength="200" value="' + esc(s.maintenance_note || '') + '">' +
-      '<button class="btn full" id="amt">' + (mt ? 'Turn maintenance off' : 'Turn maintenance on') + '</button></div>' +
-      '<div class="box" style="margin-top:16px"><h3>Numbers</h3><p style="margin:0">' + st.users + ' usernames, ' + st.messages + ' messages (' + st.bots + ' from the bot), ' + st.pool + ' in the bot pool.</p></div>' +
-      '<h2 class="sec">Recent messages</h2><div id="arecent"></div>';
-    $('abot').onclick = function () { rpc('admin_set', { p: AP, k: 'bot_enabled', v: on ? 'false' : 'true' }).then(function () { return aRefresh(on ? 'Bot stopped.' : 'Bot started.'); }).catch(aErr); };
-    $('aiv').onchange = function () { rpc('admin_set', { p: AP, k: 'bot_interval_min', v: $('aiv').value }).then(function () { return aRefresh('Interval saved.'); }).catch(aErr); };
-    $('anow').onclick = function () { rpc('admin_post_now', { p: AP }).then(function () { return aRefresh('Posted one message.'); }).catch(aErr); };
-    $('adel').onclick = function () { if (!confirm('Delete all bot posts?')) return; rpc('admin_delete_bots', { p: AP }).then(function (n) { return aRefresh('Deleted ' + n + ' bot posts.'); }).catch(aErr); };
-    $('amt').onclick = function () {
-      rpc('admin_set', { p: AP, k: 'maintenance_note', v: $('anote').value }).then(function () { return rpc('admin_set', { p: AP, k: 'maintenance', v: mt ? 'false' : 'true' }); })
-        .then(function () { return aRefresh(mt ? 'Maintenance is off.' : 'Maintenance is on.'); }).catch(aErr);
+  function fnHeaders() {
+    var se = sessionGet(), h = { 'Content-Type': 'application/json', apikey: C.SUPABASE_KEY };
+    if (se && se.access_token) h.Authorization = 'Bearer ' + se.access_token;
+    else if (/^eyJ/.test(C.SUPABASE_KEY)) h.Authorization = 'Bearer ' + C.SUPABASE_KEY;
+    return h;
+  }
+  var STATUS = { pending: 'Pending', in_progress: 'In progress', resolved: 'Resolved', draft: 'Draft', approved: 'Approved', archived: 'Archived' };
+  function when(t) { try { return new Date(t).toLocaleString(); } catch (e) { return ''; } }
+
+  /* ---------- support chat (public) ---------- */
+  var chat = [], TIX = 'anon-tickets', busy = false;
+  var CRISIS_TXT = C.CRISIS_TEXT || 'If you may be in danger, please reach out right now: call 911, or the NCMH Crisis Hotline at 1553 (mobile 0917-899-8727), or Hopeline at 0917-558-4673 (2919 is toll-free for Globe/TM). You can also tell a trusted adult near you.';
+  function bub(role, text) { var d = document.createElement('div'); d.className = 'b ' + role; d.textContent = text; $('chatlog').appendChild(d); $('chatlog').scrollTop = 1e9; }
+  function setBusy(b) { busy = b; $('chatsend').disabled = b; }
+  function mySummary() {
+    var u = chat.filter(function (m) { return m.role === 'user'; }).map(function (m) { return m.content; }).slice(-3).join(' ');
+    return u.slice(0, 600);
+  }
+  function sendChat() {
+    var t = $('chatin').value.trim(); if (!t || busy) return;
+    $('chatin').value = ''; bub('me', t); chat.push({ role: 'user', content: t });
+    if (!REMOTE) { bub('bot', 'The support chat needs the online database. Add your keys in config.js.'); return; }
+    setBusy(true);
+    fresh().then(function () { return fetch(C.SUPABASE_URL + '/functions/v1/support-chat', { method: 'POST', headers: fnHeaders(), body: JSON.stringify({ messages: chat.slice(-10) }) }); })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d; return d; }); })
+      .then(function (d) {
+        chat.push({ role: 'assistant', content: d.reply }); bub('bot', d.reply);
+        if (d.crisis) { $('crisisBox').textContent = CRISIS_TXT; $('crisisBox').hidden = false; }
+        if (d.escalate) askConsent(d.summary || mySummary());
+      })
+      .catch(function (e) {
+        bub('bot', e && e.error === 'slow_down' ? 'You are sending messages quickly. Take a breath and try again in a minute.' : 'I cannot answer right now. If you want, you can send your concern to a real person using the link below.');
+      }).then(function () { setBusy(false); });
+  }
+  function askConsent(summary) {
+    var c = $('consent'); c.hidden = false;
+    c.innerHTML = '<b>Send this to the admin team?</b><p class="sub" style="margin:4px 0 8px">Only the text below will be shared, nothing else from this chat. Edit it if you like. It is not linked to your username.</p>' +
+      '<textarea id="csum" maxlength="1500"></textarea><div class="row" style="margin-top:10px"><button class="btn" id="cyes">Yes, send it</button><button class="btn ghost" id="cno">No, keep it private</button></div>';
+    $('csum').value = summary || '';
+    $('cno').onclick = function () { c.hidden = true; bub('bot', 'Okay, nothing was shared. We can keep talking whenever you want.'); };
+    $('cyes').onclick = function () {
+      var txt = $('csum').value.trim(); if (txt.length < 5) { toast('Write a few words about your concern first.', true); return; }
+      $('cyes').disabled = true;
+      api('rpc/create_ticket', { method: 'POST', body: JSON.stringify({ p_summary: txt, p_consent: true }) }).then(function (r) {
+        var a = lget(TIX, []); a.unshift({ no: r.ticket_no, code: r.code }); lset(TIX, a.slice(0, 20));
+        c.hidden = true; bub('bot', 'Done. Your request #' + r.ticket_no + ' was sent to the admin team and is waiting for a reply. I cannot tell when someone will answer, but you can check below anytime.');
+        refreshTix();
+      }).catch(function (e) { $('cyes').disabled = false; toast(dbHint(e), true); });
     };
-    rpc('admin_recent', { p: AP }).then(function (list) {
-      $('arecent').innerHTML = list.length ? list.map(function (m) {
-        return '<div class="box" style="margin-bottom:10px;padding:14px"><b>To: ' + esc(m.to_name) + '</b>' + (m.is_bot ? ' <span class="stamp">Bot</span>' : '') +
-          '<p style="margin:6px 0;color:var(--muted)">' + esc(m.body) + '</p><button class="link" data-del="' + esc(m.id) + '">Delete</button></div>';
-      }).join('') : '<div class="empty">No messages yet.</div>';
-    }).catch(function () {});
   }
-  $('aOpen').onclick = function () {
-    if (!REMOTE) { $('amsg').textContent = 'Connect Supabase first (config.js).'; return; }
-    AP = $('apass').value; $('amsg').textContent = '';
-    rpc('admin_state', { p: AP }).then(function (st) {
-      if (!st.ok) { AP = ''; $('amsg').textContent = 'Wrong passcode, or locked for 5 minutes after too many tries.'; return; }
-      adminRender(st);
-    }).catch(function (e) { AP = ''; $('amsg').textContent = dbHint(e); });
-  };
-  $('apass').onkeydown = function (e) { if (e.key === 'Enter') $('aOpen').click(); };
-  document.addEventListener('click', function (e) {
-    var d = e.target.closest('[data-del]'); if (!d || !confirm('Delete this message for good?')) return;
-    rpc('admin_delete_msg', { p: AP, mid: d.dataset.del }).then(function () { return aRefresh('Message deleted.'); }).catch(aErr);
-  });
-  window.addEventListener('hashchange', function () { if (location.hash === '#admin') tab('admin'); });
+  function refreshTix() {
+    var a = lget(TIX, []); $('mytix').hidden = !a.length; if (!a.length || !REMOTE) return;
+    Promise.all(a.map(function (t) { return api('rpc/ticket_status', { method: 'POST', body: JSON.stringify({ p_code: t.code }) }).catch(function () { return null; }); })).then(function (rs) {
+      $('tixlist').innerHTML = rs.map(function (r, i) {
+        if (!r) return '<p class="sub">Request #' + esc(a[i].no) + ': not found (it may have been deleted).</p>';
+        return '<div class="tix"><b>Request #' + r.ticket_no + '</b> <span class="chip s-' + esc(r.status) + '">' + esc(STATUS[r.status]) + '</span>' +
+          (r.admin_response ? '<p class="quote"><b>Reply from admin:</b> ' + esc(r.admin_response) + '</p>' : '<p class="sub" style="margin:6px 0 0">No reply yet.</p>') + '</div>';
+      }).join('');
+    });
+  }
+  $('chatsend').onclick = sendChat;
+  $('chatin').onkeydown = function (e) { if (e.key === 'Enter') sendChat(); };
+  $('human').onclick = function () { askConsent(mySummary()); };
+  $('tixrefresh').onclick = refreshTix;
+  bub('bot', 'Hi, I am Support Buddy. I am an AI, not a therapist, and I can only listen and share general ideas. How are you feeling today?');
+
 
   /* ---------- boot ---------- */
-  var h = location.hash.match(/(?:^#|&)to=([^&]+)/);
-  if (h) {
-    try {
-      $('to').value = decodeURIComponent(h[1]);
-      $('toLabel').textContent = 'Sending to';
-      $('to').placeholder = 'Recipient username';
-      $('to').readOnly = true;
-      $('directHead').hidden = false;
-      $('directTitle').textContent = 'Send an anonymous message to @' + decodeURIComponent(h[1]);
-      $('sendHint').textContent = 'This is a direct anonymous message. Only the owner of this personal link can see it in their Inbox.';
-      $('warn').textContent = 'You are sending privately through this person’s personal link.';
-    } catch (e) {}
-  }
+  var h = location.hash.match(/(?:^#|&)to=([^&]+)/), redirecting = false;
+  if (h) { redirecting = true; location.replace('send.html?to=' + h[1]); }      /* old personal links open the new link page */
+  if (location.hash === '#admin') { redirecting = true; location.replace('admin.html'); }
+  h = null;
   $('fine').textContent = REMOTE ? '' : 'Demo mode: data is saved on this device only. Connect Supabase to use real accounts and private Inbox access.';
   if (C.SUPPORT_EMAIL) { ['fb', 'fb2'].forEach(function (id) { $(id).href = 'mailto:' + C.SUPPORT_EMAIL + '?subject=Anonymous%20feedback'; $(id).hidden = false; }); $('fb2').style.display = 'block'; }
 
   function boot() {
+    if (redirecting) return;
     if (!REMOTE) {
       profile = lget(US, '') ? { username: lget(US, '') } : null;
-      setGateMode('create');
-      tab(location.hash === '#admin' ? 'admin' : (h ? 'submit' : 'home'));
+      setGateMode('name'); tab('home');
       return;
     }
     var sess = sessionGet();
-    if (!sess || !sess.access_token) {
-      setGateMode('login');
-      tab(location.hash === '#admin' ? 'admin' : (h ? 'submit' : 'home'));
-      return;
-    }
-    authUser().then(function (u) {
+    if (!sess || !sess.access_token) { setGateMode('name'); tab('home'); return; }
+    fresh().then(authUser).then(function (u) {
       currentUser = u;
       return loadProfile();
     }).then(function (p) {
       profile = p;
       if (!profile) {
-        profileSetup = true;
-        setGateMode('create');
-        showGate();
-        $('unWrap').hidden = false;
-        $('gateSub').textContent = 'Your account is signed in. Choose a username to finish your profile.';
-        $('claimBtn').textContent = 'Create profile';
+        profileSetup = true; setGateMode('name'); showGate();
+        $('gateSub').textContent = 'You are signed in. Choose a username to finish.';
         return;
       }
-      tab(location.hash === '#admin' ? 'admin' : (h ? 'submit' : 'home'));
+      tab('home');
     }).catch(function () {
-      sessionSet(null); currentUser = null; profile = null; setGateMode('login'); showGate();
+      sessionSet(null); currentUser = null; profile = null; setGateMode('name'); showGate();
     });
   }
+  /* maintenance mode: the admin switches it in the Maintenance Center (admin.html) */
+  if (REMOTE && !redirecting) api('settings?select=key,value').then(function (rows) {
+    var st = {}; rows.forEach(function (x) { st[x.key] = x.value; });
+    if (st.maintenance === 'true') { maint = st.maintenance_note || 'We will be right back.'; tab(cur); }
+  }).catch(function () {});
   boot();
 
 })();

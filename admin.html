@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Anonymous Maintenance Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head><body><main>
+<h1><svg class="logo" viewBox="0 0 40 24" aria-hidden="true"><path d="M2 8c6-4 12-4 18-1 6-3 12-3 18 1 0 8-5 13-10 13-4 0-6-3-8-3s-4 3-8 3C7 21 2 16 2 8z" fill="var(--pink)"/><ellipse cx="12.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/><ellipse cx="27.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/></svg>Anonymous &middot; Admin</h1>
+<h2 class="headline">maintenance center.</h2>
+<div id="alogin" class="box">
+ <label for="aemailIn">Admin email</label>
+ <input id="aemailIn" type="email" autocomplete="username" autocapitalize="none">
+ <label for="apass">Password</label>
+ <input id="apass" type="password" autocomplete="current-password">
+ <button class="btn full" id="aOpen">Sign in</button><p class="msg" id="amsg" role="status"></p>
+</div>
+<div id="apanel" hidden></div>
+<p class="fine"><a href="index.html" style="color:inherit">Back to Anonymous</a></p>
+</main>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="config.js"></script>
+<script src="admin.js"></script>
+</body></html>

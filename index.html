@@ -15,30 +15,33 @@
 </div>
 
 <section id="gate" hidden>
- <h2 class="headline">your account first.</h2>
- <p class="sub" id="gateSub">Sign in to send anonymously, receive messages, and keep your personal link.</p>
- <div class="gate-switch" role="tablist" aria-label="Account mode">
-  <button id="gateLogin" class="gate-tab" role="tab" aria-selected="true">Sign in</button>
-  <button id="gateCreate" class="gate-tab" role="tab" aria-selected="false">Create account</button>
+ <h2 class="headline">pick a username.</h2>
+ <p class="sub" id="gateSub">Pick a username to start. No email, no password.</p>
+ <div class="gate-switch" role="tablist" aria-label="How to sign in">
+  <button id="gateName" class="gate-tab" role="tab" aria-selected="true">Username</button>
+  <button id="gateLogin" class="gate-tab" role="tab" aria-selected="false">Email sign in</button>
+  <button id="gateCreate" class="gate-tab" role="tab" aria-selected="false">Email sign up</button>
  </div>
  <div class="box">
-  <label for="email">Email</label>
-  <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
-  <label for="password">Password</label>
-  <input id="password" type="password" minlength="6" placeholder="6+ characters" autocomplete="current-password">
-  <div id="unWrap" hidden>
+  <div id="emailWrap" hidden>
+   <label for="email">Email</label>
+   <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+   <label for="password">Password</label>
+   <input id="password" type="password" minlength="6" placeholder="6+ characters" autocomplete="current-password">
+  </div>
+  <div id="unWrap">
    <label for="un">Username</label>
    <input id="un" maxlength="20" placeholder="3 to 20 letters, numbers, dot or underscore" autocomplete="off" autocapitalize="none">
   </div>
-  <button class="btn full" id="claimBtn">Sign in</button><p class="msg" id="cmsg" role="status"></p>
+  <button class="btn full" id="claimBtn">Continue</button><p class="msg" id="cmsg" role="status"></p>
   <button class="link" id="reuse" hidden></button>
  </div>
- <p class="fine">Your account is used only to control your Inbox and posting access. Your identity is still hidden from the recipient when you send anonymously.</p>
+ <p class="fine">Your username is how people find you. Your identity is still hidden from the recipient when you send anonymously. Tip: this browser remembers you, so do not clear its data if you want to keep your Inbox.</p>
 </section>
 
 <section id="home" hidden>
  <h2 class="headline">say what you never said, with a song.</h2>
- <p class="sub">Use your account to send anonymously. Post on Browse for a public anonymous note, or use someone’s personal link to send directly to their private Inbox.</p>
+ <p class="sub">Post an anonymous note on Browse, or share your personal link so friends can send a song straight to your private Inbox.</p>
  <button class="btn full" data-go="submit" style="margin-top:6px">Send a song</button>
  <button class="btn ghost full" data-go="browse" style="margin-top:12px">Browse the stories</button>
  <div class="how">
@@ -87,6 +90,20 @@
   <details><summary>How do I get my messages?</summary><p>Claim a username to create a personal link. Messages sent through that link appear in your Inbox. Public Browse posts are not delivered to anyone’s Inbox.</p></details>
  </div>
  <a class="btn dark full" id="fb2" hidden style="display:none;text-align:center;text-decoration:none">Send feedback</a>
+
+ <h2 class="sec">Talk to Support Buddy</h2>
+ <div class="box">
+  <p class="sub" style="margin:0 0 12px">An AI listener for how you feel. It is not a therapist or a doctor and cannot diagnose or fix everything. This chat is not saved.</p>
+  <div id="chatlog" class="chatlog" aria-live="polite"></div>
+  <div id="crisisBox" class="warn" hidden></div>
+  <div id="consent" class="consent" hidden></div>
+  <div class="row"><input id="chatin" maxlength="1000" placeholder="Tell me what is on your mind" autocomplete="off"><button class="btn" id="chatsend">Send</button></div>
+  <button class="link" id="human">Send my concern to a real person</button>
+ </div>
+ <div class="box" id="mytix" style="margin-top:16px" hidden>
+  <h3>My requests</h3><div id="tixlist"></div>
+  <button class="btn ghost full" id="tixrefresh">Check for replies</button>
+ </div>
 </section>
 
 <section id="maint" hidden>
@@ -94,17 +111,8 @@
  <p class="sub" id="maintNote"></p>
 </section>
 
-<section id="admin" hidden>
- <h2 class="headline">maintenance center.</h2>
- <div id="alogin" class="box">
-  <label for="apass">Admin passcode</label>
-  <input id="apass" type="password" autocomplete="off">
-  <button class="btn full" id="aOpen">Open</button><p class="msg" id="amsg" role="status"></p>
- </div>
- <div id="apanel" hidden></div>
-</section>
-
 <section id="detail" hidden></section>
+<div id="toast" class="toast" role="status" hidden></div>
 <footer class="foot">
  <div class="flinks"><button class="link" data-go="support">Support</button><a class="link" id="fb" hidden>Send feedback</a></div>
  <p class="fine" id="fine"></p><p class="fine">&copy; Anonymous</p>
