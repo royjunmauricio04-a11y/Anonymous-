@@ -18,20 +18,35 @@
 <meta name="twitter:card" content="summary_large_image">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-</head><body><main>
-<h1><svg class="logo" viewBox="0 0 40 24" aria-hidden="true"><path d="M2 8c6-4 12-4 18-1 6-3 12-3 18 1 0 8-5 13-10 13-4 0-6-3-8-3s-4 3-8 3C7 21 2 16 2 8z" fill="var(--pink)"/><ellipse cx="12.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/><ellipse cx="27.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/></svg>Anonymous &middot; Admin</h1>
-<h2 class="headline">maintenance center.</h2>
-<div id="alogin" class="box">
- <label for="aemailIn">Admin email</label>
- <input id="aemailIn" type="email" autocomplete="username" autocapitalize="none">
- <label for="apass">Password</label>
- <input id="apass" type="password" autocomplete="current-password">
- <button class="btn full" id="aOpen">Sign in</button><p class="msg" id="amsg" role="status"></p>
-</div>
-<div id="apanel" hidden></div>
-<p class="fine"><a href="index.html" style="color:inherit">Back to Anonymous</a></p>
+<link rel="stylesheet" href="admin.css">
+<script>
+/* apply the saved theme before first paint (same key as the main app) */
+try { var m = JSON.parse(localStorage.getItem('anon-theme')); if (m === 'dark' || m === 'light') document.documentElement.setAttribute('data-theme', m); } catch (e) {}
+</script>
+</head><body class="adm">
+
+<main id="alogin" class="a-login">
+ <div class="a-brand"><svg class="logo" viewBox="0 0 40 24" aria-hidden="true"><path d="M2 8c6-4 12-4 18-1 6-3 12-3 18 1 0 8-5 13-10 13-4 0-6-3-8-3s-4 3-8 3C7 21 2 16 2 8z" fill="var(--pink)"/><ellipse cx="12.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/><ellipse cx="27.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/></svg>Anonymous</div>
+ <h1 class="headline" style="display:block">maintenance center.</h1>
+ <p class="sub">Admins only. Sign in with the account you added in Supabase.</p>
+ <div class="box">
+  <label for="aemailIn">Admin email</label>
+  <input id="aemailIn" type="email" autocomplete="username" autocapitalize="none">
+  <label for="apass">Password</label>
+  <input id="apass" type="password" autocomplete="current-password">
+  <button class="btn full" id="aOpen">Sign in</button><p class="msg" id="amsg" role="status"></p>
+ </div>
+ <p class="fine"><a href="index.html" style="color:inherit">Back to Anonymous</a></p>
 </main>
+
+<div id="apanel" hidden></div>
 <div id="toast" class="toast" role="status" hidden></div>
+
 <script src="config.js"></script>
 <script src="admin.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function () {}); });
+}
+</script>
 </body></html>

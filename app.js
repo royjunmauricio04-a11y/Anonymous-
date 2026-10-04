@@ -33,6 +33,9 @@
     if (!e || !e.status) return 'Could not reach the database. Check your connection.';
     var code = ''; try { code = JSON.parse(e.text).code || ''; } catch (x) {}
     var msg = ''; try { msg = JSON.parse(e.text).msg || JSON.parse(e.text).message || ''; } catch (x2) {}
+    if (e.status === 300 || code === 'PGRST203') return 'Posting is being fixed on our side (two copies of a database function). Tell the site owner to run fix-300.sql in Supabase.';
+    if (msg === 'blocked_content') return 'That message has a word that is not allowed here. Please change it and try again.';
+    if (msg === 'rate_limited') return 'You are sending too fast. Please try again in a while.';
     if (code === 'PGRST202') return 'Required database functions are not installed. Run the latest schema.sql in Supabase.';
     if (code === '42501' || e.status === 401 || e.status === 403) return 'Your account is not allowed to do that. Run the latest SQL migration and sign in again.';
     if (code === '23505') return 'That username or account is already in use.';
@@ -115,7 +118,8 @@
       p_art: m.color,
       p_preview: m.prev
     };
-    if (m.parent) payload.p_parent_id = m.parent;
+    /* always send p_parent_id: only the 9-argument send_message can match, so PostgREST never answers HTTP 300 */
+    payload.p_parent_id = m.parent || null;
     return rpc('send_message', payload).then(function (id) {
       /* server returns the real UUID — keep it so reactions work later */
       if (id && (typeof id === 'string' || typeof id === 'number')) m.id = String(id).replace(/^"|"$/g, '');
@@ -692,6 +696,29 @@
     setTimeout(function () { b.textContent = 'Copy'; }, 1500);
   };
 
+  /* ---------- report a public post ---------- */
+  var REASONS = [['hate', 'Hate or discrimination'], ['harassment', 'Bullying or harassment'], ['sexual', 'Sexual content'], ['selfharm', 'Self-harm'], ['spam', 'Spam'], ['other', 'Something else']];
+  function openReport(m) {
+    var box = $('reportBox'); if (!box) return;
+    if (!box.hidden) { box.hidden = true; return; }
+    box.innerHTML = '<p class="sub" style="margin:10px 0 8px">Why are you reporting this post? An admin will review it.</p><div class="chips" id="reasonChips">' +
+      REASONS.map(function (r) { return '<button type="button" data-r="' + r[0] + '">' + esc(r[1]) + '</button>'; }).join('') + '</div><p class="msg" id="reportMsg" role="status"></p>';
+    box.hidden = false;
+    $('reasonChips').onclick = function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      [].forEach.call($('reasonChips').children, function (x) { x.disabled = true; });
+      rpc('report_message', { p_message_id: m.id, p_reason: b.dataset.r, p_note: null }).then(function () {
+        $('reportMsg').className = 'msg ok-pop'; $('reportMsg').textContent = 'Thank you. An admin will take a look.';
+        var rb = $('reportBtn'); if (rb) rb.hidden = true;
+      }).catch(function (err) {
+        [].forEach.call($('reasonChips').children, function (x) { x.disabled = false; });
+        var t = ''; try { t = JSON.parse(err.text).code || ''; } catch (x) {}
+        $('reportMsg').className = 'msg err';
+        $('reportMsg').textContent = t === 'PGRST202' ? 'Reporting is not switched on yet.' : (err && err.status === 401 ? 'Please open the app once more and try again.' : dbHint(err));
+      });
+    };
+  }
+
   /* ---------- detail view ---------- */
   function openD(id) {
     var m = cache[id]; if (!m) return;
@@ -707,13 +734,15 @@
       '<p id="pnote" class="sub" style="text-align:center;min-height:1.2em"></p>' +
       '<p class="sub" style="text-align:center;margin-top:22px">Also, here is a message from the sender:</p><p class="hand">' + esc(m.text) + '</p>' +
       (isPublic && !m.ex && isUuid(m.id) ? '<div class="react-bar">' + reactBar(m) + '</div>' : '') +
-      '<button type="button" class="btn ghost full reply-btn" id="replySong">Reply with a song</button>';
+      '<button type="button" class="btn ghost full reply-btn" id="replySong">Reply with a song</button>' +
+      (isPublic && !m.ex && !m.bot && isUuid(m.id) && REMOTE ? '<button type="button" class="link report-link" id="reportBtn">Report this post</button><div id="reportBox" class="report-box" hidden></div>' : '');
     SECS.forEach(function (x) { $(x).hidden = true; });
     try { if (!(history.state && history.state.t === 'detail')) history.pushState({ t: 'detail' }, ''); } catch (e) {}
     $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0); hydrateArt();
     if (isPublic && !m.ex && isUuid(m.id)) {
       loadReactions([m.id]).then(function () { paintReacts(m.id); });
     }
+    if ($('reportBtn')) $('reportBtn').onclick = function () { openReport(m); };
     $('back').onclick = function () {
       au.pause(); rst(); closeReactPicker();
       if (history.state && history.state.t === 'detail') history.back(); else tab(cur, true);
@@ -983,7 +1012,22 @@
   if (REMOTE && !redirecting) api('settings?select=key,value').then(function (rows) {
     var st = {}; rows.forEach(function (x) { st[x.key] = x.value; });
     if (st.maintenance === 'true') { maint = st.maintenance_note || 'We will be right back.'; tab(cur); }
+    showAnnouncement(st.announcement);
   }).catch(function () {});
+  function showAnnouncement(txt) {
+    txt = String(txt || '').trim();
+    var el = $('announce');
+    if (!txt) { if (el) el.hidden = true; return; }
+    var seen = ''; try { seen = localStorage.getItem('anon-ann-seen') || ''; } catch (e) {}
+    if (seen === txt) return;
+    if (!el) {
+      el = document.createElement('div'); el.id = 'announce'; el.className = 'announce'; el.setAttribute('role', 'status');
+      el.innerHTML = '<span id="announceTxt"></span><button type="button" id="announceX" aria-label="Dismiss announcement">&times;</button>';
+      var tb = document.querySelector('.topbar'); (tb && tb.parentNode ? tb.parentNode : document.body).insertBefore(el, tb ? tb.nextSibling : document.body.firstChild);
+      $('announceX').onclick = function () { el.hidden = true; try { localStorage.setItem('anon-ann-seen', $('announceTxt').textContent); } catch (e) {} };
+    }
+    $('announceTxt').textContent = txt; el.hidden = false;
+  }
 
   /* ---------- theme toggle (button beside site name) ---------- */
   var THEME_KEY = 'anon-theme';

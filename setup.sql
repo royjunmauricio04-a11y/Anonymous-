@@ -645,14 +645,8 @@ end $$;
 
 revoke all on function public.send_message(text,text,text,text,text,text,text,text,uuid) from public, anon;
 grant execute on function public.send_message(text,text,text,text,text,text,text,text,uuid) to authenticated;
--- keep old 8-arg overload working for older clients
-create or replace function public.send_message(
-  p_type text, p_to_name text, p_to_key text, p_body text,
-  p_song text, p_artist text, p_art text default null, p_preview text default null
-) returns uuid language sql security definer set search_path = public as $$
-  select public.send_message(p_type, p_to_name, p_to_key, p_body, p_song, p_artist, p_art, p_preview, null);
-$$;
-revoke all on function public.send_message(text,text,text,text,text,text,text,text) from public, anon;
-grant execute on function public.send_message(text,text,text,text,text,text,text,text) to authenticated;
+-- Only ONE send_message may exist. A second (8-argument) copy makes PostgREST answer HTTP 300
+-- "could not choose the best candidate function", and posting fails with "Database error (300)".
+drop function if exists public.send_message(text,text,text,text,text,text,text,text);
 
 notify pgrst, 'reload schema';

@@ -351,3 +351,12 @@ body.lp{background:var(--accent)}
 
 /* card new highlight */
 .card.new{border-color:var(--accent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 30%,transparent)}
+
+/* announcement banner (set from the admin Controls tab) */
+.announce{display:flex;align-items:flex-start;gap:10px;margin:0 0 14px;padding:11px 12px 11px 14px;border-radius:14px;background:var(--info);border:1px solid var(--info-b);color:var(--info-t);font-size:.92rem;line-height:1.4}
+.announce span{flex:1;word-break:break-word}
+.announce button{flex:none;border:0;background:none;color:inherit;font-size:1.4rem;line-height:1;width:28px;height:28px;border-radius:50%;cursor:pointer;padding:0;margin:-3px 0 0}
+.announce[hidden]{display:none}
+.report-link{display:block;margin:18px auto 0}
+.report-box{margin-top:6px}
+.report-box .chips{justify-content:center}

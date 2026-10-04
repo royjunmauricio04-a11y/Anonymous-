@@ -100,3 +100,15 @@ git push
 ## Mga limitasyon
 - Kapag walang PIN at binura ang data ng browser, hindi na mababawi ang username at Inbox.
 - Hindi pa nasubukan ang `setup.sql`, ang `pg_cron` ng bot, at ang chatbot sa totoong Supabase mo. Kung may error, kopyahin ang eksaktong text.
+
+## Admin upgrade (run once)
+1. In Supabase > SQL Editor, run `fix-300.sql` if posting shows "Database error (300)". It removes the duplicate `send_message` copy. The last two result tables must show one row and no rows.
+2. Run `admin-upgrade.sql` once. It adds reports, blocked words, the announcement banner, the bot pool tools, the People list and the dashboard numbers.
+3. Open `/admin.html` and sign in. Until step 2 is done the admin shows a yellow "One step left" card.
+
+Private direct messages are never shown in the admin. Messages do not store who sent them.
+
+## Secrets (important)
+Never put the Anthropic key or the Supabase service-role/secret key in any file in this repo.
+Set them only as Edge Function secrets (Supabase > Edge Functions > support-chat > Secrets, or `supabase secrets set`).
+`config.js` may only contain the public `anon` key.

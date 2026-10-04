@@ -64,6 +64,8 @@
     if (e && e.off) return e.status === 429 ? 'Too many tries from this network. Please wait a few minutes.' : 'Sending is not switched on yet. The site owner must turn on Anonymous sign-ins in Supabase.';
     if (m === 'rate_limited') return 'You are sending too fast. Please try again in a while.';
     if (m === 'recipient_not_found') return 'That link is not connected to anyone.';
+    if (m === 'blocked_content') return 'That message has a word that is not allowed here. Please change it and try again.';
+    if (e && (e.status === 300)) return 'Sending is being fixed on our side. Please try again later.';
     if (!e || !e.status) return 'Could not reach the database. Check your connection.';
     return 'Could not send right now (error ' + e.status + ').';
   }
@@ -261,7 +263,7 @@
     if (bad) { m.className = 'msg err'; m.textContent = bad; return; }
     stopAudio(); $('sSend').disabled = true; m.className = 'msg'; m.textContent = 'Sending...';
     ensureSession().then(function () {
-      return rpc('send_message', { p_type: 'direct', p_to_name: to, p_to_key: to.toLowerCase(), p_body: tx, p_song: pick[0], p_artist: pick[1], p_art: pick[2] || null, p_preview: pick[3] || null });
+      return rpc('send_message', { p_type: 'direct', p_to_name: to, p_to_key: to.toLowerCase(), p_body: tx, p_song: pick[0], p_artist: pick[1], p_art: pick[2] || null, p_preview: pick[3] || null, p_parent_id: null });
     }).then(function () {
       var sent = lget(SENT, []); sent.unshift({ id: 'l' + Date.now(), to: to, key: to.toLowerCase(), type: 'direct', text: tx, song: pick[0], artist: pick[1], color: pick[2], prev: pick[3], t: Date.now() }); lset(SENT, sent.slice(0, 100));
       $('sDoneArt').innerHTML = /^https:\/\//.test(pick[2] || '') ? '<img alt="" src="' + esc(pick[2].replace('100x100', 300 + 'x' + 300)) + '">' : '';
