@@ -3,7 +3,8 @@
 ## Ano ang bago sa bersyong ito (v5)
 - **Na-fix ang bug:** hindi natatanggap ng may-ari ang message galing sa link page. Ang Inbox ay naghahanap gamit ang username na may capital letters (hal. "RoyJun"), pero lowercase ang naka-save, kaya laging walang laman. Ngayon, ang Inbox ay nagpapakita ng lahat ng direct message na para sa account mo, kahit anong spelling.
 - **Bagong send.html:** malaking pulang header na may pangalan, mga ideya ng message na pipindutin, bilang ng letra, preview ng kanta bago mag-send, at success screen na may cover ng kanta.
-- **PIN login:** username + PIN. Pwede ka nang mag-log in ulit sa bagong phone at kasama ang Inbox mo. May "Add a PIN" na paalala sa mga walang PIN pa.
+- **Username na may random number:** pwede nang pareho ang napiling pangalan ng maraming tao. Dinadagdagan ng app ang dulo ng 4 na numero, halimbawa `rjay_4821`, kaya laging magkakaiba ang buong username. Ang pangalan mo ay 3 hanggang 15 letra, at ang buong username ay hanggang 20. Ang buong username (kasama ang numero) ang gamit sa link mo at sa pag-log in. Ang mga lumang username na walang numero ay gumagana pa rin at hindi nagbabago.
+- **PIN login:** buong username + PIN. Pwede ka nang mag-log in ulit sa bagong phone at kasama ang Inbox mo. May "Add a PIN" na paalala sa mga walang PIN pa.
 - **Hindi ka na basta nalolog-out:** kapag mahina ang signal, hindi na buburahin ang session mo (dati, ito ang pinakamalamang na dahilan ng pagkawala ng Inbox).
 - **Badge sa Inbox:** may bilang ng bagong message.
 - **Logo at icons:** favicon, app icon, at preview image kapag ni-share ang link.
@@ -77,17 +78,19 @@ git push
 
 ## PART 4. Paano subukan
 1. **Bug fix:** gumawa ng username na may capital letters (hal. RoyJun) at PIN. Buksan ang link mo sa private tab, magpadala. Sa Inbox, dapat nandoon ang message. May pulang bilang sa Inbox tab bago mo ito buksan.
-2. **PIN login:** sa ibang browser, Send a song, tab na Log in, ilagay ang username at PIN. Dapat nandoon pa rin ang Inbox.
-3. **Link page:** pindutin ang mga ideya, pumili ng kanta, pindutin ang play para sa preview, Send.
-4. **Chatbot:** Support tab, pindutin ang isang topic. Dapat sumagot na parang kausap, may kasamang mungkahing kanta paminsan-minsan.
-5. **Logo:** buksan ang site, dapat may pulang mask sa tab.
+2. **Random number:** gumawa ng account sa dalawang browser gamit ang parehong pangalan (hal. rjay). Dapat magkaiba ang numero sa dulo (rjay_4821 at rjay_7302). Lalabas ang buong username sa asul na kahon sa Home. Isulat ito.
+3. **PIN login:** sa ibang browser, Send a song, tab na Log in, ilagay ang BUONG username (may numero) at PIN. Dapat nandoon pa rin ang Inbox.
+4. **Link page:** pindutin ang mga ideya, pumili ng kanta, pindutin ang play para sa preview, Send.
+5. **Chatbot:** Support tab, pindutin ang isang topic. Dapat sumagot na parang kausap, may kasamang mungkahing kanta paminsan-minsan.
+6. **Logo:** buksan ang site, dapat may pulang mask sa tab.
 
 ## Kung may error
 | Sinasabi ng app | Gawin |
 |---|---|
 | Username login is not switched on yet | Step 2 |
 | Create a PIN with 4 to 20 characters | Maglagay ng PIN |
-| Wrong username or PIN | Tingnan ang spelling at PIN |
+| Wrong username or PIN | Ilagay ang BUONG username na may numero (hal. rjay_4821) at ang tamang PIN |
+| That name is very popular right now | Subukan ang bahagyang ibang pangalan |
 | Too many wrong tries | Maghintay ng 15 minuto |
 | Required database functions / Tables are missing | Step 1 (i-run ulit ang setup.sql) |
 | The AI helper is not switched on yet | Step 4 |

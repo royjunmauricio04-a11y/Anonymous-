@@ -134,7 +134,7 @@
   }
   function claim(u, pin) {
     u = u.trim();
-    if (!/^[A-Za-z0-9._]{3,20}$/.test(u)) return Promise.reject({ msg: 'Use 3 to 20 letters, numbers, dot or underscore.' });
+    if (!/^[A-Za-z0-9._]{3,15}$/.test(u)) return Promise.reject({ msg: 'Use 3 to 15 letters, numbers, dot or underscore. We add the number for you.' });
     if (!REMOTE) { lset(US, u); profile = { username: u }; return Promise.resolve(); }
     return rpc('claim_username', { p_username: u, p_pin: pin || null }).then(function (p) {
       profile = { username: (p && p.username) || u, has_pin: !!pin };
@@ -145,7 +145,8 @@
       if (msg === 'username_taken') msg = 'That username is taken. Pick another one, or use the Log in tab if it is yours.';
       else if (msg === 'pin_required') msg = 'Create a PIN with 4 to 20 characters.';
       else if (msg === 'already_has_username') msg = 'This device already has a username. Sign out first.';
-      else if (msg === 'invalid_username') msg = 'Use 3 to 20 letters, numbers, dot or underscore.';
+      else if (msg === 'invalid_username') msg = 'Use 3 to 15 letters, numbers, dot or underscore. We add the number for you.';
+      else if (msg === 'name_busy') msg = 'That name is very popular right now. Try a slightly different one.';
       throw { msg: msg || dbHint(e), taken: true };
     });
   }
@@ -349,15 +350,20 @@
     $('gate').hidden = true;
     if (route === 'submit') tab('submit'); else tab('home');
     checkInbox(false);
+    if (justCreated) { $('welcomeName').textContent = justCreated; $('welcome').hidden = false; justCreated = null; }
   }
 
-  var gateMode = 'name', profileSetup = false;
+  var gateMode = 'name', profileSetup = false, justCreated = null;
   function setGateMode(mode) {
     gateMode = mode;
     $('gateName').setAttribute('aria-selected', mode === 'name');
     $('gateBack').setAttribute('aria-selected', mode === 'back');
     $('gateLogin').setAttribute('aria-selected', mode === 'login');
-    $('gateSub').textContent = mode === 'name' ? 'Pick a username and a PIN. No email needed.' : mode === 'back' ? 'Log in again with your username and PIN. Your Inbox comes with you.' : 'Sign in with the email you used before.';
+    $('gateSub').textContent = mode === 'name' ? 'Pick a name and a PIN. We add a random number so your username is always unique.' : mode === 'back' ? 'Log in with your full username (with the number) and your PIN. Your Inbox comes with you.' : 'Sign in with the email you used before.';
+    $('unLabel').textContent = mode === 'back' ? 'Your full username (with the number)' : 'Pick a name';
+    $('un').maxLength = mode === 'back' ? 20 : 15;
+    $('un').placeholder = mode === 'back' ? 'for example rjay_4821' : 'for example rjay (3 to 15 characters)';
+    $('unHint').hidden = mode !== 'name';
     $('emailWrap').hidden = mode !== 'login';
     $('unWrap').hidden = mode === 'login';
     $('pinWrap').hidden = mode === 'login';
@@ -377,7 +383,7 @@
     $('claimBtn').disabled = true; $('cmsg').className = 'msg'; $('cmsg').textContent = 'Please wait...';
     if (!REMOTE) {
       if (gateMode === 'login') { if (!lget(US, '')) return gateErr('Demo mode needs a username. Use the New tab.'); profile = { username: lget(US, ''), has_pin: true }; }
-      else { if (!un) return gateErr('Choose a username.'); lset(US, un); profile = { username: un, has_pin: true }; }
+      else { if (!/^[A-Za-z0-9._]{3,15}$/.test(un)) return gateErr('Use 3 to 15 letters, numbers, dot or underscore. We add the number for you.'); var dh = un + '_' + (1000 + Math.floor(Math.random() * 9000)); lset(US, dh); profile = { username: dh, has_pin: true }; justCreated = dh; }
       finishGate(route); $('claimBtn').disabled = false; return;
     }
     var op;
@@ -390,7 +396,8 @@
         });
       });
     } else {
-      if (!/^[A-Za-z0-9._]{3,20}$/.test(un)) return gateErr('Use 3 to 20 letters, numbers, dot or underscore for the username.');
+      var maxLen = gateMode === 'back' ? 20 : 15;
+      if (!new RegExp('^[A-Za-z0-9._]{3,' + maxLen + '}$').test(un)) return gateErr(gateMode === 'back' ? 'Type your full username with the number, for example rjay_4821.' : 'Use 3 to 15 letters, numbers, dot or underscore. We add the number for you.');
       if (pin.length < 4 || pin.length > 20) return gateErr('The PIN must be 4 to 20 characters.');
       var needSession = function () { return sessionGet() ? Promise.resolve(null) : authSignUpAnon(); };
       var keep = function (d) { if (d) { storeSess(d); currentUser = d.user; } };
@@ -402,12 +409,10 @@
       } else if (profileSetup) {
         op = claim(un, pin);
       } else {
-        op = rpc('username_available', { p_username: un }).then(function (ok) {
-          if (ok === false) throw { msg: 'That username is taken. Pick another one, or use the Log in tab if it is yours.' };
-          return needSession();
-        }).then(keep).then(function () { return claim(un, pin); });
+        op = needSession().then(keep).then(function () { return claim(un, pin); });
       }
     }
+    if (gateMode === 'name') op = op.then(function () { justCreated = profile && profile.username; });
     op.then(function () { finishGate(route); })
       .catch(function (e) {
         if (e && e.stop) return;
@@ -425,6 +430,7 @@
     rpc('set_pin', { p_pin: v }).then(function () { profile.has_pin = true; $('pinNew').value = ''; $('pinNudge').hidden = true; toast('PIN saved. You can now log in on another phone.'); })
       .catch(function (e) { toast(dbHint(e), true); });
   };
+  $('welcomeOk').onclick = function () { $('welcome').hidden = true; };
   $('swap').onclick = function () {
     if (currentUser && currentUser.is_anonymous && !confirm('You signed in with a username only. If you sign out, you cannot get this username or its Inbox back. Sign out anyway?')) return;
     authSignOut().then(function () { setGateMode('name'); showGate(); });

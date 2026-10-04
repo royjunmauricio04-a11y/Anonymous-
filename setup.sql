@@ -86,28 +86,47 @@ declare
   u text := btrim(p_username);
   k text := lower(btrim(p_username));
   existing public.users%rowtype;
+  mine public.users%rowtype;
+  handle text;
+  tries integer := 0;
 begin
   if auth.uid() is null then raise exception 'login_required' using errcode = '42501'; end if;
   if u !~ '^[A-Za-z0-9._]{3,20}$' then raise exception 'invalid_username'; end if;
-  select * into existing from public.users where username_key = k for update;
+
+  -- This account already has a username: give it back (double tap, reload) or refuse a second one.
+  select * into mine from public.users where auth_id = auth.uid() limit 1;
   if found then
-    if existing.auth_id = auth.uid() then
-      return json_build_object('username', existing.username);
-    elsif existing.auth_id is null then          -- old name from before accounts: first come, first served
-      update public.users set auth_id = auth.uid(),
-        pin_hash = case when p_pin is not null and char_length(p_pin) between 4 and 20
-                        then extensions.crypt(p_pin, extensions.gen_salt('bf')) else pin_hash end
-       where id = existing.id;
-      return json_build_object('username', existing.username);
-    else
-      raise exception 'username_taken' using errcode = '23505';
+    if mine.username_key = k or left(mine.username_key, greatest(char_length(mine.username_key) - 5, 0)) = k then
+      return json_build_object('username', mine.username);
     end if;
+    raise exception 'already_has_username';
   end if;
+
+  -- An old name from before accounts, typed in full: first come, first served.
+  select * into existing from public.users where username_key = k and auth_id is null for update;
+  if found then
+    update public.users set auth_id = auth.uid(),
+      pin_hash = case when p_pin is not null and char_length(p_pin) between 4 and 20
+                      then extensions.crypt(p_pin, extensions.gen_salt('bf')) else pin_hash end
+     where id = existing.id;
+    return json_build_object('username', existing.username);
+  end if;
+
   if p_pin is null or char_length(p_pin) < 4 or char_length(p_pin) > 20 then raise exception 'pin_required'; end if;
-  if exists (select 1 from public.users where auth_id = auth.uid()) then raise exception 'already_has_username'; end if;
-  insert into public.users (username, username_key, auth_id, pin_hash)
-  values (u, k, auth.uid(), extensions.crypt(p_pin, extensions.gen_salt('bf')));
-  return json_build_object('username', u);
+  if u !~ '^[A-Za-z0-9._]{3,15}$' then raise exception 'invalid_username'; end if;   -- room for the random number
+
+  -- Many people can pick the same name: we add a random 4-digit number, e.g. rjay_4821.
+  loop
+    tries := tries + 1;
+    handle := u || '_' || lpad((1000 + floor(random() * 9000))::int::text, 4, '0');
+    begin
+      insert into public.users (username, username_key, auth_id, pin_hash)
+      values (handle, lower(handle), auth.uid(), extensions.crypt(p_pin, extensions.gen_salt('bf')));
+      return json_build_object('username', handle);
+    exception when unique_violation then
+      if tries >= 30 then raise exception 'name_busy'; end if;
+    end;
+  end loop;
 end $$;
 
 -- Log in again (new phone, cleared browser): username + PIN. The Inbox moves to this device.

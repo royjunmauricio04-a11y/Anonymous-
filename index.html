@@ -44,8 +44,9 @@
    <input id="password" type="password" minlength="6" placeholder="6+ characters" autocomplete="current-password">
   </div>
   <div id="unWrap">
-   <label for="un">Username</label>
-   <input id="un" maxlength="20" placeholder="3 to 20 letters, numbers, dot or underscore" autocomplete="off" autocapitalize="none">
+   <label for="un" id="unLabel">Pick a name</label>
+   <input id="un" maxlength="20" placeholder="for example rjay (3 to 15 characters)" maxlength="15" autocomplete="off" autocapitalize="none">
+   <p class="sub" id="unHint" style="margin:6px 0 0;font-size:.85rem">We add a random number to the end (like rjay_4821), so you never clash with someone who picked the same name.</p>
   </div>
   <div id="pinWrap">
    <label for="pin" id="pinLabel">Create a PIN (4 to 20 characters)</label>
@@ -59,6 +60,10 @@
 </section>
 
 <section id="home" hidden>
+ <div class="warn" id="welcome" hidden>
+  <b>Your username is <span id="welcomeName"></span></b>. Write it down. You need the full username with the number, plus your PIN, to log in on another phone.
+  <button class="link" id="welcomeOk" style="display:block;margin-top:8px">Got it</button>
+ </div>
  <h2 class="headline">say what you never said, with a song.</h2>
  <p class="sub">Post an anonymous note on Browse, or share your personal link so friends can send a song straight to your private Inbox.</p>
  <button class="btn full" data-go="submit" style="margin-top:6px">Send a song</button>
