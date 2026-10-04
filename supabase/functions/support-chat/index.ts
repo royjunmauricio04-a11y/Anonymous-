@@ -6,11 +6,12 @@
 //   ALLOWED_ORIGIN     optional. Example https://your-site.onrender.com (default: any)
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided to the function automatically.
 
-const KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
-const MODEL = Deno.env.get("AI_MODEL") ?? "claude-sonnet-5-5";
+
+const KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "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";
+const MODEL = Deno.env.get("AI_MODEL") ?? "claude-haiku-4-5-20251001";
 const CAP = Number(Deno.env.get("DAILY_CAP") ?? "400");
-const SB_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SB_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SB_URL = Deno.env.get("SUPABASE_URL") ?? "https://rulwnrsxcqvvltfaosjw.supabase.co";
+const SB_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "sb_secret_E9cwWQSJ9jahqqwh8CHBgg_iWn2hVo5";
 const cors = {
   "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") ?? "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
