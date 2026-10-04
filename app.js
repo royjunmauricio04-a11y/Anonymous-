@@ -184,17 +184,39 @@
     if ($('supportFab')) $('supportFab').hidden = true;
     window.scrollTo(0, 0);
   }
+  /* ---------- Android back button (history) ----------
+     home is the base entry. Other tabs sit on top of home, so Back from any tab goes home,
+     and Back from home leaves the app. Detail view and Support Buddy get their own entry. */
+  var skipPop = false;
+  try { history.replaceState({ t: 'home' }, ''); } catch (e) {}
+  function navTo(t) {
+    try {
+      var st = history.state && history.state.t;
+      if (st === t) return;
+      if (t === 'home' || (st && st !== 'home')) history.replaceState({ t: t }, '');
+      else history.pushState({ t: t }, '');
+    } catch (e) {}
+  }
+  window.addEventListener('popstate', function (e) {
+    if (skipPop) { skipPop = false; return; }
+    var s = (e.state && e.state.t) || 'home';
+    if (!$('supportOverlay').hidden && s !== 'support') { closeSupport(true); return; }
+    if (s === 'detail' || s === 'support') return;
+    if (!$('detail').hidden) { au.pause(); rst(); closeReactPicker(); }
+    tab(s, true);
+  });
   function isDirectLink() { return /(?:^#|&)to=/.test(location.hash); }
-  function tab(t) {
+  function tab(t, fromPop) {
     if (maint !== null && t !== 'admin') { showMaint(); return; }
     if (!profile && ['submit', 'mybox', 'history'].indexOf(t) > -1) { showGate(); return; }
     if (typeof au !== 'undefined') { au.pause(); rst(); }
     cur = t; window.scrollTo(0, 0);
+    if (!fromPop) navTo(t);
     SECS.forEach(function (x) { $(x).hidden = x !== t; });
     $('tabs').hidden = t === 'admin' || (t === 'submit' && isDirectLink());
     if (t === 'submit') $('directHead').hidden = !isDirectLink();
     if ($('supportFab')) $('supportFab').hidden = false;
-    if ($('supportOverlay')) $('supportOverlay').hidden = true;
+    if ($('supportOverlay') && !$('supportOverlay').hidden) { $('supportOverlay').hidden = true; document.body.style.overflow = ''; }
     [].forEach.call($('tabs').children, function (b) { b.setAttribute('aria-selected', b.dataset.t === t); });
     if (t === 'home') loadHome();
     if (t === 'history') showHistory();
@@ -205,18 +227,22 @@
 
   /* ---------- Support Buddy modal ---------- */
   function openSupport() {
+    try { if (!(history.state && history.state.t === 'support')) history.pushState({ t: 'support' }, ''); } catch (e) {}
     $('supportOverlay').hidden = false;
     $('supportFab').hidden = true;
     document.body.style.overflow = 'hidden';
     refreshTix();
   }
-  function closeSupport() {
+  function closeSupport(fromPop) {
     $('supportOverlay').hidden = true;
     $('supportFab').hidden = false;
     document.body.style.overflow = '';
+    if (fromPop !== true) {
+      try { if (history.state && history.state.t === 'support') { skipPop = true; history.back(); } } catch (e) {}
+    }
   }
   $('supportFab').onclick = openSupport;
-  $('supportClose').onclick = closeSupport;
+  $('supportClose').onclick = function () { closeSupport(); };
   $('footerSupport').onclick = openSupport;
   $('supportOverlay').onclick = function (e) {
     if (e.target === $('supportOverlay')) closeSupport();
@@ -683,11 +709,15 @@
       (isPublic && !m.ex && isUuid(m.id) ? '<div class="react-bar">' + reactBar(m) + '</div>' : '') +
       '<button type="button" class="btn ghost full reply-btn" id="replySong">Reply with a song</button>';
     SECS.forEach(function (x) { $(x).hidden = true; });
+    try { if (!(history.state && history.state.t === 'detail')) history.pushState({ t: 'detail' }, ''); } catch (e) {}
     $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0); hydrateArt();
     if (isPublic && !m.ex && isUuid(m.id)) {
       loadReactions([m.id]).then(function () { paintReacts(m.id); });
     }
-    $('back').onclick = function () { au.pause(); rst(); closeReactPicker(); var t = cur; tab(t); };
+    $('back').onclick = function () {
+      au.pause(); rst(); closeReactPicker();
+      if (history.state && history.state.t === 'detail') history.back(); else tab(cur, true);
+    };
     $('replySong').onclick = function () {
       replyParent = (isPublic && !m.ex && isUuid(m.id)) ? m.id : null;
       var seed = isPublic
@@ -1003,13 +1033,18 @@
   function notifyNewInbox(n) {
     if (n < 1 || document.visibilityState === 'visible') return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    var opts = {
+      body: n === 1 ? 'You have a new anonymous song in your Inbox.' : 'You have ' + n + ' new messages in your Inbox.',
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      tag: 'anon-inbox',
+      renotify: true,
+      data: { url: './index.html#inbox' }
+    };
     try {
-      new Notification('Anonymous', {
-        body: n === 1 ? 'You have a new anonymous song in your Inbox.' : 'You have ' + n + ' new messages in your Inbox.',
-        icon: 'icon-192.png',
-        tag: 'anon-inbox',
-        renotify: true
-      });
+      if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(function (reg) { return reg.showNotification('Anonymous', opts); }).catch(function () {});
+      } else { new Notification('Anonymous', opts); }
     } catch (e) {}
   }
   var _checkInbox = checkInbox;
