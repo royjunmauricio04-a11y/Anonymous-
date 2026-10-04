@@ -82,50 +82,167 @@
       });
     });
   }
-  function art(c) { return /^https:\/\//.test(c || '') ? '<img class="art" alt="" src="' + esc(c) + '">' : '<span class="art" style="background:#999"></span>'; }
+  function art(c) {
+    return /^https:\/\//.test(c || '')
+      ? '<img class="art" alt="" src="' + esc(c) + '">'
+      : '<span class="art art-ph" aria-hidden="true"></span>';
+  }
   var REC = [
-    ["Tingin", "Cup of Joe, Janine", ""], ["Sana", "I Belong to the Zoo", ""], ["Multo", "Cup of Joe", ""],
-    ["Babylon", "Taylor Swift", ""], ["Die With A Smile", "Lady Gaga, Bruno Mars", ""], ["Pagsamo", "Arthur Nery", ""],
-    ["Heather", "Conan Gray", ""], ["Perfect", "Ed Sheeran", ""], ["Iris", "Goo Goo Dolls", ""]
+    ["Tingin", "Cup of Joe, Janine"], ["Sana", "I Belong to the Zoo"], ["Multo", "Cup of Joe"],
+    ["Babylon", "Taylor Swift"], ["Die With A Smile", "Lady Gaga, Bruno Mars"], ["Pagsamo", "Arthur Nery"],
+    ["Heather", "Conan Gray"], ["Perfect", "Ed Sheeran"], ["Iris", "Goo Goo Dolls"]
   ];
+  var recMeta = {}; /* "title|artist" -> { c, p } cached from iTunes */
+  function recKey(t, a) { return (t + '|' + a).toLowerCase(); }
+  function enrichRecs() {
+    /* quietly fill cover + preview for visible recommendations */
+    REC.forEach(function (s, i) {
+      var k = recKey(s[0], s[1]);
+      if (recMeta[k]) {
+        if (last[i]) { last[i].c = recMeta[k].c; last[i].p = recMeta[k].p; }
+        return;
+      }
+      itunes(s[0] + ' ' + s[1], 1).then(function (d) {
+        var r = d.results && d.results[0];
+        if (!r) return;
+        recMeta[k] = { c: r.artworkUrl100 || '', p: r.previewUrl || '' };
+        if (last[i] && last[i].t === s[0]) {
+          last[i].c = recMeta[k].c;
+          last[i].p = recMeta[k].p;
+        }
+        /* refresh list art if still open */
+        if (!$('sres').hidden && last[i]) {
+          var btn = $('sres').querySelector('button[data-i="' + i + '"]');
+          if (btn && recMeta[k].c) {
+            var img = btn.querySelector('.art');
+            if (img && img.tagName !== 'IMG') {
+              var n = document.createElement('img');
+              n.className = 'art'; n.alt = ''; n.src = recMeta[k].c;
+              img.replaceWith(n);
+            }
+          }
+        }
+      }).catch(function () {});
+    });
+  }
   function showRecs() {
-    last = REC.map(function (s) { return { t: s[0], a: s[1], c: s[2], p: '' }; });
-    $('sres').innerHTML = '<div class="res-head">Recommended songs</div>' +
-      last.map(function (s, i) { return '<button data-i="' + i + '">' + art(s.c) + '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>'; }).join('');
+    last = REC.map(function (s) {
+      var m = recMeta[recKey(s[0], s[1])] || {};
+      return { t: s[0], a: s[1], c: m.c || '', p: m.p || '' };
+    });
+    $('sres').innerHTML = '<div class="res-head">Recommended for you</div>' +
+      last.map(function (s, i) {
+        return '<button type="button" data-i="' + i + '">' + art(s.c) +
+          '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>';
+      }).join('');
     $('sres').hidden = false;
+    enrichRecs();
   }
   $('sq').onfocus = function () { if (!$('sq').value.trim() && !pick) showRecs(); };
   $('sq').oninput = function () {
     var raw = $('sq').value.trim(); clearTimeout(tmr);
     if (!raw) { showRecs(); return; }
-    $('sres').innerHTML = '<button data-free="1">' + art('') + '<span><b>Use "' + esc(raw) + '"</b><span>Add it as typed (Title - Artist)</span></span></button>'; $('sres').hidden = false;
+    $('sres').innerHTML = '<button type="button" data-free="1">' + art('') +
+      '<span><b>Use “‘ + esc(raw) + '”</b><span>Add as typed (Title - Artist)</span></span></button>';
+    $('sres').hidden = false;
     tmr = setTimeout(function () {
       itunes(raw, 10).then(function (d) {
         if ($('sq').value.trim() !== raw) return;
-        last = (d.results || []).map(function (x) { return { t: x.trackName, a: x.artistName, c: x.artworkUrl100, p: x.previewUrl || '' }; });
-        $('sres').innerHTML = last.map(function (s, i) { return '<button data-i="' + i + '">' + art(s.c) + '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>'; }).join('') +
-          '<button data-free="1">' + art('') + '<span><b>Use "' + esc(raw) + '"</b><span>Add it as typed (Title - Artist)</span></span></button>';
+        last = (d.results || []).map(function (x) {
+          return { t: x.trackName, a: x.artistName, c: x.artworkUrl100, p: x.previewUrl || '' };
+        });
+        $('sres').innerHTML = last.map(function (s, i) {
+          return '<button type="button" data-i="' + i + '">' + art(s.c) +
+            '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>';
+        }).join('') +
+          '<button type="button" data-free="1">' + art('') +
+          '<span><b>Use “‘ + esc(raw) + '”</b><span>Add as typed (Title - Artist)</span></span></button>';
       }).catch(function () {});
     }, 350);
   };
-  function stopAudio() { au.pause(); playing = null; var b = document.getElementById('spl'); if (b) b.innerHTML = '&#9654;'; }
+  function stopAudio() {
+    au.pause(); playing = null;
+    var b = document.getElementById('spl');
+    if (b) b.innerHTML = '&#9654;';
+  }
   au.onended = stopAudio;
+  function fillPickMeta(done) {
+    if (pick[2] && pick[3]) { if (done) done(); return; }
+    var k = recKey(pick[0], pick[1]);
+    if (recMeta[k]) {
+      if (!pick[2]) pick[2] = recMeta[k].c;
+      if (!pick[3]) pick[3] = recMeta[k].p;
+      if (done) done();
+      return;
+    }
+    itunes(pick[0] + ' ' + pick[1], 1).then(function (d) {
+      var r = d.results && d.results[0];
+      if (r) {
+        if (!pick[2]) pick[2] = r.artworkUrl100 || '';
+        if (!pick[3]) pick[3] = r.previewUrl || '';
+        recMeta[k] = { c: pick[2], p: pick[3] };
+      }
+    }).catch(function () {}).then(function () { if (done) done(); });
+  }
   function renderPick() {
     if (!pick) { $('spicked').innerHTML = ''; $('sq').hidden = false; return; }
-    $('spicked').innerHTML = '<div class="lp-pick">' + art(pick[2]) + '<div class="pt"><b>' + esc(pick[0]) + '</b><span>' + esc(pick[1]) + '</span></div>' +
-      (pick[3] ? '<button id="spl" aria-label="Play 30 second preview">&#9654;</button>' : '') + '<button class="x" id="sx" aria-label="Remove song">×</button></div>';
+    /* always show circular play — fetch preview if missing */
+    $('spicked').innerHTML =
+      '<div class="lp-pick">' +
+        art(pick[2]) +
+        '<div class="pt"><b>' + esc(pick[0]) + '</b><span>' + esc(pick[1]) + '</span></div>' +
+        '<button type="button" id="spl" class="lp-play" aria-label="Play 30 second preview">&#9654;</button>' +
+        '<button type="button" class="x" id="sx" aria-label="Remove song">×</button>' +
+      '</div>';
     $('sx').onclick = function () { stopAudio(); pick = null; renderPick(); };
-    if ($('spl')) $('spl').onclick = function () {
+    $('spl').onclick = function () {
       if (playing) { stopAudio(); return; }
-      au.src = pick[3]; playing = true; $('spl').innerHTML = '&#10073;&#10073;';
-      au.play().catch(function () { stopAudio(); });
+      function go(u) {
+        if (!u) return;
+        au.src = u; playing = true;
+        var b = $('spl'); if (b) b.innerHTML = '&#10073;&#10073;';
+        au.play().catch(function () { stopAudio(); });
+      }
+      if (pick[3] && /^https:\/\//.test(pick[3])) { go(pick[3]); return; }
+      var btn = $('spl'); if (btn) btn.disabled = true;
+      fillPickMeta(function () {
+        if (btn) btn.disabled = false;
+        /* update cover in place without resetting play state */
+        if (pick && pick[2] && /^https:\/\//.test(pick[2])) {
+          var ph = $('spicked').querySelector('.art');
+          if (ph && ph.tagName !== 'IMG') {
+            var n = document.createElement('img');
+            n.className = 'art'; n.alt = ''; n.src = pick[2];
+            ph.replaceWith(n);
+          }
+        }
+        go(pick[3] || '');
+      });
     };
+    /* if cover missing, fetch and swap art in place */
+    if (!pick[2] || !/^https:\/\//.test(pick[2])) {
+      fillPickMeta(function () {
+        if (!pick || !pick[2]) return;
+        var ph = $('spicked').querySelector('.art');
+        if (ph && ph.tagName !== 'IMG') {
+          var n = document.createElement('img');
+          n.className = 'art'; n.alt = ''; n.src = pick[2];
+          ph.replaceWith(n);
+        }
+      });
+    }
   }
   $('sres').onclick = function (e) {
     var b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.free) { var t = $('sq').value.trim().split(' - '); pick = [t[0], t[1] || 'Unknown artist', '', '']; }
-    else { var o = last[+b.dataset.i]; pick = [o.t, o.a, o.c, o.p]; }
-    $('sres').hidden = true; $('sq').value = ''; $('sq').hidden = true; renderPick();
+    if (b.dataset.free) {
+      var t = $('sq').value.trim().split(' - ');
+      pick = [t[0], t[1] || 'Unknown artist', '', ''];
+    } else {
+      var o = last[+b.dataset.i];
+      pick = [o.t, o.a, o.c || '', o.p || ''];
+    }
+    $('sres').hidden = true; $('sq').value = ''; $('sq').hidden = true;
+    renderPick();
   };
 
   /* ---- message box: ideas + counter ---- */
