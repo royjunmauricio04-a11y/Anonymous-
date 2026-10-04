@@ -1,72 +1,58 @@
-# Anonymous: gabay sa setup (Taglish, step by step)
+# Anonymous: gabay sa setup at update (Taglish)
 
-## Ano ang laman ng folder
+## Ano ang bago sa bersyong ito (v5)
+- **Na-fix ang bug:** hindi natatanggap ng may-ari ang message galing sa link page. Ang Inbox ay naghahanap gamit ang username na may capital letters (hal. "RoyJun"), pero lowercase ang naka-save, kaya laging walang laman. Ngayon, ang Inbox ay nagpapakita ng lahat ng direct message na para sa account mo, kahit anong spelling.
+- **Bagong send.html:** malaking pulang header na may pangalan, mga ideya ng message na pipindutin, bilang ng letra, preview ng kanta bago mag-send, at success screen na may cover ng kanta.
+- **PIN login:** username + PIN. Pwede ka nang mag-log in ulit sa bagong phone at kasama ang Inbox mo. May "Add a PIN" na paalala sa mga walang PIN pa.
+- **Hindi ka na basta nalolog-out:** kapag mahina ang signal, hindi na buburahin ang session mo (dati, ito ang pinakamalamang na dahilan ng pagkawala ng Inbox).
+- **Badge sa Inbox:** may bilang ng bagong message.
+- **Logo at icons:** favicon, app icon, at preview image kapag ni-share ang link.
+- **Mas matalinong Support Buddy:** mas malakas na model, naaalala ang buong usapan, may kaalaman tungkol sa app, nagmumungkahi ng kanta, at may daily cap para hindi ka mabigla sa bill.
+
+## Ano ang buburahin sa GitHub repo mo
+Ang mga lumang SQL na ito ay napalitan na ng `setup.sql`. Burahin para hindi ka malito:
+`schema.sql`, `bot.sql`, `account-delivery-migration.sql`, `delivery-mode-migration.sql`
+Itira ang `admin-user.sql`. Wala nang ibang buburahin.
+
+## Mga file
 | File | Para saan |
 |---|---|
-| index.html, style.css, app.js | Main platform (Home, Submit, Browse, Inbox, History, Support) |
-| send.html, send.js | Personal link page na parang NGL. Dito nagpapadala ang mga bisita. |
-| admin.html, admin.js | Maintenance Center. Hiwalay na page. |
-| config.js | Ang keys mo (Supabase URL, anon key, SITE_URL) |
-| setup.sql | ISANG SQL para sa buong database. Palitan nito ang lahat ng lumang .sql |
-| admin-user.sql | Para gawing admin ang account mo |
+| index.html, style.css, app.js | Main platform |
+| send.html, send.js | Personal link page |
+| admin.html, admin.js | Maintenance Center |
+| config.js | Ang keys mo |
+| setup.sql | ISANG SQL para sa buong database |
+| admin-user.sql | Gawing admin ang account mo |
 | supabase/functions/support-chat/index.ts | Chatbot (optional) |
+| favicon.svg, favicon.ico, favicon-32/48.png, apple-touch-icon.png, icon-192/512.png, icon-maskable-512.png, site.webmanifest | Logo at icons |
+| og-image.png | Larawan kapag ni-share ang link (Facebook, Messenger) |
+| robots.txt, sitemap.xml | Para sa search engines |
 
-Burahin sa GitHub repo ang mga luma: schema.sql, bot.sql, account-delivery-migration.sql, delivery-mode-migration.sql. Hindi mo na sila kailangan.
+## PART 1. Supabase (kapag may update, gawin ito ulit)
 
-## Paano gumagana ang login ngayon
-Username lang. Walang email, walang password.
-Kapag nagbigay ka ng username, gumagawa ang app ng "anonymous account" sa Supabase para sa device mo at ikinakabit doon ang username. Naka-save ang login sa browser.
-May email option pa rin ("Email sign in") para sa mga account na ginawa mo dati.
-Limitasyon: kapag binura mo ang data ng browser o lumipat ka ng phone, hindi mo na mababawi ang username at Inbox mo. Sinasabi ito ng app bago ka mag-sign out.
+### Step 1. I-run ulit ang setup.sql (kailangan, may bago itong laman)
+SQL Editor, New query, i-paste ang LAHAT ng `setup.sql`, Run. Ligtas ito at hindi binubura ang data mo.
+Kasama na rito ang PIN login at ang daily cap ng chatbot.
 
-## PART 1. Supabase (sundin ang pagkakasunod)
+### Step 2. Anonymous sign-ins
+Authentication, Sign In / Providers: ON ang **Allow anonymous sign-ins** at ON ang **Allow new users to sign up**.
+Authentication, Rate Limits: itaas ang anonymous sign-ins kung maraming gumagamit sa iisang Wi-Fi (default 30 kada oras kada IP).
+Huwag munang i-on ang CAPTCHA sa Supabase (wala pang CAPTCHA box ang app).
 
-### Step 1. Patakbuhin ang setup.sql
-1. Buksan ang supabase.com, piliin ang project mo.
-2. Kaliwang menu: SQL Editor, tapos New query.
-3. Buksan ang `setup.sql`, kopyahin ang LAHAT, i-paste, pindutin ang Run.
-4. Dapat lumabas ang "Success. No rows returned".
-5. Tingnan sa Table Editor. Dapat may: users, messages, settings, bot_pool, admins, support_tickets, kb_entries, send_log.
-Ligtas itong i-run ulit kahit kailan. Hindi nito binubura ang mga message at user mo.
-Kung may red error, kopyahin ang eksaktong text at ipadala sa akin.
+### Step 3. Admin account (kung hindi mo pa nagagawa)
+Authentication, Users, Add user (tick Auto Confirm). Kopyahin ang UID, ilagay sa `admin-user.sql`, i-Run.
 
-### Step 2. I-on ang anonymous sign-ins (kailangan para sa username login)
-1. Authentication, tapos Sign In / Providers.
-2. I-ON ang **Allow anonymous sign-ins**.
-3. Siguraduhing naka-ON din ang **Allow new users to sign up**.
-4. Save.
-Kapag hindi ito naka-on, ang sasabihin ng app ay "Username login is not switched on yet."
-
-### Step 3. Rate limit (maganda nang gawin)
-Authentication, tapos Rate Limits. Ang anonymous sign-ins ay 30 kada oras kada IP address. Kung maraming gumagamit sa iisang Wi-Fi o load network, itaas ito (halimbawa 100).
-Huwag munang i-on ang CAPTCHA sa Supabase. Wala pang CAPTCHA box ang app, kaya babagsak ang lahat ng sign-up.
-
-### Step 4. Tingnan ang config.js
-- SUPABASE_URL: ang Project URL mo (Settings, API).
-- SUPABASE_KEY: ang `anon` public key (nagsisimula sa `eyJ`). HUWAG ilagay ang service_role key.
-- SITE_URL: ang Render link mo, halimbawa https://anonymous-ztsp.onrender.com
-
-### Step 5. Gumawa ng ADMIN account (hiwalay ito sa username mo)
-1. Authentication, tapos Users, tapos Add user, tapos Create new user.
-2. Maglagay ng email at password. I-tick ang **Auto Confirm User**. Create.
-3. I-click ang user na ginawa mo at kopyahin ang **UID** (mahabang id).
-4. Buksan ang `admin-user.sql`, palitan ang `PASTE-YOUR-USER-UID-HERE` ng UID mo (iwanan ang mga quote).
-5. SQL Editor, New query, i-paste, Run. Dapat may lumabas na 1 row na may email mo.
-Kapag ang UID mo lang ang nasa listahan, ikaw lang ang admin. Walang user ang makakapagpalit nito.
-
-### Step 6. Bot
-Walang kailangang i-run. Naka-schedule na ito sa setup.sql. Pumunta sa admin page at pindutin ang Start bot.
-
-### Step 7. Chatbot (optional)
-1. Gumawa ng API key sa console.anthropic.com (kailangan ng credits).
-2. Supabase, tapos Edge Functions, tapos Deploy a new function. Pangalan: `support-chat`.
-3. I-paste ang laman ng `supabase/functions/support-chat/index.ts`, tapos Deploy.
-4. Edge Functions, tapos Secrets, tapos Add: `ANTHROPIC_API_KEY` = ang key mo.
-Kapag walang key, sasabihin ng chat na hindi muna ito makakasagot, pero gumagana pa rin ang "Send my concern to a real person".
-Huwag ilalagay ang API key sa GitHub o sa config.js.
+### Step 4. Chatbot (optional, pero ito ang nagpapatalino)
+1. console.anthropic.com: gumawa ng API key at maglagay ng credits.
+2. Supabase, Edge Functions, `support-chat`: i-paste ang BAGONG `index.ts`, Deploy. (Kung wala ka pa nito, Deploy a new function, pangalan `support-chat`.)
+3. Edge Functions, Secrets, idagdag:
+   - `ANTHROPIC_API_KEY` = ang key mo (required)
+   - `AI_MODEL` = `claude-sonnet-5-5` (default na ito, mas matalino). Mas mura: `claude-haiku-4-5-20251001`
+   - `DAILY_CAP` = `400` (ang pinakamaraming chat message kada araw para sa lahat. Bawasan para mas mababa ang gastos.)
+4. Kung may error, tingnan ang Edge Functions, Logs.
 
 ## PART 2. I-upload gamit ang Termux
-Una, i-download ang `anonymous-v4.zip` sa phone mo (mapupunta sa Downloads).
+I-download ang `anonymous-v5.zip` sa phone (Downloads).
 ```
 pkg update -y && pkg install git unzip -y
 termux-setup-storage
@@ -74,32 +60,40 @@ cd ~
 git clone https://github.com/royjunmauricio04-a11y/Anonymous-.git
 cd Anonymous-
 git pull
-unzip -o ~/storage/downloads/anonymous-v4.zip
+unzip -o ~/storage/downloads/anonymous-v5.zip
 git rm -f --ignore-unmatch schema.sql bot.sql account-delivery-migration.sql delivery-mode-migration.sql
 git add -A
-git commit -m "Username login, link page, admin center, support chat"
+git commit -m "v5: inbox fix, PIN login, new link page, logo, smarter chatbot"
 git push
 ```
-- Kung na-clone mo na dati, laktawan ang `git clone` at gawin ang `cd Anonymous-` lang.
-- Sa `git push`: username = GitHub username mo, password = Personal Access Token (GitHub, Settings, Developer settings, Personal access tokens, Contents: Read and write).
-- Maghintay ng 1 hanggang 2 minuto para mag-redeploy ang Render, tapos i-refresh ang page.
+- Kung na-clone mo na dati, laktawan ang `git clone` at `cd Anonymous-` na lang.
+- Sa `git push`: username = GitHub username, password = Personal Access Token.
+- Maghintay ng 1 hanggang 2 minuto sa Render, tapos i-refresh (kung luma pa rin ang itsura, i-hard refresh o i-clear ang cache).
 
-## PART 3. Paano subukan
-1. **Username login:** buksan ang site, pindutin ang Send a song, maglagay ng username, Continue. Dapat nasa Home ka na. I-refresh, dapat naka-login ka pa rin.
-2. **Link page:** Inbox, kopyahin ang link. Buksan sa private tab o ibang phone. Dapat may kard na may pangalan mo. Magsulat, pumili ng kanta, Send!. Dapat lumabas ito sa Inbox mo.
-3. **Album art:** sa Home, dapat may cover na ang mga sample message at ang bot posts.
-4. **Admin:** buksan ang `/admin.html`, mag-sign in gamit ang admin email. Dapat lumabas ang Overview.
-5. **Bot:** Start bot, tapos Post one now. Dapat may bagong "Bot" na post sa Browse.
-6. **Maintenance:** i-on, tapos buksan ang main site sa ibang tab. Dapat "back soon" ang makikita. Bukas pa rin ang admin.
-7. **Support chat:** Support tab, mag-chat, hayaang mag-alok ng admin help, tapos pindutin ang yes. Sa admin, Support tab, buksan ang ticket, mag-reply. Sa user, Check for replies.
-8. **Knowledge:** sa ticket, Add to knowledge, tick ang privacy box, Approve.
+## PART 3. Logo at search
+- Ang icon ay lumalabas agad sa tab ng browser, bookmarks, at kapag ni-add sa home screen.
+- Kapag ni-share ang link sa Facebook o Messenger, lalabas ang `og-image.png`. Nakasulat sa HTML ang link na `https://anonymous-ztsp.onrender.com`. Kung magpalit ka ng domain, palitan ang `og:image` at `og:url` sa index.html, send.html, admin.html, at ang robots.txt at sitemap.xml.
+- **Google search:** lalabas lang ang icon ng site mo sa resulta pagkatapos ma-index ng Google, na inaabot ng ilang araw o linggo. Gawin ito: search.google.com/search-console, Add property (URL prefix), i-verify, tapos Sitemaps, idagdag ang `sitemap.xml`, tapos URL Inspection, Request indexing para sa homepage. Mas mabilis kung may sarili kang domain kaysa sa onrender.com.
+
+## PART 4. Paano subukan
+1. **Bug fix:** gumawa ng username na may capital letters (hal. RoyJun) at PIN. Buksan ang link mo sa private tab, magpadala. Sa Inbox, dapat nandoon ang message. May pulang bilang sa Inbox tab bago mo ito buksan.
+2. **PIN login:** sa ibang browser, Send a song, tab na Log in, ilagay ang username at PIN. Dapat nandoon pa rin ang Inbox.
+3. **Link page:** pindutin ang mga ideya, pumili ng kanta, pindutin ang play para sa preview, Send.
+4. **Chatbot:** Support tab, pindutin ang isang topic. Dapat sumagot na parang kausap, may kasamang mungkahing kanta paminsan-minsan.
+5. **Logo:** buksan ang site, dapat may pulang mask sa tab.
 
 ## Kung may error
 | Sinasabi ng app | Gawin |
 |---|---|
 | Username login is not switched on yet | Step 2 |
-| Required database functions are not installed / Tables are missing | Step 1 (i-run ulit ang setup.sql) |
-| Too many tries from this network | Hintayin ng ilang minuto, o Step 3 |
-| This link is not connected to anyone yet | Wala pang nag-claim ng username na iyon |
-| Not allowed. Is your account listed as an admin? | Step 5 |
-| The admin tools are not installed | Step 1 |
+| Create a PIN with 4 to 20 characters | Maglagay ng PIN |
+| Wrong username or PIN | Tingnan ang spelling at PIN |
+| Too many wrong tries | Maghintay ng 15 minuto |
+| Required database functions / Tables are missing | Step 1 (i-run ulit ang setup.sql) |
+| The AI helper is not switched on yet | Step 4 |
+| Support Buddy is resting for today | Naabot ang DAILY_CAP. Itaas ito sa Secrets |
+| Not allowed. Is your account listed as an admin? | Step 3 |
+
+## Mga limitasyon
+- Kapag walang PIN at binura ang data ng browser, hindi na mababawi ang username at Inbox.
+- Hindi pa nasubukan ang `setup.sql`, ang `pg_cron` ng bot, at ang chatbot sa totoong Supabase mo. Kung may error, kopyahin ang eksaktong text.

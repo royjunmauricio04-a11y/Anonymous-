@@ -36,13 +36,17 @@
     sessionSet({ access_token: d.access_token, refresh_token: d.refresh_token, user: d.user || old.user, exp: Math.floor(Date.now() / 1000) + (d.expires_in || 3600) });
   }
   /* keep the login alive: refresh the access token shortly before it expires */
+  var freshP = null;
   function fresh() {
     var s = sessionGet();
     if (!s || !s.refresh_token || (s.exp && s.exp - 60 > Date.now() / 1000)) return Promise.resolve();
-    return fetch(C.SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: C.SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }) })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(); }).then(storeSess).catch(function () { sessionSet(null); });
+    if (freshP) return freshP;
+    freshP = fetch(C.SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: C.SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }) })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject({ status: r.status }); }).then(storeSess)
+      .catch(function (e) { if (e && (e.status === 400 || e.status === 401 || e.status === 403)) sessionSet(null); })   /* a weak signal must never sign you out */
+      .then(function () { freshP = null; });
+    return freshP;
   }
-
   function api(path, opt) { return fresh().then(function () { return api0(path, opt); }); }
   function rpc(name, args) { return api('rpc/' + name, { method: 'POST', body: JSON.stringify(args) }); }
   function api0(path, opt) {
@@ -77,11 +81,13 @@
     return { id: r.id, to: r.to_name, key: r.to_key, type: r.delivery_type || 'direct', text: r.body, song: r.song, artist: r.artist, color: r.art || '', prev: r.preview || '', bot: !!r.is_bot, t: Date.parse(r.created_at) || 0 };
   }
   function fetchMsgs(key) {
+    key = key ? String(key).trim().toLowerCase() : '';
     if (!REMOTE) {
-      return Promise.resolve(lget(LS, []).filter(function (m) { return key ? (m.type !== 'public' && m.key === key) : m.type === 'public'; }));
+      return Promise.resolve(lget(LS, []).filter(function (m) { return key ? (m.type !== 'public' && String(m.key).toLowerCase() === key) : m.type === 'public'; }));
     }
     var q = 'messages?select=id,to_name,to_key,delivery_type,body,song,artist,art,preview,is_bot,created_at&order=created_at.desc&limit=' + (key ? 100 : 50);
-    q += key ? '&delivery_type=eq.direct&to_key=eq.' + encodeURIComponent(key) : '&delivery_type=eq.public';
+    /* Inbox: the database only ever returns direct messages addressed to the signed-in account */
+    q += key ? '&delivery_type=eq.direct' : '&delivery_type=eq.public';
     return api(q).then(function (rows) { return rows.map(fromRow); });
   }
   function saveMsg(m) {
@@ -126,17 +132,19 @@
       return profile;
     });
   }
-  function claim(u) {
+  function claim(u, pin) {
     u = u.trim();
     if (!/^[A-Za-z0-9._]{3,20}$/.test(u)) return Promise.reject({ msg: 'Use 3 to 20 letters, numbers, dot or underscore.' });
     if (!REMOTE) { lset(US, u); profile = { username: u }; return Promise.resolve(); }
-    return rpc('claim_username', { p_username: u }).then(function (p) {
-      profile = p || { username: u };
+    return rpc('claim_username', { p_username: u, p_pin: pin || null }).then(function (p) {
+      profile = { username: (p && p.username) || u, has_pin: !!pin };
       lset(US, u);
     }).catch(function (e) {
       var msg = '';
       try { msg = JSON.parse(e.text).message || ''; } catch (x) {}
-      if (msg === 'username_taken') msg = 'That username is taken. Pick another one.';
+      if (msg === 'username_taken') msg = 'That username is taken. Pick another one, or use the Log in tab if it is yours.';
+      else if (msg === 'pin_required') msg = 'Create a PIN with 4 to 20 characters.';
+      else if (msg === 'already_has_username') msg = 'This device already has a username. Sign out first.';
       else if (msg === 'invalid_username') msg = 'Use 3 to 20 letters, numbers, dot or underscore.';
       throw { msg: msg || dbHint(e), taken: true };
     });
@@ -284,6 +292,21 @@
     }).join('') : '<div class="empty">' + empty + '</div>';
     hydrateArt();
   }
+  var SEEN = 'anon-seen-ids';
+  function setInboxBadge(n) {
+    var b = document.querySelector('#tabs [data-t=mybox]'); if (!b) return;
+    var old = b.querySelector('.badge'); if (old) old.remove();
+    if (n > 0) { var sp = document.createElement('span'); sp.className = 'badge'; sp.textContent = n > 9 ? '9+' : n; b.appendChild(document.createTextNode(' ')); b.appendChild(sp); }
+  }
+  function checkInbox(markSeen) {
+    if (!REMOTE || !profile || !sessionGet()) return Promise.resolve();
+    return fetchMsgs(profile.username).then(function (a) {
+      var seen = lget(SEEN, []), ids = a.map(function (m) { return m.id; });
+      if (markSeen) { lset(SEEN, ids.slice(0, 200)); setInboxBadge(0); return; }
+      setInboxBadge(ids.filter(function (id) { return seen.indexOf(id) < 0; }).length);
+    }).catch(function () {});
+  }
+  setInterval(function () { if (!document.hidden && cur !== 'mybox') checkInbox(false); }, 45000);
   var feedTop = null;
   function loadFeed() {
     fetchMsgs('').then(function (a) {
@@ -312,8 +335,10 @@
       else $('copy').click();
     };
     $('mine').innerHTML = '<div class="empty">Loading your private messages...</div>';
+    $('pinNudge').hidden = !(profile && profile.has_pin === false);
     fetchMsgs(u).then(function (a) {
       show($('mine'), a, 'No direct messages yet. Share your personal link so someone can send you one.', false);
+      lset(SEEN, a.map(function (m) { return m.id; }).slice(0, 200)); setInboxBadge(0);
     }).catch(function (e) {
       $('mine').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>';
     });
@@ -323,61 +348,64 @@
     profileSetup = false; $('cmsg').className = 'msg'; $('cmsg').textContent = '';
     $('gate').hidden = true;
     if (route === 'submit') tab('submit'); else tab('home');
+    checkInbox(false);
   }
 
   var gateMode = 'name', profileSetup = false;
   function setGateMode(mode) {
     gateMode = mode;
     $('gateName').setAttribute('aria-selected', mode === 'name');
+    $('gateBack').setAttribute('aria-selected', mode === 'back');
     $('gateLogin').setAttribute('aria-selected', mode === 'login');
-    $('gateCreate').setAttribute('aria-selected', mode === 'create');
-    $('gateSub').textContent = mode === 'name' ? 'Pick a username to start. No email, no password.' : mode === 'login' ? 'Sign in with the email you used before.' : 'Create an account with email. Your name stays hidden when you send anonymously.';
-    $('emailWrap').hidden = mode === 'name';
+    $('gateSub').textContent = mode === 'name' ? 'Pick a username and a PIN. No email needed.' : mode === 'back' ? 'Log in again with your username and PIN. Your Inbox comes with you.' : 'Sign in with the email you used before.';
+    $('emailWrap').hidden = mode !== 'login';
     $('unWrap').hidden = mode === 'login';
-    $('claimBtn').textContent = mode === 'name' ? 'Continue' : mode === 'login' ? 'Sign in' : 'Create account';
-    $('reuse').hidden = true;
+    $('pinWrap').hidden = mode === 'login';
+    $('pinLabel').textContent = mode === 'name' ? 'Create a PIN (4 to 20 characters)' : 'Your PIN';
+    $('pinHint').hidden = mode !== 'name';
+    $('claimBtn').textContent = mode === 'name' ? 'Continue' : mode === 'back' ? 'Log in' : 'Sign in';
+    $('cmsg').textContent = ''; $('reuse').hidden = true;
   }
   $('gateName').onclick = function () { setGateMode('name'); };
+  $('gateBack').onclick = function () { setGateMode('back'); };
   $('gateLogin').onclick = function () { setGateMode('login'); };
-  $('gateCreate').onclick = function () { setGateMode('create'); };
   function gateErr(t) { $('cmsg').className = 'msg err'; $('cmsg').textContent = t; $('claimBtn').disabled = false; }
+  var RECOVER_ERR = { wrong_username_or_pin: 'Wrong username or PIN.', too_many_attempts: 'Too many wrong tries. Please wait 15 minutes, then try again.', already_has_username: 'This device already has a username. Sign out first.' };
   $('claimBtn').onclick = function () {
-    var email = $('email').value.trim(), pass = $('password').value, un = $('un').value.trim();
+    var email = $('email').value.trim(), pass = $('password').value, un = $('un').value.trim(), pin = $('pin').value;
     var route = 'home';
     $('claimBtn').disabled = true; $('cmsg').className = 'msg'; $('cmsg').textContent = 'Please wait...';
     if (!REMOTE) {
-      if (gateMode !== 'login') { if (!un) return gateErr('Choose a username.'); lset(US, un); profile = { username: un }; finishGate(route); }
-      else if (!lget(US, '')) return gateErr('Demo mode needs a username. Use the Username tab.');
-      else { profile = { username: lget(US, '') }; finishGate(route); }
-      $('claimBtn').disabled = false; return;
+      if (gateMode === 'login') { if (!lget(US, '')) return gateErr('Demo mode needs a username. Use the New tab.'); profile = { username: lget(US, ''), has_pin: true }; }
+      else { if (!un) return gateErr('Choose a username.'); lset(US, un); profile = { username: un, has_pin: true }; }
+      finishGate(route); $('claimBtn').disabled = false; return;
     }
     var op;
-    if (profileSetup || gateMode === 'name') {
-      if (!un) return gateErr('Choose a username.');
-      if (profileSetup) op = claim(un);
-      else op = rpc('username_available', { p_username: un }).then(function (ok) {
-        if (!/^[A-Za-z0-9._]{3,20}$/.test(un)) throw { msg: 'Use 3 to 20 letters, numbers, dot or underscore.' };
-        if (ok === false) throw { msg: 'That username is taken. Pick another one.' };
-        return sessionGet() ? null : authSignUpAnon();
-      }).then(function (d) {
-        if (d) { storeSess(d); currentUser = d.user; }
-        return claim(un);
+    if (gateMode === 'login') {
+      if (!email || !pass) return gateErr('Enter your email and password.');
+      op = authSignIn(email, pass).then(function (d) {
+        storeSess(d); currentUser = d.user;
+        return loadProfile().then(function (p) {
+          if (!p) { profileSetup = true; setGateMode('name'); $('gateSub').textContent = 'Signed in. Choose a username and a PIN to finish.'; throw { stop: true }; }
+        });
       });
     } else {
-      if (!email || !pass || pass.length < 6 || (gateMode === 'create' && !un)) return gateErr(gateMode === 'create' ? 'Enter email, password (6+ characters), and username.' : 'Enter your email and password.');
-      if (gateMode === 'create') {
-        op = authSignUp(email, pass).then(function (d) {
-          if (!d.access_token) throw { msg: 'Account created. Check your email to confirm the account, then sign in.' };
-          storeSess(d); currentUser = d.user;
-          return claim(un);
+      if (!/^[A-Za-z0-9._]{3,20}$/.test(un)) return gateErr('Use 3 to 20 letters, numbers, dot or underscore for the username.');
+      if (pin.length < 4 || pin.length > 20) return gateErr('The PIN must be 4 to 20 characters.');
+      var needSession = function () { return sessionGet() ? Promise.resolve(null) : authSignUpAnon(); };
+      var keep = function (d) { if (d) { storeSess(d); currentUser = d.user; } };
+      if (gateMode === 'back') {
+        op = needSession().then(keep).then(function () { return rpc('recover_username', { p_username: un, p_pin: pin }); }).then(function (res) {
+          if (!res || res.ok !== true) throw { msg: RECOVER_ERR[res && res.error] || 'Could not log in. Check your username and PIN.' };
+          return loadProfile();
         });
+      } else if (profileSetup) {
+        op = claim(un, pin);
       } else {
-        op = authSignIn(email, pass).then(function (d) {
-          storeSess(d); currentUser = d.user;
-          return loadProfile().then(function (p) {
-            if (!p) { profileSetup = true; setGateMode('name'); $('gateSub').textContent = 'Signed in. Choose a username to finish your profile.'; throw { stop: true }; }
-          });
-        });
+        op = rpc('username_available', { p_username: un }).then(function (ok) {
+          if (ok === false) throw { msg: 'That username is taken. Pick another one, or use the Log in tab if it is yours.' };
+          return needSession();
+        }).then(keep).then(function () { return claim(un, pin); });
       }
     }
     op.then(function () { finishGate(route); })
@@ -390,9 +418,13 @@
         gateErr(t);
       }).then(function () { $('claimBtn').disabled = false; });
   };
-  $('password').onkeydown = function (e) { if (e.key === 'Enter') $('claimBtn').click(); };
-  $('email').onkeydown = function (e) { if (e.key === 'Enter') $('claimBtn').click(); };
-  $('un').onkeydown = function (e) { if (e.key === 'Enter') $('claimBtn').click(); };
+  ['password', 'email', 'un', 'pin'].forEach(function (id) { $(id).onkeydown = function (e) { if (e.key === 'Enter') $('claimBtn').click(); }; });
+  $('pinSave').onclick = function () {
+    var v = $('pinNew').value;
+    if (v.length < 4 || v.length > 20) { toast('The PIN must be 4 to 20 characters.', true); return; }
+    rpc('set_pin', { p_pin: v }).then(function () { profile.has_pin = true; $('pinNew').value = ''; $('pinNudge').hidden = true; toast('PIN saved. You can now log in on another phone.'); })
+      .catch(function (e) { toast(dbHint(e), true); });
+  };
   $('swap').onclick = function () {
     if (currentUser && currentUser.is_anonymous && !confirm('You signed in with a username only. If you sign out, you cannot get this username or its Inbox back. Sign out anyway?')) return;
     authSignOut().then(function () { setGateMode('name'); showGate(); });
@@ -492,26 +524,42 @@
   var chat = [], TIX = 'anon-tickets', busy = false;
   var CRISIS_TXT = C.CRISIS_TEXT || 'If you may be in danger, please reach out right now: call 911, or the NCMH Crisis Hotline at 1553 (mobile 0917-899-8727), or Hopeline at 0917-558-4673 (2919 is toll-free for Globe/TM). You can also tell a trusted adult near you.';
   function bub(role, text) { var d = document.createElement('div'); d.className = 'b ' + role; d.textContent = text; $('chatlog').appendChild(d); $('chatlog').scrollTop = 1e9; }
-  function setBusy(b) { busy = b; $('chatsend').disabled = b; }
+  function setBusy(b) { busy = b; $('chatsend').disabled = b; var t = $('typing'); if (t) { t.hidden = !b; if (b) $('chatlog').scrollTop = 1e9; } }
   function mySummary() {
     var u = chat.filter(function (m) { return m.role === 'user'; }).map(function (m) { return m.content; }).slice(-3).join(' ');
     return u.slice(0, 600);
   }
-  function sendChat() {
-    var t = $('chatin').value.trim(); if (!t || busy) return;
-    $('chatin').value = ''; bub('me', t); chat.push({ role: 'user', content: t });
+  function songChip(sg) {
+    if (!sg || !sg.title) return;
+    var q = encodeURIComponent(sg.title + ' ' + (sg.artist || '')), d = document.createElement('a');
+    d.className = 'songchip'; d.target = '_blank'; d.rel = 'noopener'; d.href = 'https://open.spotify.com/search/' + q;
+    d.textContent = 'Try listening: ' + String(sg.title).slice(0, 60) + (sg.artist ? ' by ' + String(sg.artist).slice(0, 40) : '');
+    $('chatlog').appendChild(d); $('chatlog').scrollTop = 1e9;
+  }
+  var CHAT_ERR = {
+    slow_down: 'You are sending messages quickly. Take a breath and try again in a minute.',
+    busy: 'Support Buddy is resting for today because many people used it. You can still send your concern to a real person with the link below.',
+    not_configured: 'The AI helper is not switched on yet. You can still send your concern to a real person with the link below.'
+  };
+  function sendChat(text) {
+    var t = (typeof text === 'string' ? text : $('chatin').value).trim(); if (!t || busy) return;
+    $('chatin').value = ''; $('chips').hidden = true; bub('me', t); chat.push({ role: 'user', content: t });
     if (!REMOTE) { bub('bot', 'The support chat needs the online database. Add your keys in config.js.'); return; }
     setBusy(true);
-    fresh().then(function () { return fetch(C.SUPABASE_URL + '/functions/v1/support-chat', { method: 'POST', headers: fnHeaders(), body: JSON.stringify({ messages: chat.slice(-10) }) }); })
+    fresh().then(function () { return fetch(C.SUPABASE_URL + '/functions/v1/support-chat', { method: 'POST', headers: fnHeaders(), body: JSON.stringify({ messages: chat.slice(-20) }) }); })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d; return d; }); })
       .then(function (d) {
-        chat.push({ role: 'assistant', content: d.reply }); bub('bot', d.reply);
+        chat.push({ role: 'assistant', content: d.reply }); bub('bot', d.reply); songChip(d.song);
         if (d.crisis) { $('crisisBox').textContent = CRISIS_TXT; $('crisisBox').hidden = false; }
         if (d.escalate) askConsent(d.summary || mySummary());
       })
       .catch(function (e) {
-        bub('bot', e && e.error === 'slow_down' ? 'You are sending messages quickly. Take a breath and try again in a minute.' : 'I cannot answer right now. If you want, you can send your concern to a real person using the link below.');
+        bub('bot', (e && CHAT_ERR[e.error]) || 'I could not answer just now. Please try again in a moment, or send your concern to a real person with the link below.');
       }).then(function () { setBusy(false); });
+  }
+  function newChat() {
+    chat = []; $('chatlog').innerHTML = ''; $('crisisBox').hidden = true; $('consent').hidden = true; $('chips').hidden = false;
+    bub('bot', 'Hi, I am Support Buddy. I am an AI, not a therapist, so I can listen and share ideas, but I cannot diagnose or replace a real person. What is on your mind today?');
   }
   function askConsent(summary) {
     var c = $('consent'); c.hidden = false;
@@ -539,11 +587,13 @@
       }).join('');
     });
   }
-  $('chatsend').onclick = sendChat;
+  $('chatsend').onclick = function () { sendChat(); };
+  $('newchat').onclick = newChat;
+  $('chips').onclick = function (e) { var b = e.target.closest('button'); if (b) sendChat(b.textContent); };
   $('chatin').onkeydown = function (e) { if (e.key === 'Enter') sendChat(); };
   $('human').onclick = function () { askConsent(mySummary()); };
   $('tixrefresh').onclick = refreshTix;
-  bub('bot', 'Hi, I am Support Buddy. I am an AI, not a therapist, and I can only listen and share general ideas. How are you feeling today?');
+  newChat();
 
 
   /* ---------- boot ---------- */
@@ -573,8 +623,9 @@
         $('gateSub').textContent = 'You are signed in. Choose a username to finish.';
         return;
       }
-      tab('home');
-    }).catch(function () {
+      tab('home'); checkInbox(false);
+    }).catch(function (e) {
+      if (!(e && e.status && e.status >= 400 && e.status < 500)) { profile = null; setGateMode('name'); showGate(); $('cmsg').className = 'msg err'; $('cmsg').textContent = 'Could not reach the server. Check your connection and reload. You are not signed out.'; return; }
       sessionSet(null); currentUser = null; profile = null; setGateMode('name'); showGate();
     });
   }

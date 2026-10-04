@@ -5,6 +5,7 @@
 -- =====================================================================
 
 create extension if not exists pg_cron;
+create extension if not exists pgcrypto with schema extensions;
 
 -- ---------- PART 1: usernames and messages ----------
 create table if not exists public.users (
@@ -14,6 +15,7 @@ create table if not exists public.users (
   created_at timestamptz default now()
 );
 alter table public.users add column if not exists auth_id uuid references auth.users(id) on delete cascade;
+alter table public.users add column if not exists pin_hash text;   -- PIN so you can log in again on another phone
 create unique index if not exists users_auth_id_unique on public.users (auth_id) where auth_id is not null;
 
 create table if not exists public.messages (
@@ -40,6 +42,11 @@ create table if not exists public.send_log (auth_id uuid not null, at timestampt
 create index if not exists send_log_auth_at on public.send_log (auth_id, at desc);
 alter table public.send_log enable row level security;
 revoke all on public.send_log from anon, authenticated;
+
+-- wrong-PIN counter (locks a username for 15 minutes after 5 wrong tries)
+create table if not exists public.pin_attempts (user_key text primary key, fails integer not null default 0, locked_until timestamptz);
+alter table public.pin_attempts enable row level security;
+revoke all on public.pin_attempts from anon, authenticated;
 
 alter table public.users enable row level security;
 alter table public.messages enable row level security;
@@ -72,8 +79,9 @@ language sql stable security definer set search_path = public, pg_catalog as $$
                   where username_key = lower(btrim(p_username)) and auth_id is not null)
 $$;
 
-create or replace function public.claim_username(p_username text) returns json
-language plpgsql security definer set search_path = public, pg_catalog as $$
+drop function if exists public.claim_username(text);   -- replaced by the version with a PIN
+create or replace function public.claim_username(p_username text, p_pin text default null) returns json
+language plpgsql security definer set search_path = public, extensions, pg_catalog as $$
 declare
   u text := btrim(p_username);
   k text := lower(btrim(p_username));
@@ -83,22 +91,72 @@ begin
   if u !~ '^[A-Za-z0-9._]{3,20}$' then raise exception 'invalid_username'; end if;
   select * into existing from public.users where username_key = k for update;
   if found then
-    if existing.auth_id is null then
-      update public.users set auth_id = auth.uid() where id = existing.id;
+    if existing.auth_id = auth.uid() then
       return json_build_object('username', existing.username);
-    elsif existing.auth_id = auth.uid() then
+    elsif existing.auth_id is null then          -- old name from before accounts: first come, first served
+      update public.users set auth_id = auth.uid(),
+        pin_hash = case when p_pin is not null and char_length(p_pin) between 4 and 20
+                        then extensions.crypt(p_pin, extensions.gen_salt('bf')) else pin_hash end
+       where id = existing.id;
       return json_build_object('username', existing.username);
     else
       raise exception 'username_taken' using errcode = '23505';
     end if;
   end if;
-  insert into public.users (username, username_key, auth_id) values (u, k, auth.uid());
+  if p_pin is null or char_length(p_pin) < 4 or char_length(p_pin) > 20 then raise exception 'pin_required'; end if;
+  if exists (select 1 from public.users where auth_id = auth.uid()) then raise exception 'already_has_username'; end if;
+  insert into public.users (username, username_key, auth_id, pin_hash)
+  values (u, k, auth.uid(), extensions.crypt(p_pin, extensions.gen_salt('bf')));
   return json_build_object('username', u);
+end $$;
+
+-- Log in again (new phone, cleared browser): username + PIN. The Inbox moves to this device.
+-- It returns ok:false instead of raising, so the wrong-try counter is really saved.
+create or replace function public.recover_username(p_username text, p_pin text) returns json
+language plpgsql security definer set search_path = public, extensions, pg_catalog as $$
+declare k text := lower(btrim(p_username)); u public.users%rowtype; a public.pin_attempts%rowtype; old uuid;
+begin
+  if auth.uid() is null then raise exception 'login_required' using errcode = '42501'; end if;
+  select * into a from public.pin_attempts where user_key = k;
+  if found and a.locked_until is not null and a.locked_until > now() then
+    return json_build_object('ok', false, 'error', 'too_many_attempts');
+  end if;
+  select * into u from public.users where username_key = k for update;
+  if not found or u.pin_hash is null or u.pin_hash <> extensions.crypt(coalesce(p_pin, ''), u.pin_hash) then
+    if found then
+      insert into public.pin_attempts (user_key, fails) values (k, 1)
+      on conflict (user_key) do update
+        set fails = public.pin_attempts.fails + 1,
+            locked_until = case when public.pin_attempts.fails + 1 >= 5 then now() + interval '15 minutes' else public.pin_attempts.locked_until end;
+    end if;
+    return json_build_object('ok', false, 'error', 'wrong_username_or_pin');
+  end if;
+  if exists (select 1 from public.users where auth_id = auth.uid() and id <> u.id) then
+    return json_build_object('ok', false, 'error', 'already_has_username');
+  end if;
+  delete from public.pin_attempts where user_key = k;
+  old := u.auth_id;
+  update public.users set auth_id = auth.uid() where id = u.id;
+  if old is not null and old <> auth.uid() then
+    update public.messages set recipient_auth_id = auth.uid() where recipient_auth_id = old;
+  end if;
+  return json_build_object('ok', true, 'username', u.username);
+end $$;
+
+create or replace function public.set_pin(p_pin text) returns boolean
+language plpgsql security definer set search_path = public, extensions, pg_catalog as $$
+begin
+  if auth.uid() is null then raise exception 'login_required' using errcode = '42501'; end if;
+  if p_pin is null or char_length(p_pin) < 4 or char_length(p_pin) > 20 then raise exception 'invalid_pin'; end if;
+  update public.users set pin_hash = extensions.crypt(p_pin, extensions.gen_salt('bf')) where auth_id = auth.uid();
+  if not found then raise exception 'no_profile'; end if;
+  return true;
 end $$;
 
 create or replace function public.my_profile() returns json
 language sql security definer set search_path = public, pg_catalog as $$
-  select coalesce((select json_build_object('username', username) from public.users where auth_id = auth.uid() limit 1), '{}'::json)
+  select coalesce((select json_build_object('username', username, 'has_pin', pin_hash is not null)
+                     from public.users where auth_id = auth.uid() limit 1), '{}'::json)
 $$;
 
 create or replace function public.send_message(
@@ -131,9 +189,9 @@ begin
   return new_id;
 end $$;
 
-revoke all on function public.claim_username(text), public.my_profile(),
+revoke all on function public.claim_username(text, text), public.recover_username(text, text), public.set_pin(text), public.my_profile(),
   public.send_message(text,text,text,text,text,text,text,text) from public, anon;
-grant execute on function public.claim_username(text), public.my_profile(),
+grant execute on function public.claim_username(text, text), public.recover_username(text, text), public.set_pin(text), public.my_profile(),
   public.send_message(text,text,text,text,text,text,text,text) to authenticated;
 revoke all on function public.username_available(text), public.username_exists(text) from public;
 grant execute on function public.username_available(text), public.username_exists(text) to anon, authenticated;
@@ -433,5 +491,21 @@ grant execute on function public.admin_state() to authenticated;
 do $$ begin perform cron.unschedule('anonymous-ticket-cleanup'); exception when others then null; end $$;
 select cron.schedule('anonymous-ticket-cleanup', '0 3 * * *',
   $q$delete from public.support_tickets where status = 'resolved' and updated_at < now() - interval '90 days'$q$);
+
+
+-- Daily cap for the AI chat, so a surprise bill is impossible (the function reads it with the service role).
+create table if not exists public.chat_usage (day date primary key, n integer not null default 0);
+alter table public.chat_usage enable row level security;
+revoke all on public.chat_usage from anon, authenticated;
+create or replace function public.chat_allow(p_cap integer) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare c integer;
+begin
+  insert into public.chat_usage (day, n) values (current_date, 1)
+  on conflict (day) do update set n = public.chat_usage.n + 1 returning n into c;
+  return c <= p_cap;
+end $$;
+revoke all on function public.chat_allow(integer) from public, anon, authenticated;
+grant execute on function public.chat_allow(integer) to service_role;
 
 notify pgrst, 'reload schema';

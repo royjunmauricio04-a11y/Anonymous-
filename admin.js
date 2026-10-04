@@ -55,7 +55,7 @@
     if (s.exp - 60 > Date.now() / 1000) return Promise.resolve(s.access);
     return authCall('token?grant_type=refresh_token', { refresh_token: s.refresh }).then(function (d) {
       var n = toSess(d); n.email = n.email || s.email; sessSet(n); return n.access;
-    }).catch(function (e) { sessSet(null); throw e; });
+    }).catch(function (e) { if (e && (e.status === 400 || e.status === 401 || e.status === 403)) sessSet(null); throw e; });
   }
   function A(path, opt) {
     return token().then(function (t) { opt = opt || {}; opt.headers = Object.assign({ Authorization: 'Bearer ' + t }, opt.headers); return api(path, opt); });

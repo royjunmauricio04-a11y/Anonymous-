@@ -1,7 +1,21 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Anonymous</title>
+<title>Anonymous: send a song, stay unknown</title>
+<meta name="description" content="Send an anonymous song and message to someone. They will never know it was you.">
+<meta name="theme-color" content="#E5334B">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Anonymous">
+<meta property="og:title" content="Anonymous: send a song, stay unknown">
+<meta property="og:description" content="Send an anonymous song and message to someone. They will never know it was you.">
+<meta property="og:image" content="https://anonymous-ztsp.onrender.com/og-image.png">
+<meta property="og:url" content="https://anonymous-ztsp.onrender.com/">
+<meta name="twitter:card" content="summary_large_image">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head><body><main>
@@ -15,12 +29,12 @@
 </div>
 
 <section id="gate" hidden>
- <h2 class="headline">pick a username.</h2>
- <p class="sub" id="gateSub">Pick a username to start. No email, no password.</p>
+ <h2 class="headline">your username.</h2>
+ <p class="sub" id="gateSub">Pick a username and a PIN. No email needed.</p>
  <div class="gate-switch" role="tablist" aria-label="How to sign in">
-  <button id="gateName" class="gate-tab" role="tab" aria-selected="true">Username</button>
-  <button id="gateLogin" class="gate-tab" role="tab" aria-selected="false">Email sign in</button>
-  <button id="gateCreate" class="gate-tab" role="tab" aria-selected="false">Email sign up</button>
+  <button id="gateName" class="gate-tab" role="tab" aria-selected="true">New</button>
+  <button id="gateBack" class="gate-tab" role="tab" aria-selected="false">Log in</button>
+  <button id="gateLogin" class="gate-tab" role="tab" aria-selected="false">Email</button>
  </div>
  <div class="box">
   <div id="emailWrap" hidden>
@@ -33,10 +47,15 @@
    <label for="un">Username</label>
    <input id="un" maxlength="20" placeholder="3 to 20 letters, numbers, dot or underscore" autocomplete="off" autocapitalize="none">
   </div>
+  <div id="pinWrap">
+   <label for="pin" id="pinLabel">Create a PIN (4 to 20 characters)</label>
+   <input id="pin" type="password" inputmode="text" maxlength="20" placeholder="Remember it" autocomplete="off">
+   <p class="sub" id="pinHint" style="margin:6px 0 0;font-size:.85rem">Your PIN lets you log in again on a new phone and keeps your Inbox. Nobody else can see it.</p>
+  </div>
   <button class="btn full" id="claimBtn">Continue</button><p class="msg" id="cmsg" role="status"></p>
   <button class="link" id="reuse" hidden></button>
  </div>
- <p class="fine">Your username is how people find you. Your identity is still hidden from the recipient when you send anonymously. Tip: this browser remembers you, so do not clear its data if you want to keep your Inbox.</p>
+ <p class="fine">Your identity is hidden from the people you send to. Your username is only how friends find you.</p>
 </section>
 
 <section id="home" hidden>
@@ -70,6 +89,11 @@
   <div class="row" style="margin-top:10px"><input id="link" readonly aria-label="Your link"><button class="btn dark" id="copy">Copy</button></div>
   <p class="sub" id="linkNote" hidden style="margin:8px 0 0"></p>
   <div class="share" id="share"></div>
+  <div class="warn" id="pinNudge" hidden style="margin:14px 0 0">
+   <b>Add a PIN.</b> Without it you cannot get this username or your Inbox back if you change phones or clear your browser.
+   <div class="row" style="margin-top:10px"><input id="pinNew" type="password" maxlength="20" placeholder="New PIN (4 to 20 characters)" autocomplete="off"><button class="btn dark" id="pinSave">Save</button></div>
+  </div>
+
   <button class="link" id="swap">Use a different username</button>
  </div>
  <h2 class="sec">Your messages</h2>
@@ -95,10 +119,12 @@
  <div class="box">
   <p class="sub" style="margin:0 0 12px">An AI listener for how you feel. It is not a therapist or a doctor and cannot diagnose or fix everything. This chat is not saved.</p>
   <div id="chatlog" class="chatlog" aria-live="polite"></div>
+  <div class="typing" id="typing" hidden><i></i><i></i><i></i></div>
+  <div class="chips" id="chips"><button>I feel anxious</button><button>My heart is broken</button><button>I cannot sleep</button><button>Problems with family</button><button>I feel alone</button></div>
   <div id="crisisBox" class="warn" hidden></div>
   <div id="consent" class="consent" hidden></div>
   <div class="row"><input id="chatin" maxlength="1000" placeholder="Tell me what is on your mind" autocomplete="off"><button class="btn" id="chatsend">Send</button></div>
-  <button class="link" id="human">Send my concern to a real person</button>
+  <button class="link" id="human">Send my concern to a real person</button> <button class="link" id="newchat" style="margin-left:14px">New chat</button>
  </div>
  <div class="box" id="mytix" style="margin-top:16px" hidden>
   <h3>My requests</h3><div id="tixlist"></div>

@@ -2,46 +2,79 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Send an anonymous song</title>
+<meta name="description" content="Someone shared their link with you. Send them a song and a message. They will never know it was you.">
+<meta name="theme-color" content="#E5334B">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Anonymous">
+<meta property="og:title" content="Send an anonymous song">
+<meta property="og:description" content="Someone shared their link with you. Send them a song and a message. They will never know it was you.">
+<meta property="og:image" content="https://anonymous-ztsp.onrender.com/og-image.png">
+<meta property="og:url" content="https://anonymous-ztsp.onrender.com/send.html">
+<meta name="twitter:card" content="summary_large_image">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-</head><body><div class="nglwrap">
+</head><body class="lp">
 
-<section id="sLoad"><div class="empty">Loading...</div></section>
+<section id="sLoad" class="lp-center"><div class="empty">Loading...</div></section>
 
-<section id="sForm" hidden>
- <div class="ngl-card">
-  <div class="ngl-head"><div class="ngl-av" id="sAv"></div><div><b id="sName"></b><span>send me an anonymous song</span></div></div>
-  <textarea id="sText" maxlength="1000" placeholder="write a message..." aria-label="Your message"></textarea>
-  <div class="ngl-song">
-   <input id="sq" placeholder="Search a song to send" autocomplete="off" aria-label="Song">
-   <div class="res" id="sres" hidden></div><div id="spicked"></div>
+<main id="sForm" hidden>
+ <header class="lp-hero">
+  <div class="lp-brand"><svg viewBox="0 0 40 24" aria-hidden="true"><path d="M2 8c6-4 12-4 18-1 6-3 12-3 18 1 0 8-5 13-10 13-4 0-6-3-8-3s-4 3-8 3C7 21 2 16 2 8z" fill="#fff"/><ellipse cx="12.5" cy="12" rx="4.2" ry="2.6" fill="#E5334B"/><ellipse cx="27.5" cy="12" rx="4.2" ry="2.6" fill="#E5334B"/></svg>Anonymous</div>
+  <div class="lp-av" id="sAv"></div>
+  <h1 class="lp-name" id="sName"></h1>
+  <p class="lp-sub">send me an anonymous song</p>
+ </header>
+
+ <div class="lp-sheet">
+  <div class="lp-prompts" id="sPrompts" aria-label="Ideas for your message">
+   <button>You are my favorite person</button><button>This song reminds me of you</button><button>I am sorry about before</button><button>Thank you for everything</button><button>I miss you</button>
   </div>
-  <p class="ngl-note" id="sNote"></p>
+  <div class="lp-field">
+   <textarea id="sText" maxlength="1000" placeholder="write your message..." aria-label="Your message"></textarea>
+   <span class="lp-count" id="sCount">0 / 1000</span>
+  </div>
+
+  <div class="lp-song">
+   <label for="sq">Pick a song</label>
+   <input id="sq" placeholder="Search a song or artist" autocomplete="off">
+   <div class="res" id="sres" hidden></div>
+   <div id="spicked"></div>
+  </div>
+
+  <button class="btn full lp-send" id="sSend">Send anonymously</button>
+  <p class="msg" id="sMsg" role="status"></p>
+  <p class="lp-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h6V8a3 3 0 0 0-6 0v2z" fill="currentColor"/></svg><span id="sNote"></span></p>
+
+  <div class="lp-own">
+   <p>Want your own link? Get messages and songs from your friends.</p>
+   <a class="btn ghost full" href="index.html">Get your own link</a>
+  </div>
  </div>
- <button class="btn full ngl-send" id="sSend">Send!</button>
- <p class="msg" id="sMsg" role="status"></p>
- <a class="btn ghost full" href="index.html">Get your own link</a>
-</section>
+</main>
 
-<section id="sDone" class="ngl-done" hidden>
- <h2>sent!</h2>
- <p class="sub">Your song is on its way. Nobody will know it was you.</p>
- <button class="btn full" id="sAgain">Send another</button>
- <a class="btn ghost full" href="index.html">Get your own link</a>
-</section>
+<main id="sDone" class="lp-center" hidden>
+ <div class="lp-done">
+  <div id="sDoneArt" class="lp-doneart"></div>
+  <h1>sent!</h1>
+  <p class="sub" id="sDoneTxt"></p>
+  <button class="btn full" id="sAgain">Send another</button>
+  <a class="btn ghost full" href="index.html">Get your own link</a>
+ </div>
+</main>
 
-<section id="sMiss" class="ngl-done" hidden>
- <h2>hmm.</h2>
- <p class="sub" id="sMissTxt"></p>
- <a class="btn full" href="index.html">Go to Anonymous</a>
-</section>
+<main id="sMiss" class="lp-center" hidden>
+ <div class="lp-done"><h1>hmm.</h1><p class="sub" id="sMissTxt"></p><a class="btn full" href="index.html">Go to Anonymous</a></div>
+</main>
 
-<section id="sMaint" class="ngl-done" hidden>
- <h2>back soon.</h2>
- <p class="sub" id="sMaintTxt"></p>
-</section>
+<main id="sMaint" class="lp-center" hidden>
+ <div class="lp-done"><h1>back soon.</h1><p class="sub" id="sMaintTxt"></p></div>
+</main>
 
-</div>
 <script src="config.js"></script>
 <script src="send.js"></script>
 </body></html>
