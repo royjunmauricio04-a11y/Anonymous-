@@ -162,10 +162,26 @@ body.lp{background:var(--accent)}
 .lp-prompts::-webkit-scrollbar{display:none}
 .lp-prompts button{flex:none;border:1px solid var(--border);background:var(--surface);color:var(--text);font:500 .85rem 'Plus Jakarta Sans',sans-serif;padding:8px 14px;border-radius:999px;cursor:pointer;white-space:nowrap}
 .lp-prompts button:active{background:var(--border)}
-.lp-field{position:relative}
-.lp-field textarea{height:150px;border-radius:18px;padding:16px 16px 30px;font-family:'Caveat',cursive;font-size:1.65rem;line-height:1.25;background:var(--surface);border-color:transparent}
+.lp-field{position:relative;z-index:1}
+.lp-field textarea{
+  height:150px;border-radius:18px;padding:16px 16px 30px;
+  font-family:'Caveat',cursive;font-size:1.65rem;line-height:1.25;
+  background:var(--surface);border-color:transparent;color:var(--text);
+  caret-color:var(--accent);
+  -webkit-user-select:text;user-select:text;
+  pointer-events:auto;touch-action:manipulation;
+  -webkit-appearance:none;appearance:none
+}
 .lp-field textarea:focus{background:var(--bg);border-color:var(--text)}
-.lp-count{position:absolute;right:14px;bottom:10px;font-size:.75rem;color:var(--muted)}
+.lp-count{position:absolute;right:14px;bottom:10px;font-size:.75rem;color:var(--muted);pointer-events:none;z-index:2}
+.lp-song{position:relative;z-index:1}
+.lp-song input{
+  -webkit-user-select:text;user-select:text;
+  pointer-events:auto;touch-action:manipulation;
+  caret-color:var(--accent);color:var(--text);
+  -webkit-appearance:none;appearance:none
+}
+.lp-song .res{position:relative;z-index:5}
 .lp-song{margin-top:16px}
 .lp-song label{margin-top:0;font-weight:700;font-size:.9rem}
 .lp-song .sub{margin:4px 0 10px}
