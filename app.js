@@ -361,7 +361,7 @@
     $('send').disabled = true;
     saveMsg(o).then(function (saved) {
       if (saved && saved.id) o.id = saved.id;
-      var sent = lget(SENT, []); sent.unshift(o); lset(SENT, sent.slice(0, 100));
+      var sent = pruneHistory(); sent.unshift(o); lset(SENT, sent.slice(0, 100));
       m.className = 'msg ok-pop';
       m.textContent = direct ? 'Sent anonymously. Only the owner of that personal link can see it in their Inbox.' : 'Posted anonymously to Browse. The named person will not receive an Inbox message.';
       $('to').value = direct ? $('to').value : ''; $('text').value = ''; pick = null; $('picked').innerHTML = ''; $('q').hidden = false;
@@ -803,7 +803,24 @@
       $('mqs').innerHTML = mqRow(rows[0], false) + mqRow(rows[1], true) + mqRow(rows[2], false); hydrateArt();
     });
   }
-  function showHistory() { show($('hlist'), lget(SENT, []), 'Nothing sent from this device yet.', false); }
+  /* History keeps only the last 7 days on this device */
+  var HISTORY_DAYS = 7;
+  function pruneHistory() {
+    var cutoff = Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000;
+    var all = lget(SENT, []);
+    var kept = all.filter(function (m) {
+      var t = m && m.t;
+      if (!t) return false;
+      if (typeof t === 'string') t = Date.parse(t) || 0;
+      return t >= cutoff;
+    });
+    if (kept.length !== all.length) lset(SENT, kept);
+    return kept;
+  }
+  function showHistory() {
+    var list = pruneHistory();
+    show($('hlist'), list, 'Nothing sent from this device in the last 7 days.', false);
+  }
   document.addEventListener('click', function (e) { var g = e.target.closest('[data-go]'); if (g) tab(g.dataset.go); });
   $('homeLink').onclick = function () { tab('home'); };
   $('homeLink').onkeydown = function (e) { if (e.key === 'Enter') tab('home'); };

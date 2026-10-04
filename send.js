@@ -143,7 +143,7 @@
     var raw = $('sq').value.trim(); clearTimeout(tmr);
     if (!raw) { showRecs(); return; }
     $('sres').innerHTML = '<button type="button" data-free="1">' + art('') +
-      '<span><b>Use “‘ + esc(raw) + '”</b><span>Add as typed (Title - Artist)</span></span></button>';
+      '<span><b>Use "' + esc(raw) + '"</b><span>Add as typed (Title - Artist)</span></span></button>';
     $('sres').hidden = false;
     tmr = setTimeout(function () {
       itunes(raw, 10).then(function (d) {
@@ -156,7 +156,7 @@
             '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>';
         }).join('') +
           '<button type="button" data-free="1">' + art('') +
-          '<span><b>Use “‘ + esc(raw) + '”</b><span>Add as typed (Title - Artist)</span></span></button>';
+          '<span><b>Use "' + esc(raw) + '"</b><span>Add as typed (Title - Artist)</span></span></button>';
       }).catch(function () {});
     }, 350);
   };
