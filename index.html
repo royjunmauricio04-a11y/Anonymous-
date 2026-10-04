@@ -19,13 +19,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head><body><main>
-<h1 id="homeLink" role="link" tabindex="0" aria-label="Home" style="cursor:pointer"><svg class="logo" viewBox="0 0 40 24" aria-hidden="true"><path d="M2 8c6-4 12-4 18-1 6-3 12-3 18 1 0 8-5 13-10 13-4 0-6-3-8-3s-4 3-8 3C7 21 2 16 2 8z" fill="var(--pink)"/><ellipse cx="12.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/><ellipse cx="27.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/></svg>Anonymous</h1>
+<div class="topbar">
+ <h1 id="homeLink" role="link" tabindex="0" aria-label="Home" style="cursor:pointer"><svg class="logo" viewBox="0 0 40 24" aria-hidden="true"><path d="M2 8c6-4 12-4 18-1 6-3 12-3 18 1 0 8-5 13-10 13-4 0-6-3-8-3s-4 3-8 3C7 21 2 16 2 8z" fill="var(--pink)"/><ellipse cx="12.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/><ellipse cx="27.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/></svg>Anonymous</h1>
+ <button type="button" id="themeToggle" class="theme-toggle" aria-label="Switch theme" title="Light / Dark">
+  <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0-5a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 17a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zM3 11a1 1 0 1 1 0 2H2a1 1 0 1 1 0-2h1zm19 0a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2h1zM5.64 5.64a1 1 0 0 1 1.41 0l.71.7a1 1 0 1 1-1.41 1.42l-.7-.71a1 1 0 0 1 0-1.41zm12.02 12.02a1 1 0 0 1 1.41 0l.71.71a1 1 0 0 1-1.41 1.41l-.71-.71a1 1 0 0 1 0-1.41zM5.64 18.36a1 1 0 0 1 0-1.41l.7-.71a1 1 0 1 1 1.42 1.41l-.71.71a1 1 0 0 1-1.41 0zm12.02-12.02a1 1 0 0 1 0-1.41l.71-.71a1 1 0 0 1 1.41 1.41l-.71.71a1 1 0 0 1-1.41 0z"/></svg>
+  <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12.1 2a1 1 0 0 1 .9 1.4A8 8 0 1 0 19.6 14a1 1 0 0 1 1.5.9A10 10 0 1 1 12.1 2z"/></svg>
+ </button>
+</div>
 <div class="tabs" role="tablist" id="tabs">
  <button role="tab" data-t="submit" aria-selected="false">Submit</button>
  <button role="tab" data-t="browse" aria-selected="false">Browse</button>
  <button role="tab" data-t="mybox" aria-selected="false">Inbox</button>
  <button role="tab" data-t="history" aria-selected="false">History</button>
- <button role="tab" data-t="support" aria-selected="false">Support</button>
 </div>
 
 <section id="gate" hidden>
@@ -80,7 +85,9 @@
 <div class="box">
  <label for="to" id="toLabel">Name or nickname (public post)</label><input id="to" maxlength="40" placeholder="Who is this message about?" autocomplete="off"><p class="sub" id="sendHint">This appears anonymously in Browse. It will not go to anyone’s Inbox.</p>
  <label for="text">Message</label><textarea id="text" maxlength="5000" placeholder="Write it here. Your name stays hidden."></textarea>
- <label for="q">Song</label><input id="q" placeholder="Search and select your song" autocomplete="off">
+ <label for="q">Song</label>
+ <p class="sub" style="margin:0 0 8px;font-size:.85rem">Tap the box to see recommended songs, or type to search.</p>
+ <input id="q" placeholder="Tap for recommendations or search a song" autocomplete="off">
  <div class="res" id="res" hidden></div><div id="picked"></div>
  <button class="btn full" id="send">Send anonymously</button><p class="msg" id="msg" role="status"></p>
 </div></section>
@@ -107,35 +114,45 @@
 </section>
 
 <section id="history" hidden>
- <p class="sub">Songs you sent from this device. Only you can see this list.</p>
+ <p class="sub">Songs you sent from this device in the last 7 days. Older entries are removed automatically. Only you can see this list.</p>
  <div id="hlist"></div>
 </section>
 
-<section id="support" hidden>
- <div class="box faq">
-  <details open><summary>Is it really anonymous?</summary><p>Your account is used to prevent spam and protect your Inbox, but your username is not shown to the recipient when you send anonymously.</p></details>
-  <details><summary>Can I delete a message?</summary><p>No. Once it is posted it cannot be removed, so check it before you send.</p></details>
-  <details><summary>Why only 30 seconds of the song?</summary><p>The player uses the free 30-second preview. Tap the arrow to open the full song in Spotify.</p></details>
-  <details><summary>How do I get my messages?</summary><p>Claim a username to create a personal link. Messages sent through that link appear in your Inbox. Public Browse posts are not delivered to anyone’s Inbox.</p></details>
+<!-- Support Buddy modal (opened by floating button) -->
+<div id="supportOverlay" class="support-overlay" hidden>
+ <div class="support-sheet" role="dialog" aria-labelledby="supportTitle">
+  <div class="support-head">
+   <h2 id="supportTitle">Support Buddy</h2>
+   <button type="button" class="support-close" id="supportClose" aria-label="Close">×</button>
+  </div>
+  <div class="support-body">
+   <div class="box faq" style="margin-bottom:14px">
+    <details><summary>Is it really anonymous?</summary><p>Your account is used to prevent spam and protect your Inbox, but your username is not shown to the recipient when you send anonymously.</p></details>
+    <details><summary>Can I delete a message?</summary><p>No. Once it is posted it cannot be removed, so check it before you send.</p></details>
+    <details><summary>Why only 30 seconds of the song?</summary><p>The player uses the free 30-second preview. Tap the arrow to open the full song in Spotify.</p></details>
+    <details><summary>How do I get my messages?</summary><p>Claim a username to create a personal link. Messages sent through that link appear in your Inbox. Public Browse posts are not delivered to anyone’s Inbox.</p></details>
+   </div>
+   <a class="btn dark full" id="fb2" hidden style="display:none;text-align:center;text-decoration:none;margin-bottom:12px">Send feedback</a>
+   <p class="sub" style="margin:0 0 12px">An AI listener for how you feel. It is not a therapist or a doctor. This chat is not saved.</p>
+   <div id="chatlog" class="chatlog" aria-live="polite"></div>
+   <div class="typing" id="typing" hidden><i></i><i></i><i></i></div>
+   <div class="chips" id="chips"><button>I feel anxious</button><button>My heart is broken</button><button>I cannot sleep</button><button>Problems with family</button><button>I feel alone</button></div>
+   <div id="crisisBox" class="warn" hidden></div>
+   <div id="consent" class="consent" hidden></div>
+   <div class="row"><input id="chatin" maxlength="1000" placeholder="Tell me what is on your mind" autocomplete="off"><button class="btn" id="chatsend">Send</button></div>
+   <button class="link" id="human">Send my concern to a real person</button> <button class="link" id="newchat" style="margin-left:14px">New chat</button>
+   <div class="box" id="mytix" style="margin-top:16px" hidden>
+    <h3>My requests</h3><div id="tixlist"></div>
+    <button class="btn ghost full" id="tixrefresh">Check for replies</button>
+   </div>
+  </div>
  </div>
- <a class="btn dark full" id="fb2" hidden style="display:none;text-align:center;text-decoration:none">Send feedback</a>
+</div>
 
- <h2 class="sec">Talk to Support Buddy</h2>
- <div class="box">
-  <p class="sub" style="margin:0 0 12px">An AI listener for how you feel. It is not a therapist or a doctor and cannot diagnose or fix everything. This chat is not saved.</p>
-  <div id="chatlog" class="chatlog" aria-live="polite"></div>
-  <div class="typing" id="typing" hidden><i></i><i></i><i></i></div>
-  <div class="chips" id="chips"><button>I feel anxious</button><button>My heart is broken</button><button>I cannot sleep</button><button>Problems with family</button><button>I feel alone</button></div>
-  <div id="crisisBox" class="warn" hidden></div>
-  <div id="consent" class="consent" hidden></div>
-  <div class="row"><input id="chatin" maxlength="1000" placeholder="Tell me what is on your mind" autocomplete="off"><button class="btn" id="chatsend">Send</button></div>
-  <button class="link" id="human">Send my concern to a real person</button> <button class="link" id="newchat" style="margin-left:14px">New chat</button>
- </div>
- <div class="box" id="mytix" style="margin-top:16px" hidden>
-  <h3>My requests</h3><div id="tixlist"></div>
-  <button class="btn ghost full" id="tixrefresh">Check for replies</button>
- </div>
-</section>
+<!-- Floating Support button (side) -->
+<button type="button" id="supportFab" class="support-fab" aria-label="Open Support Buddy" title="Need help?">
+ <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l5.71-.97C9 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.38 0-2.68-.29-3.86-.81l-.28-.14-2.9.49.5-2.85-.16-.29A7.93 7.93 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z"/></svg>
+</button>
 
 <section id="maint" hidden>
  <h2 class="headline">back soon.</h2>
@@ -145,10 +162,11 @@
 <section id="detail" hidden></section>
 <div id="toast" class="toast" role="status" hidden></div>
 <footer class="foot">
- <div class="flinks"><button class="link" data-go="support">Support</button><a class="link" id="fb" hidden>Send feedback</a></div>
+ <div class="flinks"><button class="link" id="footerSupport">Support & FAQ</button><a class="link" id="fb" hidden>Send feedback</a></div>
  <p class="fine" id="fine"></p><p class="fine">&copy; Anonymous</p>
 </footer>
 </main>
+<div id="successBurst" class="success-burst" hidden aria-hidden="true">sent!</div>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body></html>

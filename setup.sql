@@ -528,3 +528,131 @@ revoke all on function public.chat_allow(integer) from public, anon, authenticat
 grant execute on function public.chat_allow(integer) to service_role;
 
 notify pgrst, 'reload schema';
+
+-- ---------- PART: reactions on public posts ----------
+create table if not exists public.reactions (
+  message_id uuid not null references public.messages(id) on delete cascade,
+  auth_id uuid not null,
+  emoji text not null check (char_length(emoji) between 1 and 8),
+  created_at timestamptz default now(),
+  primary key (message_id, auth_id)
+);
+create index if not exists reactions_message on public.reactions (message_id);
+alter table public.reactions enable row level security;
+revoke all on public.reactions from anon, authenticated;
+grant select on public.reactions to anon, authenticated;
+
+-- anyone signed in can read reaction counts; only own row can be written via RPC
+drop policy if exists "read reactions" on public.reactions;
+create policy "read reactions" on public.reactions for select to anon, authenticated using (true);
+
+create or replace function public.toggle_reaction(p_message_id uuid, p_emoji text)
+returns json
+language plpgsql security definer set search_path = public, pg_catalog as $$
+declare
+  existing text;
+  counts json;
+begin
+  if auth.uid() is null then raise exception 'login_required' using errcode = '42501'; end if;
+  if p_emoji is null or char_length(p_emoji) < 1 or char_length(p_emoji) > 8 then
+    raise exception 'invalid_emoji';
+  end if;
+  -- only allow reacting to public posts
+  if not exists (select 1 from public.messages where id = p_message_id and delivery_type = 'public') then
+    raise exception 'not_public';
+  end if;
+  select emoji into existing from public.reactions
+   where message_id = p_message_id and auth_id = auth.uid();
+  if existing is not null and existing = p_emoji then
+    delete from public.reactions where message_id = p_message_id and auth_id = auth.uid();
+  else
+    insert into public.reactions (message_id, auth_id, emoji)
+    values (p_message_id, auth.uid(), p_emoji)
+    on conflict (message_id, auth_id) do update set emoji = excluded.emoji, created_at = now();
+  end if;
+  select coalesce(json_object_agg(emoji, c), '{}'::json) into counts
+  from (select emoji, count(*)::int as c from public.reactions where message_id = p_message_id group by emoji) s;
+  return json_build_object('counts', counts, 'mine', (
+    select emoji from public.reactions where message_id = p_message_id and auth_id = auth.uid()
+  ));
+end $$;
+
+create or replace function public.reaction_counts(p_ids uuid[])
+returns json
+language sql stable security definer set search_path = public, pg_catalog as $$
+  select coalesce(json_object_agg(message_id::text, counts), '{}'::json)
+  from (
+    select message_id,
+           json_build_object(
+             'counts', (select coalesce(json_object_agg(emoji, c), '{}'::json)
+                        from (select emoji, count(*)::int as c from public.reactions r2
+                              where r2.message_id = r.message_id group by emoji) x),
+             'mine', (select emoji from public.reactions r3
+                      where r3.message_id = r.message_id and r3.auth_id = auth.uid() limit 1)
+           ) as counts
+    from public.reactions r
+    where message_id = any(p_ids)
+    group by message_id
+  ) t;
+$$;
+
+revoke all on function public.toggle_reaction(uuid, text), public.reaction_counts(uuid[]) from public, anon;
+grant execute on function public.toggle_reaction(uuid, text) to authenticated;
+grant execute on function public.reaction_counts(uuid[]) to anon, authenticated;
+
+-- optional parent for soft threading (public replies)
+alter table public.messages add column if not exists parent_id uuid references public.messages(id) on delete set null;
+create index if not exists messages_parent on public.messages (parent_id) where parent_id is not null;
+
+-- extend send_message to accept optional parent_id
+create or replace function public.send_message(
+  p_type text, p_to_name text, p_to_key text, p_body text,
+  p_song text, p_artist text, p_art text default null, p_preview text default null,
+  p_parent_id uuid default null
+) returns uuid
+language plpgsql security definer set search_path = public, pg_catalog as $$
+declare rec_auth uuid; rec_name text; new_id uuid;
+begin
+  if auth.uid() is null then raise exception 'login_required' using errcode = '42501'; end if;
+  if p_type not in ('public','direct') then raise exception 'invalid_delivery_type'; end if;
+  if char_length(btrim(coalesce(p_body,''))) < 1 or char_length(p_body) > 5000 then raise exception 'invalid_message'; end if;
+  if char_length(btrim(coalesce(p_to_name,''))) < 1 or char_length(p_to_name) > 40 then raise exception 'invalid_recipient'; end if;
+  if char_length(btrim(coalesce(p_song,''))) < 1 or char_length(p_song) > 200 then raise exception 'invalid_song'; end if;
+  if char_length(btrim(coalesce(p_artist,''))) < 1 or char_length(p_artist) > 200 then raise exception 'invalid_artist'; end if;
+  if (select count(*) from public.send_log where auth_id = auth.uid() and at > now() - interval '1 hour') >= 30 then
+    raise exception 'rate_limited' using errcode = '54000';
+  end if;
+  if p_type = 'direct' then
+    select auth_id, username into rec_auth, rec_name from public.users
+     where username_key = lower(btrim(p_to_key)) and auth_id is not null limit 1;
+    if rec_auth is null then raise exception 'recipient_not_found' using errcode = 'P0002'; end if;
+  else
+    rec_auth := null; rec_name := btrim(p_to_name);
+  end if;
+  -- parent only allowed for public posts, and must itself be public
+  if p_parent_id is not null then
+    if p_type <> 'public' then raise exception 'parent_public_only'; end if;
+    if not exists (select 1 from public.messages where id = p_parent_id and delivery_type = 'public') then
+      raise exception 'parent_not_found';
+    end if;
+  end if;
+  insert into public.send_log (auth_id) values (auth.uid());
+  insert into public.messages (to_name, to_key, delivery_type, recipient_auth_id, body, song, artist, art, preview, parent_id)
+  values (btrim(rec_name), lower(btrim(p_to_key)), p_type, rec_auth, btrim(p_body), btrim(p_song), btrim(p_artist), p_art, p_preview, p_parent_id)
+  returning id into new_id;
+  return new_id;
+end $$;
+
+revoke all on function public.send_message(text,text,text,text,text,text,text,text,uuid) from public, anon;
+grant execute on function public.send_message(text,text,text,text,text,text,text,text,uuid) to authenticated;
+-- keep old 8-arg overload working for older clients
+create or replace function public.send_message(
+  p_type text, p_to_name text, p_to_key text, p_body text,
+  p_song text, p_artist text, p_art text default null, p_preview text default null
+) returns uuid language sql security definer set search_path = public as $$
+  select public.send_message(p_type, p_to_name, p_to_key, p_body, p_song, p_artist, p_art, p_preview, null);
+$$;
+revoke all on function public.send_message(text,text,text,text,text,text,text,text) from public, anon;
+grant execute on function public.send_message(text,text,text,text,text,text,text,text) to authenticated;
+
+notify pgrst, 'reload schema';

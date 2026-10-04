@@ -4,9 +4,22 @@
   var REMOTE = !!(C.SUPABASE_URL && C.SUPABASE_KEY);
   var $ = function (i) { return document.getElementById(i); };
   var LS = 'anon-msgs', US = 'anon-user', SENT = 'anon-sent';
-  var SECS = ['gate', 'maint', 'home', 'submit', 'browse', 'mybox', 'history', 'support', 'detail'];
+  var SECS = ['gate', 'maint', 'home', 'submit', 'browse', 'mybox', 'history', 'detail'];
   var cache = {}, cur = 'submit', pick = null, last = [], tmr, seen = {}, feedReady = false;
-  var CAT = [["Tingin", "Cup of Joe, Janine", "#3F6B55"], ["Sana", "I Belong to the Zoo", "#2C3E75"], ["Lucky", "Jason Mraz, Colbie Caillat", "#9C8F7A"], ["stranger", "Olivia Rodrigo", "#5B3A8C"], ["Binibini", "Zack Tabudlo", "#D4547A"], ["Perfect", "Ed Sheeran", "#D9A441"]];
+  var CAT = [
+    ["Tingin", "Cup of Joe, Janine", "#3F6B55"],
+    ["Sana", "I Belong to the Zoo", "#2C3E75"],
+    ["Lucky", "Jason Mraz, Colbie Caillat", "#9C8F7A"],
+    ["stranger", "Olivia Rodrigo", "#5B3A8C"],
+    ["Binibini", "Zack Tabudlo", "#D4547A"],
+    ["Perfect", "Ed Sheeran", "#D9A441"],
+    ["Babylon", "Taylor Swift", "#1A1A2E"],
+    ["Heather", "Conan Gray", "#6B4E71"],
+    ["Die With A Smile", "Lady Gaga, Bruno Mars", "#C44569"],
+    ["Multo", "Cup of Joe", "#2E5A4C"],
+    ["Pagsamo", "Arthur Nery", "#4A6FA5"],
+    ["Iris", "Goo Goo Dolls", "#3D5A80"]
+  ];
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function norm(s) { return String(s).trim().toLowerCase(); }
@@ -78,21 +91,21 @@
   }
 
   function fromRow(r) {
-    return { id: r.id, to: r.to_name, key: r.to_key, type: r.delivery_type || 'direct', text: r.body, song: r.song, artist: r.artist, color: r.art || '', prev: r.preview || '', bot: !!r.is_bot, t: Date.parse(r.created_at) || 0 };
+    return { id: r.id, to: r.to_name, key: r.to_key, type: r.delivery_type || 'direct', text: r.body, song: r.song, artist: r.artist, color: r.art || '', prev: r.preview || '', bot: !!r.is_bot, parent: r.parent_id || null, t: Date.parse(r.created_at) || 0 };
   }
   function fetchMsgs(key) {
     key = key ? String(key).trim().toLowerCase() : '';
     if (!REMOTE) {
       return Promise.resolve(lget(LS, []).filter(function (m) { return key ? (m.type !== 'public' && String(m.key).toLowerCase() === key) : m.type === 'public'; }));
     }
-    var q = 'messages?select=id,to_name,to_key,delivery_type,body,song,artist,art,preview,is_bot,created_at&order=created_at.desc&limit=' + (key ? 100 : 50);
+    var q = 'messages?select=id,to_name,to_key,delivery_type,body,song,artist,art,preview,is_bot,parent_id,created_at&order=created_at.desc&limit=' + (key ? 100 : 50);
     /* Inbox: the database only ever returns direct messages addressed to the signed-in account */
     q += key ? '&delivery_type=eq.direct' : '&delivery_type=eq.public';
     return api(q).then(function (rows) { return rows.map(fromRow); });
   }
   function saveMsg(m) {
-    if (!REMOTE) { var a = lget(LS, []); a.unshift(m); lset(LS, a); return Promise.resolve(); }
-    return rpc('send_message', {
+    if (!REMOTE) { var a = lget(LS, []); a.unshift(m); lset(LS, a); return Promise.resolve(m); }
+    var payload = {
       p_type: m.type,
       p_to_name: m.to,
       p_to_key: m.key,
@@ -101,6 +114,12 @@
       p_artist: m.artist,
       p_art: m.color,
       p_preview: m.prev
+    };
+    if (m.parent) payload.p_parent_id = m.parent;
+    return rpc('send_message', payload).then(function (id) {
+      /* server returns the real UUID — keep it so reactions work later */
+      if (id && (typeof id === 'string' || typeof id === 'number')) m.id = String(id).replace(/^"|"$/g, '');
+      return m;
     });
   }
 
@@ -155,11 +174,15 @@
   var maint = null;
   function showMaint() {
     SECS.forEach(function (x) { $(x).hidden = x !== 'maint'; });
-    $('maintNote').textContent = maint; $('tabs').hidden = true; window.scrollTo(0, 0);
+    $('maintNote').textContent = maint; $('tabs').hidden = true;
+    if ($('supportFab')) $('supportFab').hidden = true;
+    window.scrollTo(0, 0);
   }
   function showGate() {
     SECS.forEach(function (x) { $(x).hidden = x !== 'gate'; });
-    $('tabs').hidden = true; window.scrollTo(0, 0);
+    $('tabs').hidden = true;
+    if ($('supportFab')) $('supportFab').hidden = true;
+    window.scrollTo(0, 0);
   }
   function isDirectLink() { return /(?:^#|&)to=/.test(location.hash); }
   function tab(t) {
@@ -170,14 +193,34 @@
     SECS.forEach(function (x) { $(x).hidden = x !== t; });
     $('tabs').hidden = t === 'admin' || (t === 'submit' && isDirectLink());
     if (t === 'submit') $('directHead').hidden = !isDirectLink();
+    if ($('supportFab')) $('supportFab').hidden = false;
+    if ($('supportOverlay')) $('supportOverlay').hidden = true;
     [].forEach.call($('tabs').children, function (b) { b.setAttribute('aria-selected', b.dataset.t === t); });
     if (t === 'home') loadHome();
     if (t === 'history') showHistory();
     if (t === 'browse') loadFeed();
     if (t === 'mybox') inbox();
-    if (t === 'support') refreshTix();
   }
   $('tabs').onclick = function (e) { var b = e.target.closest('button'); if (b) tab(b.dataset.t); };
+
+  /* ---------- Support Buddy modal ---------- */
+  function openSupport() {
+    $('supportOverlay').hidden = false;
+    $('supportFab').hidden = true;
+    document.body.style.overflow = 'hidden';
+    refreshTix();
+  }
+  function closeSupport() {
+    $('supportOverlay').hidden = true;
+    $('supportFab').hidden = false;
+    document.body.style.overflow = '';
+  }
+  $('supportFab').onclick = openSupport;
+  $('supportClose').onclick = closeSupport;
+  $('footerSupport').onclick = openSupport;
+  $('supportOverlay').onclick = function (e) {
+    if (e.target === $('supportOverlay')) closeSupport();
+  };
 
   /* ---------- song search ---------- */
   /* iTunes search: normal request first, JSONP as a backup if the browser blocks it */
@@ -226,17 +269,25 @@
       });
     })();
   }
-  function draw(items, raw) {
+  function draw(items, raw, isRec) {
     last = items;
-    $('res').innerHTML = items.map(function (s, i) {
+    var head = isRec ? '<div class="res-head">Recommended for you</div>' : '';
+    var free = raw ? '<button data-free="1">' + art('#999') + '<span><b>Use "' + esc(raw) + '"</b><span>Not listed? Add it as typed</span></span></button>' : '';
+    $('res').innerHTML = head + items.map(function (s, i) {
       return '<button data-i="' + i + '">' + art(s.c, s.t + ' ' + s.a) + '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>';
-    }).join('') + '<button data-free="1">' + art('#999') + '<span><b>Use "' + esc(raw) + '"</b><span>Not listed? Add it as typed</span></span></button>';
+    }).join('') + free;
     $('res').hidden = false; hydrateArt();
   }
+  function showRecs() {
+    draw(CAT.map(function (s) { return { t: s[0], a: s[1], c: s[2] }; }), '', true);
+  }
+  $('q').onfocus = function () {
+    if (!$('q').value.trim() && !pick) showRecs();
+  };
   $('q').oninput = function () {
     var raw = $('q').value.trim(), v = norm(raw);
     clearTimeout(tmr);
-    if (!v) { $('res').hidden = true; return; }
+    if (!v) { showRecs(); return; }
     draw(CAT.filter(function (s) { return norm(s[0] + ' ' + s[1]).indexOf(v) > -1; }).map(function (s) { return { t: s[0], a: s[1], c: s[2] }; }), raw);
     tmr = setTimeout(function () {
       itunes(raw, 12)
@@ -247,13 +298,53 @@
         }).catch(function () {});
     }, 350);
   };
+  /* close recommendations when tapping outside */
+  document.addEventListener('click', function (e) {
+    if (!$('res') || $('res').hidden) return;
+    if (e.target.closest('#q') || e.target.closest('#res') || e.target.closest('#picked')) return;
+    $('res').hidden = true;
+  });
   $('res').onclick = function (e) {
     var b = e.target.closest('button'); if (!b) return;
     if (b.dataset.free) { var t = $('q').value.trim().split(' - '); pick = [t[0], t[1] || 'Unknown artist', '#999', '']; }
     else { var o = last[+b.dataset.i]; pick = [o.t, o.a, o.c, o.p || '']; }
     $('res').hidden = true; $('q').value = ''; $('q').hidden = true;
-    $('picked').innerHTML = '<div class="pick">' + art(pick[2], pick[0] + ' ' + pick[1]) + '<span><b>' + esc(pick[0]) + '</b><span>' + esc(pick[1]) + '</span></span><button aria-label="Remove song" id="x">×</button></div>';
-    $('x').onclick = function () { pick = null; $('picked').innerHTML = ''; $('q').hidden = false; };
+    renderPicked();
+  };
+  function renderPicked() {
+    if (!pick) { $('picked').innerHTML = ''; $('q').hidden = false; return; }
+    /* Same circular play button as send.html (personal link page) */
+    $('picked').innerHTML = '<div class="pick song-pick">' + art(pick[2], pick[0] + ' ' + pick[1]) +
+      '<div class="pt"><b>' + esc(pick[0]) + '</b><span>' + esc(pick[1]) + '</span></div>' +
+      '<button type="button" class="play-pick" id="pickPlay" aria-label="Play 30s preview">&#9654;</button>' +
+      '<button type="button" class="x" id="x" aria-label="Remove song">×</button></div>';
+    $('x').onclick = function () {
+      if (typeof au !== 'undefined') { au.pause(); rst(); }
+      pick = null; $('picked').innerHTML = ''; $('q').hidden = false;
+    };
+    $('pickPlay').onclick = function () {
+      var b = $('pickPlay');
+      if (pb === b) { au.pause(); rst(); return; }
+      if (pb) rst();
+      function playUrl(u) {
+        if (!u) { toast('No 30s preview for this song.', true); return; }
+        pick[3] = u;
+        pb = b; b.innerHTML = '&#10073;&#10073;';
+        au.src = u;
+        au.play().catch(function () { rst(); toast('Could not play preview.', true); });
+      }
+      if (pick[3] && /^https:\/\//.test(pick[3])) {
+        playUrl(pick[3]);
+        return;
+      }
+      /* fetch preview from iTunes when recommendation had no URL yet */
+      b.disabled = true;
+      itunes(pick[0] + ' ' + pick[1], 1).then(function (d) {
+        var u = d.results && d.results[0] && d.results[0].previewUrl;
+        if (u) pick[3] = u;
+        playUrl(u || '');
+      }).catch(function () { playUrl(''); }).then(function () { b.disabled = false; });
+    };
   };
 
   /* ---------- send ---------- */
@@ -266,25 +357,155 @@
     var miss = !to ? (direct ? 'The personal link is missing its recipient.' : 'Add a name or nickname for the public post.') : !tx ? 'Write a message.' : !pick ? 'Pick a song from the list, or type one and press Send.' : '';
     if (miss) { m.className = 'msg err'; m.textContent = miss; return; }
     var o = { id: 'l' + Date.now(), to: to, key: direct ? norm(to) : 'public', type: direct ? 'direct' : 'public', text: tx, song: pick[0], artist: pick[1], color: pick[2], prev: pick[3] || '', t: Date.now() };
+    if (replyParent) o.parent = replyParent;
     $('send').disabled = true;
-    saveMsg(o).then(function () {
+    saveMsg(o).then(function (saved) {
+      if (saved && saved.id) o.id = saved.id;
       var sent = lget(SENT, []); sent.unshift(o); lset(SENT, sent.slice(0, 100));
-      m.className = 'msg';
+      m.className = 'msg ok-pop';
       m.textContent = direct ? 'Sent anonymously. Only the owner of that personal link can see it in their Inbox.' : 'Posted anonymously to Browse. The named person will not receive an Inbox message.';
       $('to').value = direct ? $('to').value : ''; $('text').value = ''; pick = null; $('picked').innerHTML = ''; $('q').hidden = false;
+      replyParent = null;
+      celebrateSend();
       if (!direct) loadFeed();
     }).catch(function (e) { m.className = 'msg err'; m.textContent = (e && e.msg) || dbHint(e); })
       .then(function () { $('send').disabled = false; });
+  };
+
+  var replyParent = null;
+  function celebrateSend() {
+    try { if (navigator.vibrate) navigator.vibrate([18, 40, 18]); } catch (e) {}
+    var burst = $('successBurst');
+    if (burst) {
+      burst.hidden = false; burst.classList.remove('show');
+      void burst.offsetWidth;
+      burst.classList.add('show');
+      setTimeout(function () { burst.hidden = true; burst.classList.remove('show'); }, 950);
+    }
   };
 
   /* ---------- cards, feed, inbox search ---------- */
   function pbtn(m, cls) {
     return '<button class="play' + cls + '" aria-label="Play preview" data-src="' + esc(/^https:\/\//.test(m.prev) ? m.prev : '') + '" data-q="' + esc(m.song + ' ' + m.artist) + '">' + (cls ? '&#9654;' : '&#9654; Play') + '</button>';
   }
+  var REACT_EMOJIS = ['❤️', '🔥', '🥺', '✨', '👏'];
+  var reactCache = {}; /* id -> { counts: {emoji:n}, mine: emoji|null } */
+  function isUuid(id) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id || ''));
+  }
+  function reactTotal(st) {
+    var n = 0, c = (st && st.counts) || {};
+    Object.keys(c).forEach(function (k) { n += Number(c[k]) || 0; });
+    return n;
+  }
+  function reactBar(m) {
+    /* Only real public posts on the server (not History local ids, not samples) */
+    if (!m || m.ex || m.type !== 'public' || !isUuid(m.id)) return '';
+    var st = reactCache[m.id] || { counts: {}, mine: null };
+    var total = reactTotal(st);
+    var mine = st.mine || '';
+    var label = mine ? mine : '＋';
+    var chips = '';
+    REACT_EMOJIS.forEach(function (e) {
+      var n = (st.counts && st.counts[e]) || 0;
+      if (n > 0) chips += '<span class="react-chip' + (mine === e ? ' on' : '') + '">' + e + ' ' + n + '</span>';
+    });
+    return '<div class="reacts" data-mid="' + esc(m.id) + '">' +
+      (chips ? '<div class="react-chips">' + chips + '</div>' : '') +
+      '<button type="button" class="react-main' + (mine ? ' on' : '') + '" data-mid="' + esc(m.id) + '" aria-label="React. Hold to choose emoji.">' +
+      label + (total && !chips ? ' <span class="n">' + total + '</span>' : '') +
+      '</button></div>';
+  }
+  function paintReacts(mid) {
+    var m = cache[mid];
+    if (!m) return;
+    document.querySelectorAll('.reacts[data-mid="' + mid + '"]').forEach(function (el) {
+      el.outerHTML = reactBar(m);
+    });
+  }
+  function loadReactions(ids) {
+    ids = (ids || []).filter(isUuid);
+    if (!REMOTE || !ids.length) return Promise.resolve();
+    return rpc('reaction_counts', { p_ids: ids }).then(function (map) {
+      if (!map || typeof map !== 'object') return;
+      Object.keys(map).forEach(function (id) { reactCache[id] = map[id]; });
+    }).catch(function () {});
+  }
+  function doReact(mid, emoji) {
+    if (!mid || !emoji) return Promise.resolve();
+    if (!profile || !sessionGet()) { showGate(); return Promise.resolve(); }
+    if (!isUuid(mid)) {
+      toast('Reactions work on Browse posts only.', true);
+      return Promise.resolve();
+    }
+    if (!REMOTE) {
+      var local = reactCache[mid] || { counts: {}, mine: null };
+      if (local.mine === emoji) {
+        local.counts[emoji] = Math.max(0, (local.counts[emoji] || 1) - 1);
+        if (!local.counts[emoji]) delete local.counts[emoji];
+        local.mine = null;
+      } else {
+        if (local.mine) {
+          local.counts[local.mine] = Math.max(0, (local.counts[local.mine] || 1) - 1);
+          if (!local.counts[local.mine]) delete local.counts[local.mine];
+        }
+        local.counts[emoji] = (local.counts[emoji] || 0) + 1;
+        local.mine = emoji;
+      }
+      reactCache[mid] = local;
+      paintReacts(mid);
+      try { if (navigator.vibrate) navigator.vibrate(10); } catch (x) {}
+      return Promise.resolve();
+    }
+    return rpc('toggle_reaction', { p_message_id: mid, p_emoji: emoji }).then(function (r) {
+      reactCache[mid] = { counts: (r && r.counts) || {}, mine: (r && r.mine) || null };
+      paintReacts(mid);
+      try { if (navigator.vibrate) navigator.vibrate(10); } catch (x) {}
+    }).catch(function (err) {
+      var t = (err && err.text) || '';
+      var msg = 'Could not react right now.';
+      if (/not_public|P0002|22P02|foreign key|does not exist|not found/i.test(t))
+        msg = 'That post is gone or not public anymore.';
+      else if (/login_required|JWT|401|42501/i.test(t) || (err && err.status === 401))
+        msg = 'Log in first to react.';
+      else if (/404|PGRST202|could not find/i.test(t))
+        msg = 'Reactions not set up yet. Run PART 11 and 12 in Supabase.';
+      else if (err && err.msg) msg = err.msg;
+      toast(msg, true);
+    });
+  }
+  function closeReactPicker() {
+    var p = document.getElementById('reactPicker');
+    if (p) p.remove();
+  }
+  function openReactPicker(mid, anchor) {
+    closeReactPicker();
+    var pop = document.createElement('div');
+    pop.id = 'reactPicker';
+    pop.className = 'react-picker';
+    pop.setAttribute('data-mid', mid);
+    REACT_EMOJIS.forEach(function (e) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'react-pick-btn';
+      b.textContent = e;
+      b.setAttribute('data-emoji', e);
+      pop.appendChild(b);
+    });
+    document.body.appendChild(pop);
+    var r = anchor.getBoundingClientRect();
+    var pw = pop.offsetWidth, ph = pop.offsetHeight;
+    var left = Math.min(window.innerWidth - pw - 8, Math.max(8, r.left + r.width / 2 - pw / 2));
+    var top = r.top - ph - 10;
+    if (top < 8) top = r.bottom + 10;
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+  }
   function cardH(m, isNew) {
     return '<div class="card' + (isNew ? ' new' : '') + '" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Open message to ' + esc(m.to) + '">' +
-      '<div class="top"><span class="to">To: ' + esc(m.to) + '</span> <span class="stamp">' + (m.ex ? 'Sample' : m.bot ? 'Bot' : 'From: ???') + '</span><p class="hand clip">' + esc(m.text) + '</p></div>' +
-      '<div class="song">' + art(m.color, m.song + ' ' + m.artist) + '<span><b>' + esc(m.song) + '</b><span>' + esc(m.artist) + '</span></span>' + pbtn(m, '') + '</div></div>';
+      '<div class="top"><span class="to">To: ' + esc(m.to) + '</span> <span class="stamp">' + (m.ex ? 'Sample' : m.bot ? 'Bot' : m.parent ? 'Reply' : 'From: ???') + '</span><p class="hand clip">' + esc(m.text) + '</p></div>' +
+      '<div class="song">' + art(m.color, m.song + ' ' + m.artist) + '<span><b>' + esc(m.song) + '</b><span>' + esc(m.artist) + '</span></span>' + pbtn(m, '') + '</div>' +
+      reactBar(m) + '</div>';
   }
   function show(el, a, empty, animate) {
     a.forEach(function (m) { cache[m.id] = m; });
@@ -292,6 +513,10 @@
       return cardH(m, false);
     }).join('') : '<div class="empty">' + empty + '</div>';
     hydrateArt();
+    var ids = a.filter(function (m) { return m.type === 'public' && !m.ex && isUuid(m.id); }).map(function (m) { return m.id; });
+    if (ids.length) loadReactions(ids).then(function () {
+      ids.forEach(function (id) { paintReacts(id); });
+    });
   }
   var SEEN = 'anon-seen-ids';
   function setInboxBadge(n) {
@@ -446,28 +671,100 @@
     var m = cache[id]; if (!m) return;
     var hex = /^#[0-9a-f]{3,8}$/i.test(m.color), https = /^https:\/\//.test(m.color), col = hex ? m.color : '#27424F';
     var big = https ? '<img class="bigart" alt="" src="' + esc(m.color.replace('100x100', '600x600')) + '">' : '<span class="bigart" data-q="' + esc(m.song + ' ' + m.artist) + '" style="background:' + col + '"></span>';
+    var isPublic = m.type === 'public' || m.ex;
+    var subTxt = m.bot ? 'A song picked by the Anonymous bot.' :
+      (m.type === 'direct' ? 'Someone sent you a song. They want you to hear this one.' : 'An anonymous note on Browse.');
     $('detail').innerHTML = '<button class="back" id="back">&larr; Back</button><h2 class="hi">Hello, ' + esc(m.to) + '</h2>' +
-      '<p class="sub" style="text-align:center">' + (m.bot ? 'A song picked by the Anonymous bot.' : 'Someone sent you a song. They want you to hear this one.') + '</p>' +
+      '<p class="sub" style="text-align:center">' + subTxt + '</p>' +
       '<div class="dcard">' + big +
       '<div class="dinfo"><b>' + esc(m.song) + '</b><span>' + esc(m.artist) + '</span><em class="pv">30s preview</em></div>' + pbtn(m, ' circle') + '</div>' +
       '<p id="pnote" class="sub" style="text-align:center;min-height:1.2em"></p>' +
-      '<p class="sub" style="text-align:center;margin-top:22px">Also, here is a message from the sender:</p><p class="hand">' + esc(m.text) + '</p>';
+      '<p class="sub" style="text-align:center;margin-top:22px">Also, here is a message from the sender:</p><p class="hand">' + esc(m.text) + '</p>' +
+      (isPublic && !m.ex && isUuid(m.id) ? '<div class="react-bar">' + reactBar(m) + '</div>' : '') +
+      '<button type="button" class="btn ghost full reply-btn" id="replySong">Reply with a song</button>';
     SECS.forEach(function (x) { $(x).hidden = true; });
     $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0); hydrateArt();
-    $('back').onclick = function () { au.pause(); rst(); var t = cur; tab(t); };
+    if (isPublic && !m.ex && isUuid(m.id)) {
+      loadReactions([m.id]).then(function () { paintReacts(m.id); });
+    }
+    $('back').onclick = function () { au.pause(); rst(); closeReactPicker(); var t = cur; tab(t); };
+    $('replySong').onclick = function () {
+      replyParent = (isPublic && !m.ex && isUuid(m.id)) ? m.id : null;
+      var seed = isPublic
+        ? ('Replying to an anonymous note about “' + m.song + '”. ')
+        : ('Someone sent me “' + m.song + '”. Here is my anonymous reply on Browse. ');
+      tab('submit');
+      $('to').value = m.to || 'someone';
+      $('text').value = seed;
+      /* no toast — it covers the keyboard; the prefilled text already explains */
+      setTimeout(function () { $('text').focus(); }, 50);
+    };
   }
+
+  /* Reactions: short tap = toggle ❤️ (or remove yours); hold = pick emoji */
+  var reactHoldTimer = null, reactHoldFired = false;
+  function clearReactHold() {
+    if (reactHoldTimer) { clearTimeout(reactHoldTimer); reactHoldTimer = null; }
+  }
+  document.addEventListener('pointerdown', function (e) {
+    var main = e.target.closest('.react-main');
+    if (!main) return;
+    e.preventDefault();
+    e.stopPropagation();
+    reactHoldFired = false;
+    var mid = main.dataset.mid || (main.closest('.reacts') && main.closest('.reacts').dataset.mid);
+    clearReactHold();
+    reactHoldTimer = setTimeout(function () {
+      reactHoldFired = true;
+      try { if (navigator.vibrate) navigator.vibrate(12); } catch (x) {}
+      openReactPicker(mid, main);
+    }, 420);
+  }, true);
+  document.addEventListener('pointerup', function (e) {
+    var main = e.target.closest('.react-main');
+    if (!main) { clearReactHold(); return; }
+    e.preventDefault();
+    e.stopPropagation();
+    var mid = main.dataset.mid || (main.closest('.reacts') && main.closest('.reacts').dataset.mid);
+    var held = reactHoldFired;
+    clearReactHold();
+    if (held) return;
+    closeReactPicker();
+    var st = reactCache[mid] || {};
+    /* short tap: remove your reaction, or add ❤️ */
+    doReact(mid, st.mine || '❤️');
+  }, true);
+  document.addEventListener('pointercancel', clearReactHold, true);
   document.addEventListener('click', function (e) {
-    if (e.target.closest('.play,a')) return;
+    var pick = e.target.closest('.react-pick-btn');
+    if (pick) {
+      e.preventDefault();
+      e.stopPropagation();
+      var mid = pick.closest('.react-picker') && pick.closest('.react-picker').getAttribute('data-mid');
+      closeReactPicker();
+      doReact(mid, pick.getAttribute('data-emoji'));
+      return;
+    }
+    if (e.target.closest('.react-picker')) return;
+    if (!e.target.closest('.react-main')) closeReactPicker();
+    if (e.target.closest('.play,a,.react-main,.reacts,.react-picker,.reply-btn,.play-pick')) return;
     var c = e.target.closest('.card[data-id]'); if (c) openD(c.dataset.id);
   });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter') return;
+    if (e.target.closest && e.target.closest('.reacts')) return;
     var c = e.target.closest && e.target.closest('.card[data-id]'); if (c) openD(c.dataset.id);
   });
 
   /* ---------- player (30s iTunes preview) ---------- */
   var au = new Audio(), pb = null;
-  function rst() { if (pb) { pb.innerHTML = pb.classList.contains('circle') ? '&#9654;' : '&#9654; Play'; pb = null; } }
+  function rst() {
+    if (pb) {
+      if (pb.classList.contains('circle') || pb.classList.contains('play-pick')) pb.innerHTML = '&#9654;';
+      else pb.innerHTML = '&#9654; Play';
+      pb = null;
+    }
+  }
   au.onended = rst;
   function getSrc(b) {
     if (b.dataset.src) return Promise.resolve(b.dataset.src);
@@ -640,6 +937,79 @@
     var st = {}; rows.forEach(function (x) { st[x.key] = x.value; });
     if (st.maintenance === 'true') { maint = st.maintenance_note || 'We will be right back.'; tab(cur); }
   }).catch(function () {});
+
+  /* ---------- theme toggle (button beside site name) ---------- */
+  var THEME_KEY = 'anon-theme';
+  function isDarkNow() {
+    var m = lget(THEME_KEY, 'system');
+    if (m === 'dark') return true;
+    if (m === 'light') return false;
+    try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { return false; }
+  }
+  function applyTheme(mode) {
+    mode = mode || 'system';
+    var root = document.documentElement;
+    if (mode === 'light') root.setAttribute('data-theme', 'light');
+    else if (mode === 'dark') root.setAttribute('data-theme', 'dark');
+    else root.removeAttribute('data-theme');
+    lset(THEME_KEY, mode);
+    var btn = $('themeToggle');
+    if (btn) {
+      var dark = isDarkNow();
+      btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+      btn.title = dark ? 'Light mode' : 'Dark mode';
+    }
+    try {
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.content = isDarkNow() ? '#0C0C0E' : '#E5334B';
+    } catch (e) {}
+  }
+  applyTheme(lget(THEME_KEY, 'system'));
+  if ($('themeToggle')) {
+    $('themeToggle').onclick = function () {
+      applyTheme(isDarkNow() ? 'light' : 'dark');
+    };
+  }
+  try {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+      if (lget(THEME_KEY, 'system') === 'system') applyTheme('system');
+    });
+  } catch (e) {}
+
+  /* ---------- inbox notifications (browser Notification API when tab is in background) ---------- */
+  var notifAsked = false;
+  function maybeAskNotif() {
+    if (notifAsked || !('Notification' in window) || Notification.permission !== 'default') return;
+    notifAsked = true;
+    /* soft ask once after first successful inbox check with new items */
+  }
+  function notifyNewInbox(n) {
+    if (n < 1 || document.visibilityState === 'visible') return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      new Notification('Anonymous', {
+        body: n === 1 ? 'You have a new anonymous song in your Inbox.' : 'You have ' + n + ' new messages in your Inbox.',
+        icon: 'icon-192.png',
+        tag: 'anon-inbox',
+        renotify: true
+      });
+    } catch (e) {}
+  }
+  var _checkInbox = checkInbox;
+  checkInbox = function (markSeen) {
+    return _checkInbox(markSeen).then(function () {
+      if (markSeen) return;
+      var b = document.querySelector('#tabs [data-t=mybox] .badge');
+      var n = b ? parseInt(b.textContent, 10) : 0;
+      if (isNaN(n)) n = b && b.textContent.indexOf('+') > -1 ? 10 : 0;
+      notifyNewInbox(n);
+      if (n > 0 && 'Notification' in window && Notification.permission === 'default' && !notifAsked) {
+        notifAsked = true;
+        Notification.requestPermission().catch(function () {});
+      }
+    });
+  };
+
   boot();
 
 })();

@@ -83,15 +83,28 @@
     });
   }
   function art(c) { return /^https:\/\//.test(c || '') ? '<img class="art" alt="" src="' + esc(c) + '">' : '<span class="art" style="background:#999"></span>'; }
+  var REC = [
+    ["Tingin", "Cup of Joe, Janine", ""], ["Sana", "I Belong to the Zoo", ""], ["Multo", "Cup of Joe", ""],
+    ["Babylon", "Taylor Swift", ""], ["Die With A Smile", "Lady Gaga, Bruno Mars", ""], ["Pagsamo", "Arthur Nery", ""],
+    ["Heather", "Conan Gray", ""], ["Perfect", "Ed Sheeran", ""], ["Iris", "Goo Goo Dolls", ""]
+  ];
+  function showRecs() {
+    last = REC.map(function (s) { return { t: s[0], a: s[1], c: s[2], p: '' }; });
+    $('sres').innerHTML = '<div class="res-head">Recommended songs</div>' +
+      last.map(function (s, i) { return '<button data-i="' + i + '">' + art(s.c) + '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>'; }).join('');
+    $('sres').hidden = false;
+  }
+  $('sq').onfocus = function () { if (!$('sq').value.trim() && !pick) showRecs(); };
   $('sq').oninput = function () {
     var raw = $('sq').value.trim(); clearTimeout(tmr);
-    if (!raw) { $('sres').hidden = true; return; }
+    if (!raw) { showRecs(); return; }
     $('sres').innerHTML = '<button data-free="1">' + art('') + '<span><b>Use "' + esc(raw) + '"</b><span>Add it as typed (Title - Artist)</span></span></button>'; $('sres').hidden = false;
     tmr = setTimeout(function () {
       itunes(raw, 10).then(function (d) {
         if ($('sq').value.trim() !== raw) return;
         last = (d.results || []).map(function (x) { return { t: x.trackName, a: x.artistName, c: x.artworkUrl100, p: x.previewUrl || '' }; });
-        $('sres').innerHTML = last.map(function (s, i) { return '<button data-i="' + i + '">' + art(s.c) + '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>'; }).join('') + $('sres').innerHTML;
+        $('sres').innerHTML = last.map(function (s, i) { return '<button data-i="' + i + '">' + art(s.c) + '<span><b>' + esc(s.t) + '</b><span>' + esc(s.a) + '</span></span></button>'; }).join('') +
+          '<button data-free="1">' + art('') + '<span><b>Use "' + esc(raw) + '"</b><span>Add it as typed (Title - Artist)</span></span></button>';
       }).catch(function () {});
     }, 350);
   };
