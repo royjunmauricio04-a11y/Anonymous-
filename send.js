@@ -13,7 +13,7 @@
   function lset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function show(id) {
     ['sLoad', 'sForm', 'sDone', 'sMiss', 'sMaint'].forEach(function (x) { $(x).hidden = x !== id; });
-    document.body.className = id === 'sForm' ? 'lp' : '';
+    document.body.className = 'lp';   /* every state (form, sent, not found, maintenance) lives on the brand colour */
     window.scrollTo(0, 0);
   }
   function miss(t) { $('sMissTxt').textContent = t; show('sMiss'); }
@@ -248,7 +248,8 @@
   };
 
   /* ---- message box: ideas + counter ---- */
-  function count() { $('sCount').textContent = $('sText').value.length + ' / 1000'; }
+  function grow() { var t = $('sText'); t.style.height = 'auto'; t.style.height = Math.min(300, Math.max(150, t.scrollHeight)) + 'px'; }
+  function count() { $('sCount').textContent = $('sText').value.length + ' / 1000'; grow(); }
   $('sText').oninput = count;
   $('sPrompts').onclick = function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -274,22 +275,12 @@
       .then(function () { $('sSend').disabled = false; });
   };
   $('sAgain').onclick = function () {
-    $('sText').value = ''; count(); pick = null; renderPick(); $('sMsg').textContent = ''; show('sForm');
+    $('sText').value = ''; count(); $('sText').style.height = ''; pick = null; renderPick(); $('sMsg').textContent = ''; show('sForm');
   };
 
   /* ---- start ---- */
   if (!/^[A-Za-z0-9._]{3,20}$/.test(to)) { miss('This link is missing a name. Ask your friend to send it again.'); return; }
   if (!REMOTE) { miss('This page needs the online database. Add your Supabase keys in config.js.'); return; }
-  /* count link view once per username per day on this device */
-  try {
-    var vk = 'anon-viewed-' + to.toLowerCase();
-    var day = new Date().toISOString().slice(0, 10);
-    if (lget(vk, '') !== day) {
-      lset(vk, day);
-      rpc('record_link_view', { p_username: to }).catch(function () {});
-    }
-  } catch (e) {}
-
   api('settings?select=key,value').catch(function () { return []; }).then(function (rows) {
     var st = {}; rows.forEach(function (x) { st[x.key] = x.value; });
     if (st.maintenance === 'true') { $('sMaintTxt').textContent = st.maintenance_note || 'We will be right back.'; show('sMaint'); return; }

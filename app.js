@@ -4,7 +4,7 @@
   var REMOTE = !!(C.SUPABASE_URL && C.SUPABASE_KEY);
   var $ = function (i) { return document.getElementById(i); };
   var LS = 'anon-msgs', US = 'anon-user', SENT = 'anon-sent';
-  var SECS = ['gate', 'maint', 'home', 'submit', 'browse', 'mybox', 'profile', 'history', 'detail'];
+  var SECS = ['gate', 'maint', 'home', 'submit', 'browse', 'mybox', 'history', 'detail'];
   var cache = {}, cur = 'submit', pick = null, last = [], tmr, seen = {}, feedReady = false;
   var CAT = [
     ["Tingin", "Cup of Joe, Janine", "#3F6B55"],
@@ -411,7 +411,7 @@
   function isDirectLink() { return /(?:^#|&)to=/.test(location.hash); }
   function tab(t, fromPop) {
     if (maint !== null && t !== 'admin') { showMaint(); return; }
-    if (!profile && ['submit', 'mybox', 'profile', 'history'].indexOf(t) > -1) { showGate(); return; }
+    if (!profile && ['submit', 'mybox', 'history'].indexOf(t) > -1) { showGate(); return; }
     if (typeof au !== 'undefined') { au.pause(); rst(); }
     cur = t; window.scrollTo(0, 0);
     if (!fromPop) navTo(t);
@@ -426,8 +426,7 @@
     if (t === 'home') loadHome();
     if (t === 'history') showHistory();
     if (t === 'browse') loadFeed();
-    if (t === 'mybox') openInbox();
-    if (t === 'profile') openProfile();
+    if (t === 'mybox') inbox();
   }
   $('tabs').onclick = function (e) { var b = e.target.closest('button'); if (b) tab(b.dataset.t); };
 
@@ -837,55 +836,31 @@
   setInterval(function () { if (cur === 'browse' && !document.hidden) loadFeed(); }, 20000);
 
 
-  function fillLinkBox() {
+  function inbox() {
     var u = profile && profile.username;
-    if ($('who')) $('who').hidden = !u;
-    if (!u) return null;
+    $('who').hidden = !u;
+    if (!u) return;
     var base = C.SITE_URL ? C.SITE_URL.replace(/\/+$/, '') + '/' : location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
     var l = base + 'send.html?to=' + encodeURIComponent(u);
     var local = !C.SITE_URL && !/^https:/.test(location.protocol);
-    if ($('linkNote')) {
-      $('linkNote').hidden = !local;
-      if (local) $('linkNote').textContent = 'This link only works on this device. After you host the app, set SITE_URL in config.js.';
-    }
-    if ($('whoName')) $('whoName').textContent = '@' + u;
-    if ($('link')) $('link').value = l;
-    if ($('share')) {
-      $('share').innerHTML = '<a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(l) + '">Facebook</a><button type="button" id="nat">Share to IG, Messenger, more</button>';
-      var nat = $('nat');
-      if (nat) nat.onclick = function () {
-        if (navigator.share) navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: l }).catch(function () {});
-        else if ($('copy')) $('copy').click();
-      };
-    }
-    if ($('pinNudge')) $('pinNudge').hidden = !(profile && profile.has_pin === false);
-    return u;
-  }
-  function openInbox() {
-    var u = fillLinkBox();
-    if (!u) return;
+    $('linkNote').hidden = !local;
+    if (local) $('linkNote').textContent = 'This link only works on this device. After you host the app, set SITE_URL in config.js.';
+    $('whoName').textContent = '@' + u; $('link').value = l;
+    $('share').innerHTML = '<a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(l) + '">Facebook</a><button id="nat">Share to IG, Messenger, more</button>';
+    $('nat').onclick = function () {
+      if (navigator.share) navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: l }).catch(function () {});
+      else $('copy').click();
+    };
     $('mine').innerHTML = skel(2);
+    $('pinNudge').hidden = !(profile && profile.has_pin === false);
     fetchMsgs(u).then(function (a) {
       show($('mine'), a, 'No direct messages yet. Share your personal link so someone can send you one.', false);
       lset(SEEN, a.map(function (m) { return m.id; }).slice(0, 200)); setInboxBadge(0);
-      if (profile && profile.card) styleCards($('mine'), profile.card);
+      lastInbox = a; initProfile(); profileUI(a);
     }).catch(function (e) {
       $('mine').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>';
     });
   }
-  function openProfile() {
-    var u = fillLinkBox();
-    if (!u) return;
-    initProfile();
-    /* refresh profile fields from server (views, avatar, card) */
-    loadProfile().then(function () {
-      return fetchMsgs(u).then(function (a) {
-        profileUI(a);
-      }).catch(function () { profileUI([]); });
-    }).catch(function () { profileUI([]); });
-  }
-  /* back-compat name used nowhere critical */
-  function inbox() { openInbox(); }
 
 
   /* ---------- profile page + message card customization ---------- */
@@ -894,20 +869,37 @@
     forest: 'linear-gradient(135deg,#2E5A4C,#8BC48A)', grape: 'linear-gradient(135deg,#5B3A8C,#D4547A)',
     night: 'linear-gradient(135deg,#0C0C0E,#2A2A52)', gold: 'linear-gradient(135deg,#C9822B,#F2D06B)'
   };
-  var cardDraft = null;
-  function cardCss(c) {
+  var cardDraft = null, lastInbox = [];
+  function refreshProfile() { profileUI(lastInbox); }
+  var LIGHT_GRADS = { gold: 1 };
+  function cardBg(c) {
     if (!c) return '';
-    if (c.kind === 'grad' && GRADS[c.v]) return 'background:' + GRADS[c.v] + ';';
-    if (c.kind === 'color' && /^#[0-9a-f]{6}$/i.test(c.v)) return 'background:' + c.v + ';';
-    if (c.kind === 'photo' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(c.v || ''))
-      return 'background:linear-gradient(rgba(0,0,0,' + (Math.min(70, +c.dim || 0) / 100) + '),rgba(0,0,0,' + (Math.min(70, +c.dim || 0) / 100) + ')),url(' + c.v + ') center/cover;';
+    if (c.kind === 'grad' && GRADS[c.v]) return GRADS[c.v];
+    if (c.kind === 'color' && /^#[0-9a-f]{6}$/i.test(c.v)) return c.v;
+    if (c.kind === 'photo' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(c.v || '')) {
+      var d = Math.min(70, Math.max(0, +c.dim || 0)) / 100;
+      return 'linear-gradient(rgba(0,0,0,' + d + '),rgba(0,0,0,' + d + ')),url(' + c.v + ') center/cover';
+    }
     return '';
   }
+  function cardLight(c) {   /* is the background light enough that the text must be dark? */
+    if (!c) return false;
+    if (c.kind === 'grad') return !!LIGHT_GRADS[c.v];
+    if (c.kind === 'color' && /^#[0-9a-f]{6}$/i.test(c.v)) {
+      var n = parseInt(c.v.slice(1), 16), l = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+      return l > 0.62;
+    }
+    return false;
+  }
+  /* one CSS variable on the container (not one big inline style per card), so a photo background is stored once */
   function styleCards(root, c) {
-    var css = cardCss(c);
-    [].forEach.call(root.querySelectorAll('.card'), function (el) {
-      el.classList.toggle('styled', !!css); el.style.cssText = css;
-    });
+    var bg = cardBg(c);
+    root.classList.toggle('has-style', !!bg);
+    if (!bg) { root.style.removeProperty('--card-bg'); root.style.removeProperty('--card-fg'); root.style.removeProperty('--card-sh'); return; }
+    var light = cardLight(c);
+    root.style.setProperty('--card-bg', bg);
+    root.style.setProperty('--card-fg', light ? '#16161a' : '#fff');
+    root.style.setProperty('--card-sh', light ? 'none' : '0 1px 8px rgba(0,0,0,.25)');
   }
   function shrink(file, max, q) {
     return new Promise(function (ok, no) {
@@ -923,7 +915,7 @@
     });
   }
   function saveRpc(name, args, okMsg) {
-    return rpc(name, args).then(function () { toast(okMsg); }).catch(function (e) { toast('Could not save. Run profile-upgrade.sql in Supabase first.', true); throw e; });
+    return rpc(name, args).then(function () { toast(okMsg); }).catch(function (e) { try { console.warn('[anonymous] save failed (is profile-upgrade.sql installed?)', e); } catch (x) {} toast('Could not save right now. Please try again later.', true); throw e; });
   }
   function profileUI(msgs) {
     if (!profile || !$('pf')) return;
@@ -934,13 +926,13 @@
     var av = $('pfAv'); $('pfInit').textContent = profile.avatar ? '' : u.charAt(0).toUpperCase();
     av.style.backgroundImage = profile.avatar ? 'url(' + profile.avatar + ')' : '';
     $('stMsg').textContent = msgs.length;
-    if ($('stView')) $('stView').textContent = (profile.views != null ? profile.views : 0);
+    $('stRep').textContent = msgs.filter(function (m) { return m.parent; }).length;
     $('stSong').textContent = Object.keys(msgs.reduce(function (o, m) { o[m.song + m.artist] = 1; return o; }, {})).length;
     var shared = !!lget('anon-shared', false);
     var steps = [
       ['Add profile photo', 10, !!profile.avatar, function () { $('pfFile').click(); }],
       ['Share your link', 30, shared, function () { $('pfLink').click(); }],
-      ['Reply to a message', 20, msgs.some(function (m) { return m.parent; }), function () { tab('mybox'); }],
+      ['Reply to a message', 20, msgs.some(function (m) { return m.parent; }), function () { $('mine').scrollIntoView({ behavior: 'smooth' }); }],
       ['Add a PIN', 20, profile.has_pin !== false, function () { $('pinNew').scrollIntoView({ behavior: 'smooth', block: 'center' }); }],
       ['Customize your card', 20, !!profile.card, function () { $('cvSw').scrollIntoView({ behavior: 'smooth', block: 'center' }); }]
     ];
@@ -957,22 +949,12 @@
   }
   function drawCustom() {
     var sw = $('cvSw');
-    if (!sw) return;
     sw.innerHTML = Object.keys(GRADS).map(function (k) {
-      return '<button type="button" data-g="' + k + '" aria-label="' + k + '" aria-pressed="' + !!(cardDraft && cardDraft.kind === 'grad' && cardDraft.v === k) + '" style="background:' + GRADS[k] + '"></button>';
-    }).join('');
-    var col = $('cvCol');
-    if (col) col.value = (cardDraft && cardDraft.kind === 'color' && cardDraft.v) ? cardDraft.v : '#E5334B';
-    if ($('cvCard')) {
-      var css = cardCss(cardDraft);
-      $('cvCard').classList.toggle('styled', !!css);
-      $('cvCard').style.cssText = (css || '') + 'margin:0 0 14px';
-    }
-    var dim = $('cvDim'), wrap = $('cvDimWrap');
-    if (dim) dim.value = (cardDraft && cardDraft.dim) || 35;
-    var showDim = !!(cardDraft && cardDraft.kind === 'photo');
-    if (dim) dim.hidden = !showDim;
-    if (wrap) wrap.hidden = !showDim;
+      return '<button data-g="' + k + '" aria-label="' + k + '" aria-pressed="' + !!(cardDraft && cardDraft.kind === 'grad' && cardDraft.v === k) + '" style="background:' + GRADS[k] + '"></button>';
+    }).join('') + '<label class="cv-col" aria-label="Pick a color"><input type="color" id="cvCol" value="' + (cardDraft && cardDraft.kind === 'color' ? cardDraft.v : '#E5334B') + '"></label>';
+    styleCards($('cvPrev').parentNode, cardDraft);
+    $('cvDim').value = (cardDraft && cardDraft.dim) || 35;
+    $('cvDim').parentNode.querySelector('label[for=cvDim]').hidden = $('cvDim').hidden = !(cardDraft && cardDraft.kind === 'photo');
   }
   function initProfile() {
     if (!$('pf') || $('pf').dataset.on) return; $('pf').dataset.on = 1;
@@ -980,32 +962,20 @@
     $('pfFile').onchange = function () {
       var f = this.files[0]; this.value = ''; if (!f) return;
       shrink(f, 320, 0.8).then(function (d) {
-        return saveRpc('set_avatar', { p_avatar: d }, 'Profile photo saved.').then(function () { profile.avatar = d; profileUI(Object.keys(cache).map(function (k) { return cache[k]; }).filter(function (m) { return m.type === 'direct'; })); });
+        return saveRpc('set_avatar', { p_avatar: d }, 'Profile photo saved.').then(function () { profile.avatar = d; refreshProfile(); });
       }).catch(function () {});
     };
     $('pfLink').onclick = function () {
-      var l = $('link').value; lset('anon-shared', true);
-      var done = function () {
-        toast('Share your link so friends can send songs.');
-        try {
-          profileUI(Object.keys(cache).map(function (k) { return cache[k]; }).filter(function (m) { return m.type === 'direct'; }));
-        } catch (x) {}
-      };
-      if (navigator.share) {
-        navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: l }).then(done).catch(function () {
-          navigator.clipboard.writeText(l).then(function () { toast('Link copied.'); done(); }).catch(done);
-        });
-      } else {
-        navigator.clipboard.writeText(l).then(function () { toast('Link copied.'); done(); }).catch(done);
-      }
+      var l = $('link').value; if (!l) return;
+      var p = navigator.share ? navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: l })
+        : navigator.clipboard.writeText(l).then(function () { toast('Link copied.'); });
+      Promise.resolve(p).then(function () { lset('anon-shared', true); refreshProfile(); }).catch(function () {});   /* cancelled share = not shared */
     };
     $('cvSw').onclick = function (e) {
       var b = e.target.closest('button[data-g]'); if (!b) return;
       cardDraft = { kind: 'grad', v: b.dataset.g }; drawCustom();
     };
-    if ($('cvCol')) $('cvCol').oninput = function () {
-      cardDraft = { kind: 'color', v: this.value }; drawCustom();
-    };
+    $('cvSw').oninput = function (e) { if (e.target.id === 'cvCol') { cardDraft = { kind: 'color', v: e.target.value }; styleCards($('cvPrev').parentNode, cardDraft); } };
     $('cvUp').onclick = function () { $('cvFile').click(); };
     $('cvFile').onchange = function () {
       var f = this.files[0]; this.value = ''; if (!f) return;
@@ -1014,11 +984,11 @@
         cardDraft = { kind: 'photo', v: d, dim: +$('cvDim').value || 35 }; drawCustom();
       }).catch(function () { toast('Could not read that image.', true); });
     };
-    $('cvDim').oninput = function () { if (cardDraft && cardDraft.kind === 'photo') { cardDraft.dim = +this.value; drawCustom(); } };
+    $('cvDim').oninput = function () { if (cardDraft && cardDraft.kind === 'photo') { cardDraft.dim = +this.value; styleCards($('cvPrev').parentNode, cardDraft); } };
     $('cvClr').onclick = function () { cardDraft = null; drawCustom(); };
     $('cvSave').onclick = function () {
       saveRpc('set_card_style', { p_card: cardDraft }, 'Card style saved.').then(function () {
-        profile.card = cardDraft; styleCards($('mine'), cardDraft); profileUI(Object.keys(cache).map(function (k) { return cache[k]; }).filter(function (m) { return m.type === 'direct'; }));
+        profile.card = cardDraft; refreshProfile();
       }).catch(function () {});
     };
   }
@@ -1105,10 +1075,7 @@
   $('pinSave').onclick = function () {
     var v = $('pinNew').value;
     if (v.length < 4 || v.length > 20) { toast('The PIN must be 4 to 20 characters.', true); return; }
-    rpc('set_pin', { p_pin: v }).then(function () {
-      profile.has_pin = true; $('pinNew').value = ''; $('pinNudge').hidden = true; toast('PIN saved. You can now log in on another phone.');
-      try { profileUI(Object.keys(cache).map(function (k) { return cache[k]; }).filter(function (m) { return m.type === 'direct'; })); } catch (x) {}
-    })
+    rpc('set_pin', { p_pin: v }).then(function () { profile.has_pin = true; $('pinNew').value = ''; $('pinNudge').hidden = true; toast('PIN saved. You can now log in on another phone.'); })
       .catch(function (e) { toast(dbHint(e), true); });
   };
   $('welcomeOk').onclick = function () { $('welcome').hidden = true; };
@@ -1118,12 +1085,8 @@
   };
   $('copy').onclick = function () {
     var b = $('copy');
-    lset('anon-shared', true);
     navigator.clipboard.writeText($('link').value).then(function () { b.textContent = 'Copied'; }, function () { $('link').select(); b.textContent = 'Select, copy'; });
-    setTimeout(function () { b.textContent = 'Copy'; }, 1600);
-    try {
-      profileUI(Object.keys(cache).map(function (k) { return cache[k]; }).filter(function (m) { return m.type === 'direct'; }));
-    } catch (x) {}
+    setTimeout(function () { b.textContent = 'Copy'; }, 1500);
   };
 
   /* ---------- report a public post ---------- */
