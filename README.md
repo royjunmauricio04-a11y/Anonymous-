@@ -1,5 +1,11 @@
 # Anonymous: gabay sa setup at update (Taglish)
 
+## v6.1: BASAHIN MUNA (bakit nawawala ang ilang feature pagkatapos mag-run ng setup.sql)
+- Dati, ang `my_profile`, `send_message`, `admin_set` at `admin_recent` ay may dalawang bersyon: isa sa `setup.sql` at isa sa `admin-upgrade.sql` / `profile-upgrade.sql`. Kapag nag-run ka ulit ng `setup.sql`, **nababalik sa luma** ang mga ito (nawawala ang profile photo, ang blocked words, at ang announcement).
+- Ngayon, kasama na sa dulo ng `setup.sql` (PART 7) ang dalawang upgrade file, kaya tama na ang resulta kahit ilang beses i-run.
+- **Para sa update lang (hindi bagong database):** HINDI mo na kailangang i-paste ang buong setup.sql. I-run lang ang maliliit na file, sunod-sunod: `admin-upgrade.sql`, tapos `profile-upgrade.sql`.
+- **Bagong database:** i-run ang buong `setup.sql` (kumpleto na), tapos `admin-user.sql`.
+
 ## Ano ang bago sa bersyong ito (v5)
 - **Na-fix ang bug:** hindi natatanggap ng may-ari ang message galing sa link page. Ang Inbox ay naghahanap gamit ang username na may capital letters (hal. "RoyJun"), pero lowercase ang naka-save, kaya laging walang laman. Ngayon, ang Inbox ay nagpapakita ng lahat ng direct message na para sa account mo, kahit anong spelling.
 - **Bagong send.html:** malaking pulang header na may pangalan, mga ideya ng message na pipindutin, bilang ng letra, preview ng kanta bago mag-send, at success screen na may cover ng kanta.
