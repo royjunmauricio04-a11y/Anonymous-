@@ -385,3 +385,122 @@ body.kb-open .support-fab{opacity:0;pointer-events:none;transform:scale(.8)}
 .netbar{margin:0 0 14px;padding:10px 14px;border-radius:12px;background:var(--surface);border:1px dashed var(--muted);color:var(--muted);font-size:.88rem;text-align:center}
 .netbar[hidden]{display:none}
 #feedMore{margin:18px 0 6px}
+
+/* =====================================================================
+   v5 design layer: floating app navigation, warmer hero, richer cards
+   ===================================================================== */
+:root{--navh:78px;--grad:linear-gradient(135deg,#E5334B 0%,#FF5C5C 62%,#FF8A4C 100%)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--shadow:0 0 0 transparent}}
+body::before{content:"";position:fixed;left:-20%;right:-20%;top:0;height:58vh;z-index:-1;pointer-events:none;
+  background:radial-gradient(55% 70% at 50% 0%,color-mix(in srgb,var(--accent) 15%,transparent),transparent 72%)}
+
+/* top bar stays put and blurs what scrolls under it */
+.topbar{position:sticky;top:0;z-index:30;margin:0 -18px;padding:14px 18px 10px;
+  background:color-mix(in srgb,var(--bg) 86%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.headline{font-size:3.1rem;letter-spacing:-.01em}
+
+/* bottom navigation (the old text tabs, now an app-style bar) */
+.tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:45;
+  width:min(456px,calc(100% - 24px));margin:0;gap:2px;padding:6px;overflow:visible;border:1px solid var(--border);border-radius:26px;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  box-shadow:0 12px 32px -10px rgba(0,0,0,.28)}
+.tabs button{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  height:54px;padding:0;margin:0;border:0;border-radius:20px;background:none;color:var(--muted);
+  font:600 .68rem 'Plus Jakarta Sans',sans-serif;transition:background .15s,color .15s,transform .12s}
+.tabs button:active{transform:scale(.94)}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:transparent;background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.tabs .tl{display:block;line-height:1}
+.tabs svg{display:block}
+.tabs .badge{position:absolute;top:3px;left:calc(50% + 6px);margin:0;min-width:18px;height:18px;line-height:18px;font-size:.66rem;box-shadow:0 0 0 2px var(--bg)}
+main{padding-bottom:calc(var(--navh) + 40px + env(safe-area-inset-bottom,0px))}
+.support-fab{bottom:calc(var(--navh) + 12px + env(safe-area-inset-bottom,0px));width:52px;height:52px}
+.toast{bottom:calc(var(--navh) + 12px + env(safe-area-inset-bottom,0px))}
+/* no nav on the sign-up screen, in maintenance, or on a direct link: sit lower */
+body:has(#tabs[hidden]) .support-fab,body:has(#tabs[hidden]) .toast{bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+body:has(#tabs[hidden]) main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+body.kb-open .tabs{display:none}
+
+/* primary actions get the brand gradient */
+#home>.btn.full:not(.ghost),#send,#dailyGo,#claimBtn,.sent-actions .btn:not(.ghost){background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 10px 22px -8px rgba(229,51,75,.55)}
+#home>.btn.full:not(.ghost):active,#send:active,#dailyGo:active,#claimBtn:active{transform:scale(.985)}
+
+/* cards */
+.card{border-radius:20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 14px 28px -18px rgba(0,0,0,.22);transition:border-color .15s,transform .15s,box-shadow .15s}
+.card:active{transform:scale(.99)}
+.song{background:color-mix(in srgb,var(--surface) 70%,var(--bg))}
+#feed .card,#mine .card,#hlist .card{animation:cardIn .38s cubic-bezier(.2,.8,.2,1) both}
+#feed .card:nth-child(2),#mine .card:nth-child(2),#hlist .card:nth-child(2){animation-delay:.05s}
+#feed .card:nth-child(3),#mine .card:nth-child(3),#hlist .card:nth-child(3){animation-delay:.1s}
+#feed .card:nth-child(4),#mine .card:nth-child(4),#hlist .card:nth-child(4){animation-delay:.15s}
+#feed .card:nth-child(n+5),#mine .card:nth-child(n+5),#hlist .card:nth-child(n+5){animation-delay:.2s}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* one-tap reactions */
+.reacts{flex-wrap:nowrap;justify-content:space-between;gap:6px;padding:9px 12px 11px}
+.react-btn{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:4px;height:36px;padding:0 4px;border-radius:999px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font:600 .76rem 'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  transition:transform .12s,background .15s,border-color .15s}
+.react-btn .em{font-size:1.05rem;line-height:1;display:inline-block}
+.react-btn .n{color:var(--muted);font-variant-numeric:tabular-nums}
+.react-btn.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.react-btn.on .n{color:var(--accent)}
+.react-btn:active{transform:scale(.9)}
+.react-btn.pop .em{animation:emPop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes emPop{0%{transform:scale(1)}40%{transform:scale(1.7) rotate(-10deg)}100%{transform:scale(1)}}
+.react-bar .reacts{width:100%;border:0;padding:0}
+
+/* home */
+.daily{margin:26px 0 6px;padding:20px 20px 16px;border-radius:24px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));
+  background:linear-gradient(150deg,color-mix(in srgb,var(--accent) 13%,var(--bg)),var(--bg) 70%)}
+.daily-k{font-weight:800;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.daily-q{font-family:'Caveat',cursive;font-weight:700;font-size:2rem;line-height:1.1;margin:8px 0 14px}
+.daily-row{display:flex;align-items:center;gap:16px}
+.daily-row .btn{padding:10px 22px}.daily-row .link{margin:0}
+.steps{list-style:none;margin:26px 0 4px;padding:0;display:grid;gap:16px}
+.steps li{display:flex;gap:14px;align-items:flex-start}
+.steps .n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--text);color:var(--bg);display:grid;place-items:center;font-weight:800;font-size:.85rem}
+.steps b{display:block;font-size:1rem}
+.steps p{margin:2px 0 0;color:var(--muted);font-size:.9rem}
+
+/* submit */
+.scrollrow{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-right:-20px;padding-right:20px}
+.scrollrow::-webkit-scrollbar{display:none}
+.scrollrow button{flex:none}
+.count{text-align:right;font-size:.78rem;color:var(--muted);min-height:1em;margin-top:4px}
+.count.warn{color:var(--accent);font-weight:700}
+#surprise{display:block;margin:12px auto 0}
+.sent-actions{display:grid;gap:10px;margin-top:16px;text-align:center}
+.sent-actions .btn{margin:0}
+.sent-actions .link{margin:2px auto 0}
+.share-btn{margin-top:10px}
+
+/* browse */
+.bsearch{position:relative;margin:2px 0 10px}
+.bsearch svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.bsearch input{padding-left:44px;border-radius:999px;background:var(--surface)}
+.bsort{display:flex;align-items:center;gap:8px;margin:0 0 4px}
+.bsort button[data-s]{border:1px solid var(--border);background:var(--bg);color:var(--muted);font:600 .84rem 'Plus Jakarta Sans',sans-serif;padding:8px 16px;border-radius:999px;cursor:pointer}
+.bsort button[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.bsort .rf{margin-left:auto;width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:1.25rem;line-height:1;cursor:pointer;padding:0}
+.bsort .rf.spin{animation:rfSpin .6s ease}
+@keyframes rfSpin{to{transform:rotate(360deg)}}
+.new-pill{position:sticky;top:68px;z-index:20;display:block;margin:8px auto;background:var(--grad);color:#fff;border:0;border-radius:999px;padding:9px 18px;
+  font:700 .85rem 'Plus Jakarta Sans',sans-serif;box-shadow:0 10px 22px -6px rgba(229,51,75,.5);cursor:pointer;animation:pillIn .3s cubic-bezier(.3,1.4,.5,1)}
+.new-pill[hidden]{display:none}
+@keyframes pillIn{from{opacity:0;transform:translateY(-8px) scale(.9)}to{opacity:1;transform:none}}
+
+/* history */
+.hstats{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin:0 0 6px}
+.hstats div{border:1px solid var(--border);border-radius:16px;padding:12px 6px;text-align:center;background:var(--bg)}
+.hstats b{display:block;font-size:1.4rem;line-height:1.1}
+.hstats span{display:block;color:var(--muted);font-size:.68rem;line-height:1.2;margin-top:4px}
+.hstats .hot{border-color:var(--accent)}.hstats .hot b{color:var(--accent)}
+
+@media (prefers-reduced-motion:reduce){
+  #feed .card,#mine .card,#hlist .card,.new-pill,.react-btn.pop .em,.bsort .rf.spin{animation:none!important}
+  .card,.tabs button,.react-btn{transition:none}
+}
+
+/* the personal-link page (send.html) has its own full-colour layout: keep the app-only rules off it */
+body.lp::before{display:none}
+body.lp main:not(.lp-center){padding-bottom:0}

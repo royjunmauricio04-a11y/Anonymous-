@@ -26,12 +26,12 @@
   <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
  </button>
 </div>
-<div class="tabs" role="tablist" id="tabs">
- <button role="tab" data-t="submit" aria-selected="false">Submit</button>
- <button role="tab" data-t="browse" aria-selected="false">Browse</button>
- <button role="tab" data-t="mybox" aria-selected="false">Inbox</button>
- <button role="tab" data-t="history" aria-selected="false">History</button>
-</div>
+<nav class="tabs" role="tablist" id="tabs" aria-label="Main">
+ <button role="tab" data-t="submit" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.2-4.2L16.5 4.5a2 2 0 0 1 2.8 0l.2.2a2 2 0 0 1 0 2.8L8.2 18.8z"/><path d="M14 7l3 3"/></svg><span class="tl">Submit</span></button>
+ <button role="tab" data-t="browse" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span class="tl">Browse</span></button>
+ <button role="tab" data-t="mybox" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 13l2.2-6.2A2 2 0 0 1 7.6 5.5h8.8a2 2 0 0 1 1.9 1.3L20.5 13v4.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M3.5 13H8l1 2h6l1-2h4.5"/></svg><span class="tl">Inbox</span></button>
+ <button role="tab" data-t="history" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span class="tl">History</span></button>
+</nav>
 
 <section id="gate" hidden>
  <h2 class="headline">your username.</h2>
@@ -73,26 +73,38 @@
  <p class="sub">Post an anonymous note on Browse, or share your personal link so friends can send a song straight to your private Inbox.</p>
  <button class="btn full" data-go="submit" style="margin-top:6px">Send a song</button>
  <button class="btn ghost full" data-go="browse" style="margin-top:12px">Browse the stories</button>
- <div class="how">
-  <div class="box"><h3>Send a message</h3><p>Post anonymously on Browse with a name or nickname, or use a personal link for a direct Inbox message.</p></div>
-  <div class="box"><h3>Get your messages</h3><p>Create a username to make your personal link. Messages sent through that link go only to your Inbox.</p></div>
-  <div class="box"><h3>Open the full story</h3><p>Tap any note to read the whole message and play the song behind it.</p></div>
+ <div class="daily" id="daily">
+  <div class="daily-k">Today's prompt</div>
+  <p class="daily-q" id="dailyQ"></p>
+  <div class="daily-row"><button type="button" class="btn" id="dailyGo">Write it</button><button type="button" class="link" id="dailyShuffle">Another one</button></div>
  </div>
+ <ol class="steps">
+  <li><span class="n">1</span><div><b>Write it</b><p>Post on Browse with a name or nickname, or use a personal link for a private Inbox message.</p></div></li>
+  <li><span class="n">2</span><div><b>Pick the song</b><p>Choose the song that says it better. The other person hears a 30 second preview.</p></div></li>
+  <li><span class="n">3</span><div><b>Stay hidden</b><p>Nobody sees who sent it. Make a username to get your own link and your own Inbox.</p></div></li>
+ </ol>
  <div id="mqs"></div>
 </section>
 
 <section id="submit" hidden><div id="directHead" hidden class="box"><h2 class="headline" id="directTitle">Send an anonymous message</h2><p class="sub">Your identity will stay hidden from the recipient.</p><button class="link" id="backMain" type="button">Back to main page</button></div><div class="warn" id="warn">Messages cannot be deleted once posted. Check before you send.</div>
 <div class="box">
  <label for="to" id="toLabel">Name or nickname (public post)</label><input id="to" maxlength="40" placeholder="Who is this message about?" autocomplete="off"><p class="sub" id="sendHint">This appears anonymously in Browse. It will not go to anyone’s Inbox.</p>
- <label for="text">Message</label><textarea id="text" maxlength="5000" placeholder="Write it here. Your name stays hidden."></textarea>
+ <label id="startLabel">Need a starter?</label><div class="chips scrollrow" id="promptChips" role="group" aria-labelledby="startLabel"></div>
+ <label for="text">Message</label><textarea id="text" maxlength="5000" placeholder="Write it here. Your name stays hidden."></textarea><div class="count" id="count" aria-live="off"></div>
  <label for="q">Song</label>
  <p class="sub" style="margin:0 0 8px;font-size:.85rem">Tap the box to see recommended songs, or type to search.</p>
  <input id="q" placeholder="Tap for recommendations or search a song" autocomplete="off">
- <div class="res" id="res" hidden></div><div id="picked"></div>
+ <div class="res" id="res" hidden></div><div id="picked"></div><button type="button" class="link" id="surprise">Surprise me with a song</button>
  <button class="btn full" id="send">Send anonymously</button><p class="msg" id="msg" role="status"></p>
+ <div class="sent-actions" id="sentActions" hidden><button type="button" class="btn" id="shareSent">Share as image</button><button type="button" class="btn ghost" id="seeBrowse">See it on Browse</button><button type="button" class="link" id="writeMore">Write another</button></div>
 </div></section>
 
-<section id="browse" hidden><p class="sub">Latest messages from everyone. Tap one to open it.</p><div id="feed"></div></section>
+<section id="browse" hidden>
+ <div class="bsearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input id="bq" type="search" enterkeyhint="search" placeholder="Search a name, a word or a song" autocomplete="off" aria-label="Search notes"></div>
+ <div class="bsort" id="bsort" role="group" aria-label="Order"><button type="button" data-s="new" aria-pressed="true">Latest</button><button type="button" data-s="hot" aria-pressed="false">Most loved</button><button type="button" class="rf" id="bRefresh" aria-label="Refresh">&#8635;</button></div>
+ <button type="button" class="new-pill" id="newPill" hidden></button>
+ <div id="feed"></div>
+</section>
 
 <section id="mybox" hidden>
   <div class="box" id="who" hidden>
@@ -115,6 +127,7 @@
 
 <section id="history" hidden>
  <p class="sub">Songs you sent from this device in the last 7 days. Older entries are removed automatically. Only you can see this list.</p>
+ <div class="hstats" id="hstats" hidden></div>
  <div id="hlist"></div>
 </section>
 

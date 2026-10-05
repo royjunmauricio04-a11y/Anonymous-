@@ -18,10 +18,22 @@
     ["Die With A Smile", "Lady Gaga, Bruno Mars", "#C44569"],
     ["Multo", "Cup of Joe", "#2E5A4C"],
     ["Pagsamo", "Arthur Nery", "#4A6FA5"],
-    ["Iris", "Goo Goo Dolls", "#3D5A80"]
+    ["Iris", "Goo Goo Dolls", "#3D5A80"],
+    ["Kathang Isip", "Ben&Ben", "#C9822B"],
+    ["Mundo", "IV Of Spades", "#B5452F"],
+    ["Tadhana", "Up Dharma Down", "#3B5A6B"],
+    ["Ere", "Juan Karlos", "#7A3E5C"],
+    ["Raining in Manila", "Lola Amour", "#35506E"],
+    ["Sining", "Dionela, Jay R", "#8A4B8C"],
+    ["Pantropiko", "BINI", "#E5734B"],
+    ["Mahika", "Adie, Janine Berdin", "#4C7A6A"],
+    ["Someone You Loved", "Lewis Capaldi", "#4A4E69"],
+    ["Dilaw", "Maki", "#D9A441"],
+    ["Yellow", "Coldplay", "#D9B441"],
+    ["Photograph", "Ed Sheeran", "#5E6B73"]
   ];
 
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function norm(s) { return String(s).trim().toLowerCase(); }
   function lget(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }
   function lset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -30,19 +42,20 @@
   var AUTH = 'anon-auth', currentUser = null, profile = null;
 
   function dbHint(e) {
-    if (!e || !e.status) return 'Could not reach the database. Check your connection.';
-    var code = ''; try { code = JSON.parse(e.text).code || ''; } catch (x) {}
-    var msg = ''; try { msg = JSON.parse(e.text).msg || JSON.parse(e.text).message || ''; } catch (x2) {}
-    if (e.status === 300 || code === 'PGRST203') return 'Posting is being fixed on our side (two copies of a database function). Tell the site owner to run fix-300.sql in Supabase.';
+    if (!e || !e.status) return 'Could not reach the server. Check your connection and try again.';
+    var code = '', msg = ''; try { var j = JSON.parse(e.text); code = j.code || ''; msg = j.msg || j.message || ''; } catch (x) {}
+    try { console.warn('[anonymous] request failed', e.status, code, msg); } catch (x2) {}
+    if (e.status === 300 || code === 'PGRST203') return 'Posting has a problem on our side. Please try again later.';
     if (msg === 'blocked_content') return 'That message has a word that is not allowed here. Please change it and try again.';
     if (msg === 'rate_limited') return 'You are sending too fast. Please try again in a while.';
-    if (code === 'PGRST202') return 'Required database functions are not installed. Run the latest schema.sql in Supabase.';
-    if (code === '42501' || e.status === 401 || e.status === 403) return 'Your account is not allowed to do that. Run the latest SQL migration and sign in again.';
+    if (code === 'PGRST202') return 'This feature is not ready yet. Please try again later.';
+    if (code === '42501' || e.status === 401 || e.status === 403) return 'Please log in again to do that.';
     if (code === '23505') return 'That username or account is already in use.';
     if (msg && /username/i.test(msg)) return msg;
     if (msg && /recipient/i.test(msg)) return 'That personal link is not connected to an account.';
-    if (code === 'PGRST205' || code === '42P01' || e.status === 404) return 'Tables or functions are missing. Run schema.sql in Supabase SQL Editor.';
-    return 'Database error (' + e.status + ').';
+    if (code === 'PGRST205' || code === '42P01' || e.status === 404) return 'Something is not set up on our side yet. Please try again later.';
+    if (e.status >= 500) return 'The server is busy right now. Please try again in a moment.';
+    return 'Something went wrong (' + e.status + '). Please try again.';
   }
 
   function sessionGet() { try { return JSON.parse(localStorage.getItem(AUTH)) || JSON.parse(sessionStorage.getItem(AUTH)) || null; } catch (e) { return null; } }
@@ -96,15 +109,21 @@
   function fromRow(r) {
     return { id: r.id, to: r.to_name, key: r.to_key, type: r.delivery_type || 'direct', text: r.body, song: r.song, artist: r.artist, color: r.art || '', prev: r.preview || '', bot: !!r.is_bot, parent: r.parent_id || null, t: Date.parse(r.created_at) || 0, ts: r.created_at || '' };
   }
-  function fetchMsgs(key, before) {
+  function matchQ(m, q) {
+    q = String(q || '').toLowerCase(); if (!q) return true;
+    return (String(m.to) + ' ' + m.text + ' ' + m.song + ' ' + m.artist).toLowerCase().indexOf(q) > -1;
+  }
+  function fetchMsgs(key, before, search) {
     key = key ? String(key).trim().toLowerCase() : '';
     if (!REMOTE) {
-      return Promise.resolve(lget(LS, []).filter(function (m) { return key ? (m.type !== 'public' && String(m.key).toLowerCase() === key) : m.type === 'public'; }));
+      return Promise.resolve(lget(LS, []).filter(function (m) { return key ? (m.type !== 'public' && String(m.key).toLowerCase() === key) : m.type === 'public'; }).filter(function (m) { return matchQ(m, search); }));
     }
     var q = 'messages?select=id,to_name,to_key,delivery_type,body,song,artist,art,preview,is_bot,parent_id,created_at&order=created_at.desc&limit=' + (key ? 100 : 50);
     /* Inbox: the database only ever returns direct messages addressed to the signed-in account */
     q += key ? '&delivery_type=eq.direct' : '&delivery_type=eq.public';
     if (before) q += '&created_at=lt.' + encodeURIComponent(before);
+    var sq = search ? String(search).replace(/[(),*%\\"]/g, ' ').replace(/\s+/g, ' ').trim() : '';
+    if (sq) { var pat = '*' + sq + '*'; q += '&or=' + encodeURIComponent('(to_name.ilike.' + pat + ',body.ilike.' + pat + ',song.ilike.' + pat + ',artist.ilike.' + pat + ')'); }
     return api(q).then(function (rows) { return rows.map(fromRow); });
   }
   function saveMsg(m) {
@@ -211,6 +230,149 @@
     setTimeout(function () { if (!isField(document.activeElement)) document.body.classList.remove('kb-open'); }, 80);
   });
 
+  /* ---------- writing helpers: draft, counter, starters, surprise, daily prompt ---------- */
+  var TEXT_PH = 'Write it here. Your name stays hidden.', DRAFT = 'anon-draft', draftT, lastSent = null;
+  function clearDraft() { clearTimeout(draftT); try { localStorage.removeItem(DRAFT); } catch (e) {} }
+  function saveDraft() {
+    clearTimeout(draftT);
+    draftT = setTimeout(function () {
+      if (/(?:^#|&)to=/.test(location.hash)) return;
+      var d = { to: $('to').value, text: $('text').value, t: Date.now() };
+      if (!d.to.trim() && !d.text.trim()) { clearDraft(); return; }
+      lset(DRAFT, d);
+    }, 400);
+  }
+  function restoreDraft() {
+    if (/(?:^#|&)to=/.test(location.hash)) return;
+    var d = lget(DRAFT, null);
+    if (!d || !d.t || Date.now() - d.t > 3 * 86400000) return;
+    if (!$('to').value && !$('text').value) { $('to').value = d.to || ''; $('text').value = d.text || ''; }
+  }
+  function updCount() {
+    var c = $('count'); if (!c) return;
+    var n = $('text').value.length;
+    c.textContent = n > 200 ? n + ' / 5000' : ''; c.className = 'count' + (n > 4500 ? ' warn' : '');
+  }
+  $('text').addEventListener('input', function () { updCount(); saveDraft(); $('sentActions').hidden = true; });
+  $('to').addEventListener('input', function () { saveDraft(); $('sentActions').hidden = true; });
+
+  var STARTERS = [['Sorry', 'Sorry for '], ['Thank you', 'Thank you for '], ['I miss you', 'I miss '], ['Pasensya na', 'Pasensya na sa '], ['Salamat', 'Salamat sa '], ['Crush kita', 'Crush kita kasi '], ['I forgive you', 'I forgive you for ']];
+  $('promptChips').innerHTML = STARTERS.map(function (x, i) { return '<button type="button" data-i="' + i + '">' + esc(x[0]) + '</button>'; }).join('');
+  $('promptChips').onclick = function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    var st = STARTERS[+b.dataset.i][1], t = $('text'), v = t.value;
+    t.value = v.trim() ? v.replace(/\s*$/, ' ') + st : st;
+    t.focus(); try { t.setSelectionRange(t.value.length, t.value.length); } catch (x) {}
+    updCount(); saveDraft();
+  };
+  $('surprise').onclick = function () {
+    var pool = CAT.filter(function (x) { return !pick || x[0] !== pick[0]; }), x = pool[Math.floor(Math.random() * pool.length)];
+    pick = [x[0], x[1], x[2], '']; $('res').hidden = true; $('q').value = ''; $('q').hidden = true; renderPicked();
+    try { if (navigator.vibrate) navigator.vibrate(10); } catch (e) {}
+  };
+
+  var PROMPTS = [
+    'Who deserves a “sorry” you never said?', 'Sino ang hindi mo nasabihan ng salamat?', 'What song reminds you of someone you lost touch with?',
+    'Sino ang namimiss mo ngayon?', 'Write to the version of you from five years ago.', 'What do you wish you said at the last goodbye?',
+    'Who made your hard days lighter?', 'Sino ang crush mong hindi mo kayang aminin?', 'What would you tell your first love today?',
+    'Who do you forgive, even if they never asked?', 'Anong kantang hindi mo na kayang pakinggan ngayon, at bakit?', 'Who believed in you before you believed in yourself?',
+    'What do you want a friend to know but cannot say out loud?', 'Sino ang gusto mong batiin kahit hindi na kayo okay?', 'Tell someone why you are proud of them.',
+    'What do you miss most about home?', 'Sino ang nagparamdam sa’yo na sapat ka?', 'Write to someone who is having a hard time right now.',
+    'What would you say to someone you ghosted?', 'Who in your family never heard you say “I love you”?', 'What song would you dedicate to a stranger?',
+    'Sino ang gusto mong balikan, kahit sandali lang?', 'Thank someone who stayed.', 'What would you apologize for, if you were braver?',
+    'Who taught you something you never thanked them for?', 'What do you hope for someone you love?', 'Sino ang iniisip mo kapag tumutugtog ang paborito mong kanta?',
+    'Who needs to hear “it is not your fault”?', 'Sino ang naging bahay mo noong wala kang matakbuhan?', 'What is the kindest thing someone did that they never knew about?'
+  ], promptShift = 0;
+  function paintPrompt() {
+    var d = new Date(), day = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+    $('dailyQ').textContent = PROMPTS[(day + promptShift) % PROMPTS.length];
+  }
+  $('dailyShuffle').onclick = function () { promptShift++; paintPrompt(); };
+  $('dailyGo').onclick = function () {
+    var q = $('dailyQ').textContent;
+    tab('submit'); $('text').placeholder = q;
+    setTimeout(function () { if (!$('submit').hidden) $('to').focus(); }, 60);
+  };
+  paintPrompt();
+
+  /* ---------- share a note as a picture (for stories and chats) ---------- */
+  function hashColor(str) {
+    var h = 0; for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+    return ['#E5334B', '#5B3A8C', '#2C3E75', '#3F6B55', '#C44569', '#1F6FEB', '#9C6B30', '#7A3E5C'][Math.abs(h) % 8];
+  }
+  function shade(hex, a) {
+    var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255, t = a < 0 ? 0 : 255, p = Math.abs(a);
+    return 'rgb(' + Math.round((t - r) * p + r) + ',' + Math.round((t - g) * p + g) + ',' + Math.round((t - b) * p + b) + ')';
+  }
+  function rrect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  function wrapLines(g, text, maxW) {
+    var words = String(text).replace(/\s+/g, ' ').trim().split(' '), lines = [], line = '';
+    words.forEach(function (w) {
+      var t = line ? line + ' ' + w : w;
+      if (g.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t;
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
+  function cardBlob(m) {
+    var W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var g = cv.getContext('2d'), base = /^#[0-9a-f]{6}$/i.test(m.color || '') ? m.color : hashColor(String(m.song) + String(m.artist));
+    var bg = g.createLinearGradient(0, 0, W * .6, H); bg.addColorStop(0, shade(base, .15)); bg.addColorStop(1, shade(base, -.6));
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(255,255,255,.07)'; g.beginPath(); g.arc(W * .9, H * .12, 360, 0, 7); g.fill(); g.beginPath(); g.arc(W * .05, H * .78, 280, 0, 7); g.fill();
+    g.textBaseline = 'alphabetic'; g.fillStyle = '#fff';
+    g.font = '800 46px "Plus Jakarta Sans", system-ui, sans-serif'; g.globalAlpha = .9;
+    try { g.letterSpacing = '10px'; } catch (e) {}
+    g.fillText('ANONYMOUS', 90, 170);
+    try { g.letterSpacing = '0px'; } catch (e) {}
+    g.globalAlpha = 1;
+    g.font = '700 54px "Plus Jakarta Sans", system-ui, sans-serif'; g.globalAlpha = .85;
+    var to = 'To: ' + String(m.to); while (g.measureText(to).width > 900 && to.length > 6) to = to.slice(0, -2); g.fillText(to === 'To: ' + m.to ? to : to + '…', 90, 330); g.globalAlpha = 1;
+    /* message: shrink the text until it fits */
+    var size = 104, lines, maxLines = 11, top = 420, boxH = 880;
+    for (; size >= 52; size -= 6) {
+      g.font = '700 ' + size + 'px Caveat, "Segoe Script", cursive';
+      lines = wrapLines(g, m.text, 900);
+      if (lines.length * size * 1.15 <= boxH && lines.length <= maxLines) break;
+    }
+    if (lines.length > maxLines || lines.length * size * 1.15 > boxH) {
+      var cap = Math.max(1, Math.min(maxLines, Math.floor(boxH / (size * 1.15))));
+      lines = lines.slice(0, cap); lines[cap - 1] = lines[cap - 1].replace(/\s*\S*$/, '') + '…';
+    }
+    g.fillStyle = '#fff'; g.font = '700 ' + size + 'px Caveat, "Segoe Script", cursive';
+    var used = lines.length * size * 1.15, y0 = top + Math.max(0, (boxH - used) * .42);   /* short notes sit in the middle, not stuck to the top */
+    lines.forEach(function (ln, i) { g.fillText(ln, 90, y0 + size + i * size * 1.15); });
+    /* song card */
+    var y = 1440; g.fillStyle = 'rgba(0,0,0,.28)'; rrect(g, 70, y, 940, 230, 40); g.fill();
+    g.fillStyle = shade(base, -.25); rrect(g, 100, y + 35, 160, 160, 28); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '700 84px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('\u266A', 180, y + 140); g.textAlign = 'left';
+    function fit(txt, font, w) { g.font = font; while (g.measureText(txt).width > w && txt.length > 4) txt = txt.slice(0, -2); return txt; }
+    g.fillStyle = '#fff'; var st = String(m.song); g.fillText(fit(st, '800 56px "Plus Jakarta Sans", system-ui, sans-serif', 680) + (g.measureText(st).width > 680 ? '…' : ''), 300, y + 105);
+    g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '500 40px "Plus Jakarta Sans", system-ui, sans-serif'; var ar = String(m.artist); g.fillText(fit(ar, g.font, 680) + (g.measureText(ar).width > 680 ? '…' : ''), 300, y + 165);
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '700 44px Caveat, cursive'; g.fillText('say what you never said, with a song.', 90, 1790);
+    g.font = '500 34px "Plus Jakarta Sans", system-ui, sans-serif'; g.globalAlpha = .7; g.fillText(location.host || 'anonymous', 90, 1850); g.globalAlpha = 1;
+    return new Promise(function (res) { cv.toBlob(res, 'image/png'); });
+  }
+  function shareCard(m, btn) {
+    if (!m) return;
+    var old = btn ? btn.textContent : ''; if (btn) { btn.disabled = true; btn.textContent = 'Making your image...'; }
+    var fonts = (document.fonts && document.fonts.load) ? Promise.all([document.fonts.load('700 80px Caveat'), document.fonts.load('800 40px "Plus Jakarta Sans"')]).catch(function () {}) : Promise.resolve();
+    fonts.then(function () { return cardBlob(m); }).then(function (blob) {
+      if (!blob) throw 0;
+      var file; try { file = new File([blob], 'anonymous-note.png', { type: 'image/png' }); } catch (e) {}
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        return navigator.share({ files: [file], title: 'Anonymous', text: 'Say it with a song' }).catch(function () {});
+      }
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'anonymous-note.png';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+      toast('Image saved. Post it on your story.');
+    }).catch(function () { toast('Could not make the image. Try again.', true); })
+      .then(function () { if (btn) { btn.disabled = false; btn.textContent = old; } });
+  }
+  $('shareSent').onclick = function () { shareCard(lastSent, $('shareSent')); };
+  $('seeBrowse').onclick = function () { tab('browse'); };
+  $('writeMore').onclick = function () { $('sentActions').hidden = true; $('msg').textContent = ''; $('to').focus(); };
+
   /* ---------- tabs ---------- */
   var maint = null;
   function showMaint() {
@@ -259,6 +421,8 @@
     if ($('supportFab')) $('supportFab').hidden = false;
     if ($('supportOverlay') && !$('supportOverlay').hidden) { $('supportOverlay').hidden = true; document.body.style.overflow = ''; }
     [].forEach.call($('tabs').children, function (b) { b.setAttribute('aria-selected', b.dataset.t === t); });
+    if (t !== 'submit' && $('sentActions')) $('sentActions').hidden = true;
+    if (t === 'submit') setTimeout(updCount, 60);
     if (t === 'home') loadHome();
     if (t === 'history') showHistory();
     if (t === 'browse') loadFeed();
@@ -432,7 +596,8 @@
       m.className = 'msg ok-pop';
       m.textContent = direct ? 'Sent anonymously. Only the owner of that personal link can see it in their Inbox.' : 'Posted anonymously to Browse. The named person will not receive an Inbox message.';
       $('to').value = direct ? $('to').value : ''; $('text').value = ''; pick = null; $('picked').innerHTML = ''; $('q').hidden = false;
-      replyParent = null;
+      replyParent = null; lastSent = o; clearDraft(); updCount(); $('text').placeholder = TEXT_PH;
+      $('sentActions').hidden = false; $('seeBrowse').hidden = direct;
       celebrateSend();
       if (!direct) loadFeed();
     }).catch(function (e) { m.className = 'msg err'; m.textContent = (e && e.msg) || dbHint(e); })
@@ -468,20 +633,11 @@
   function reactBar(m) {
     /* Only real public posts on the server (not History local ids, not samples) */
     if (!m || m.ex || m.type !== 'public' || !isUuid(m.id)) return '';
-    var st = reactCache[m.id] || { counts: {}, mine: null };
-    var total = reactTotal(st);
-    var mine = st.mine || '';
-    var label = mine ? mine : '＋';
-    var chips = '';
-    REACT_EMOJIS.forEach(function (e) {
+    var st = reactCache[m.id] || { counts: {}, mine: null }, mine = st.mine || '';
+    return '<div class="reacts" data-mid="' + esc(m.id) + '">' + REACT_EMOJIS.map(function (e) {
       var n = (st.counts && st.counts[e]) || 0;
-      if (n > 0) chips += '<span class="react-chip' + (mine === e ? ' on' : '') + '">' + e + ' ' + n + '</span>';
-    });
-    return '<div class="reacts" data-mid="' + esc(m.id) + '">' +
-      (chips ? '<div class="react-chips">' + chips + '</div>' : '') +
-      '<button type="button" class="react-main' + (mine ? ' on' : '') + '" data-mid="' + esc(m.id) + '" aria-label="React. Hold to choose emoji.">' +
-      label + (total && !chips ? ' <span class="n">' + total + '</span>' : '') +
-      '</button></div>';
+      return '<button type="button" class="react-btn' + (mine === e ? ' on' : '') + '" data-mid="' + esc(m.id) + '" data-e="' + e + '" aria-pressed="' + (mine === e) + '" aria-label="React ' + e + (n ? ', ' + n + ' so far' : '') + '"><span class="em">' + e + '</span>' + (n ? '<span class="n">' + n + '</span>' : '') + '</button>';
+    }).join('') + '</div>';
   }
   function paintReacts(mid) {
     var m = cache[mid];
@@ -536,7 +692,7 @@
       else if (/login_required|JWT|401|42501/i.test(t) || (err && err.status === 401))
         msg = 'Log in first to react.';
       else if (/404|PGRST202|could not find/i.test(t))
-        msg = 'Reactions not set up yet. Run PART 11 and 12 in Supabase.';
+        msg = 'Reactions are not available yet.';
       else if (err && err.msg) msg = err.msg;
       toast(msg, true);
     });
@@ -600,33 +756,83 @@
     }).catch(function () {});
   }
   setInterval(function () { if (!document.hidden && cur !== 'mybox') checkInbox(false); }, 45000);
-  var feedTop = null, feedAll = [], feedMore = false, feedExpanded = false;
+  var feedTop = null, feedAll = [], feedMore = false, feedExpanded = false, feedQ = '', feedSort = 'new', feedPending = null, feedGen = 0, bqT;
+  function sortedFeed(list) {
+    if (feedSort !== 'hot') return list;
+    return list.map(function (m, i) { return { m: m, i: i, n: reactTotal(reactCache[m.id]) }; })
+      .sort(function (a, b) { return b.n - a.n || a.i - b.i; }).map(function (x) { return x.m; });
+  }
   function paintFeed() {
-    show($('feed'), feedAll, 'No messages yet. Send the first one.', false);
-    if (feedMore) {
-      $('feed').insertAdjacentHTML('beforeend', '<button type="button" class="btn ghost full" id="feedMore">Load older messages</button>');
-      $('feedMore').onclick = loadMoreFeed;
+    var ids = feedAll.filter(function (m) { return isUuid(m.id); }).map(function (m) { return m.id; });
+    function go() {
+      show($('feed'), sortedFeed(feedAll), feedQ ? 'No notes match “' + esc(feedQ) + '”. Try another word.' : 'No messages yet. Send the first one.', false);
+      if (feedMore) {
+        $('feed').insertAdjacentHTML('beforeend', '<button type="button" class="btn ghost full" id="feedMore">Load older messages</button>');
+        $('feedMore').onclick = loadMoreFeed;
+      }
     }
+    if (feedSort === 'hot' && ids.length) loadReactions(ids).then(go); else go();
   }
   function loadMoreFeed() {
     var last = feedAll[feedAll.length - 1]; if (!last || !last.ts) return;
     var b = $('feedMore'); b.disabled = true; b.textContent = 'Loading...';
-    fetchMsgs('', last.ts).then(function (a) {
+    fetchMsgs('', last.ts, feedQ).then(function (a) {
       var have = {}; feedAll.forEach(function (m) { have[m.id] = 1; });
       feedAll = feedAll.concat(a.filter(function (m) { return !have[m.id]; }));
       feedMore = a.length >= 50; feedExpanded = true; paintFeed();
     }).catch(function () { b.disabled = false; b.textContent = 'Could not load. Tap to try again.'; });
   }
-  function loadFeed() {
-    if (feedExpanded) return;   /* do not reset the list after the person loaded older messages */
+  function applyFeed(a) {
+    feedTop = a[0] && a[0].id; feedReady = true; feedAll = a; feedMore = REMOTE && a.length >= 50; paintFeed();
+  }
+  function showPill(n) {
+    var p = $('newPill'); if (!p) return;
+    p.textContent = (n > 1 ? n + ' new notes' : 'New note') + ' \u2191'; p.hidden = false;
+  }
+  function loadFeed(force) {
+    if (feedQ) return;            /* searching: do not replace the results */
+    if (feedExpanded && !force) return;   /* the person loaded older messages: keep their place */
     if (!feedReady) $('feed').innerHTML = skel(3);
     fetchMsgs('').then(function (a) {
       var top = a[0] && a[0].id;
-      if (feedReady && top === feedTop) return;
-      feedTop = top; feedReady = true;
-      feedAll = a; feedMore = REMOTE && a.length >= 50; paintFeed();
-    }).catch(function (e) { $('feed').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>'; });
+      if (feedReady && top === feedTop && !force) return;
+      /* someone is reading or listening: do not yank the list away, offer a pill instead */
+      if (feedReady && !force && (window.scrollY > 240 || pb)) {
+        feedPending = a; var known = {}; feedAll.forEach(function (m) { known[m.id] = 1; });
+        showPill(a.filter(function (m) { return !known[m.id]; }).length); return;
+      }
+      feedPending = null; if ($('newPill')) $('newPill').hidden = true; applyFeed(a);
+    }).catch(function (e) { if (!feedReady) $('feed').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>'; });
   }
+  $('newPill').onclick = function () {
+    $('newPill').hidden = true;
+    if (feedPending) { applyFeed(feedPending); feedPending = null; }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  function runSearch() {
+    var q = $('bq').value.trim(); feedQ = q; feedPending = null; $('newPill').hidden = true;
+    if (!q) { feedExpanded = false; feedReady = false; loadFeed(true); return; }
+    $('feed').innerHTML = skel(2);
+    var g = ++feedGen;
+    fetchMsgs('', null, q).then(function (a) {
+      if (g !== feedGen) return;
+      feedAll = a; feedMore = REMOTE && a.length >= 50; paintFeed();
+    }).catch(function (e) { if (g === feedGen) $('feed').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>'; });
+  }
+  $('bq').oninput = function () { clearTimeout(bqT); bqT = setTimeout(runSearch, 350); };
+  $('bsort').onclick = function (e) {
+    var b = e.target.closest('button[data-s]'); if (!b) return;
+    feedSort = b.dataset.s;
+    [].forEach.call($('bsort').querySelectorAll('button[data-s]'), function (x) { x.setAttribute('aria-pressed', x === b); });
+    paintFeed();
+  };
+  $('bRefresh').onclick = function () {
+    var b = $('bRefresh'); b.classList.remove('spin'); void b.offsetWidth; b.classList.add('spin');
+    try { if (navigator.vibrate) navigator.vibrate(8); } catch (x) {}
+    feedPending = null; $('newPill').hidden = true;
+    if (feedQ) { runSearch(); return; }
+    feedExpanded = false; feedReady = false; loadFeed(true);
+  };
   setInterval(function () { if (cur === 'browse' && !document.hidden) loadFeed(); }, 20000);
 
 
@@ -790,6 +996,7 @@
       '<p class="sub" style="text-align:center;margin-top:22px">Also, here is a message from the sender:</p><p class="hand">' + esc(m.text) + '</p>' +
       (isPublic && !m.ex && isUuid(m.id) ? '<div class="react-bar">' + reactBar(m) + '</div>' : '') +
       '<button type="button" class="btn ghost full reply-btn" id="replySong">Reply with a song</button>' +
+      '<button type="button" class="btn ghost full share-btn" id="shareCard">Share as image</button>' +
       (isPublic && !m.ex && !m.bot && isUuid(m.id) && REMOTE ? '<button type="button" class="link report-link" id="reportBtn">Report this post</button><div id="reportBox" class="report-box" hidden></div>' : '');
     SECS.forEach(function (x) { $(x).hidden = true; });
     try { if (!(history.state && history.state.t === 'detail')) history.pushState({ t: 'detail' }, ''); } catch (e) {}
@@ -798,6 +1005,7 @@
       loadReactions([m.id]).then(function () { paintReacts(m.id); });
     }
     if ($('reportBtn')) $('reportBtn').onclick = function () { openReport(m); };
+    $('shareCard').onclick = function () { shareCard(m, $('shareCard')); };
     $('back').onclick = function () {
       au.pause(); rst(); closeReactPicker();
       if (history.state && history.state.t === 'detail') history.back(); else tab(cur, true);
@@ -809,46 +1017,22 @@
         : ('Someone sent me “' + m.song + '”. Here is my anonymous reply on Browse. ');
       tab('submit');
       $('to').value = m.to || 'someone';
-      $('text').value = seed;
+      $('text').value = seed; updCount();
       /* no toast — it covers the keyboard; the prefilled text already explains */
       setTimeout(function () { $('text').focus(); }, 50);
     };
   }
 
-  /* Reactions: short tap = toggle ❤️ (or remove yours); hold = pick emoji */
-  var reactHoldTimer = null, reactHoldFired = false;
-  function clearReactHold() {
-    if (reactHoldTimer) { clearTimeout(reactHoldTimer); reactHoldTimer = null; }
-  }
-  document.addEventListener('pointerdown', function (e) {
-    var main = e.target.closest('.react-main');
-    if (!main) return;
-    e.preventDefault();
-    e.stopPropagation();
-    reactHoldFired = false;
-    var mid = main.dataset.mid || (main.closest('.reacts') && main.closest('.reacts').dataset.mid);
-    clearReactHold();
-    reactHoldTimer = setTimeout(function () {
-      reactHoldFired = true;
-      try { if (navigator.vibrate) navigator.vibrate(12); } catch (x) {}
-      openReactPicker(mid, main);
-    }, 420);
+  /* Reactions: one tap on any emoji. Tap your own again to take it back. */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.react-btn'); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var mid = b.dataset.mid, em = b.dataset.e;
+    doReact(mid, em).then(function () {
+      var nb = document.querySelector('.reacts[data-mid="' + mid + '"] .react-btn.on[data-e="' + em + '"]');
+      if (nb) nb.classList.add('pop');
+    });
   }, true);
-  document.addEventListener('pointerup', function (e) {
-    var main = e.target.closest('.react-main');
-    if (!main) { clearReactHold(); return; }
-    e.preventDefault();
-    e.stopPropagation();
-    var mid = main.dataset.mid || (main.closest('.reacts') && main.closest('.reacts').dataset.mid);
-    var held = reactHoldFired;
-    clearReactHold();
-    if (held) return;
-    closeReactPicker();
-    var st = reactCache[mid] || {};
-    /* short tap: remove your reaction, or add ❤️ */
-    doReact(mid, st.mine || '❤️');
-  }, true);
-  document.addEventListener('pointercancel', clearReactHold, true);
   document.addEventListener('click', function (e) {
     var pick = e.target.closest('.react-pick-btn');
     if (pick) {
@@ -861,7 +1045,7 @@
     }
     if (e.target.closest('.react-picker')) return;
     if (!e.target.closest('.react-main')) closeReactPicker();
-    if (e.target.closest('.play,a,.react-main,.reacts,.react-picker,.reply-btn,.play-pick')) return;
+    if (e.target.closest('.play,a,.react-btn,.reacts,.react-picker,.reply-btn,.share-btn,.play-pick')) return;
     var c = e.target.closest('.card[data-id]'); if (c) openD(c.dataset.id);
   });
   document.addEventListener('keydown', function (e) {
@@ -934,6 +1118,20 @@
   function showHistory() {
     var list = pruneHistory();
     show($('hlist'), list, 'Nothing sent from this device in the last 7 days.', false);
+    var hs = $('hstats');
+    if (!list.length) { hs.hidden = true; return; }
+    var pub = list.filter(function (m) { return m.type === 'public'; }).length;
+    function paint(react) {
+      hs.innerHTML = '<div><b>' + list.length + '</b><span>sent this week</span></div><div><b>' + pub + '</b><span>on Browse</span></div><div><b>' + (list.length - pub) + '</b><span>private</span></div>' +
+        (react != null ? '<div class="hot"><b>' + react + '</b><span>reactions on your posts</span></div>' : '');
+      hs.hidden = false;
+    }
+    paint(null);
+    var ids = list.filter(function (m) { return m.type === 'public' && isUuid(m.id); }).map(function (m) { return m.id; });
+    if (ids.length) loadReactions(ids).then(function () {
+      var n = 0; ids.forEach(function (id) { n += reactTotal(reactCache[id]); });
+      if (cur === 'history') paint(n);
+    });
   }
   document.addEventListener('click', function (e) { var g = e.target.closest('[data-go]'); if (g) tab(g.dataset.go); });
   $('homeLink').onclick = function () { tab('home'); };
@@ -1160,6 +1358,7 @@
     });
   };
 
+  restoreDraft(); updCount();
   boot();
 
 })();
