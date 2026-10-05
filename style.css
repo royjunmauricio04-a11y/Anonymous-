@@ -516,3 +516,47 @@ body.lp .lp-sheet .msg:empty{display:none}
 body.lp .lp-lock{margin-top:14px}
 :root:has(body.lp){padding-bottom:0}
 @media (min-width:560px){body.lp .lp-sheet{border-radius:28px 28px 0 0}}
+
+/* ---------- profile page (My Box) + custom message cards ---------- */
+.pf{margin:0 0 22px}
+.pf-head{text-align:center;padding-top:6px}
+.pf-av{position:relative;width:96px;height:96px;border-radius:50%;border:0;padding:0;cursor:pointer;background:var(--grad) center/cover;color:#fff;font:800 2.4rem 'Plus Jakarta Sans',sans-serif;display:grid;place-items:center}
+.pf-av i{position:absolute;right:-2px;bottom:-2px;width:32px;height:32px;border-radius:50%;background:var(--bg);color:var(--text);border:1px solid var(--border);font-style:normal;font-size:.95rem;display:grid;place-items:center}
+.pf-name{margin:14px 0 8px;font-size:1.5rem;font-weight:800;letter-spacing:-.01em}
+.pf-link{border:0;background:var(--surface);color:var(--muted);font:600 .88rem 'Plus Jakarta Sans',sans-serif;padding:9px 18px;border-radius:999px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-stats{display:grid;grid-template-columns:repeat(3,1fr);margin:20px 0 0}
+.pf-stats b{display:block;font-size:1.7rem;font-weight:800;line-height:1.1}
+.pf-stats span{color:var(--muted);font-size:.85rem;font-weight:600}
+.pf-boost{margin:22px 0 0;padding:18px;border-radius:22px;color:#111113;background:linear-gradient(120deg,#FFE0B8,#FFE9E5)}
+.pf-bt{display:flex;justify-content:space-between;align-items:center}
+.pf-bt b{font-size:1.15rem}
+.pf-bt em{font-style:normal;font-weight:800;font-size:.8rem;color:#fff;background:var(--grad);padding:3px 10px;border-radius:999px}
+.pf-bar{height:8px;border-radius:99px;background:#fff;margin:12px 0 10px;overflow:hidden}
+.pf-bar i{display:block;height:100%;width:0;border-radius:99px;background:var(--grad);transition:width .5s ease}
+.pf-boost p{margin:0;color:#4a4a52;font-size:.9rem}
+.pf-h{margin:24px 0 10px;font-size:.95rem;color:var(--muted)}
+.pf-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.pf-list button{width:100%;display:flex;align-items:center;gap:14px;padding:16px;border-radius:18px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;cursor:pointer;text-align:left}
+.pf-list b{flex:1;font-size:.98rem}
+.pf-list em{font-style:normal;font-weight:800;font-size:.75rem;color:#fff;background:var(--grad);padding:3px 10px;border-radius:999px}
+.pf-list .ck{flex:none;width:26px;height:26px;border-radius:50%;border:2px dashed var(--muted);display:grid;place-items:center;font-size:.8rem;color:#fff}
+.pf-list .done{opacity:.6}.pf-list .done b{text-decoration:line-through}
+.pf-list .done .ck{border:0;background:var(--accent)}
+.pf-cust .card{margin:0 0 14px;cursor:default;overflow:hidden}
+.cv-label{margin:0 0 8px;font-size:.82rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.cv-row{display:flex;align-items:center;gap:12px}
+.cv-sw{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.cv-sw button,.cv-col{width:48px;height:48px;border-radius:50%;border:2px solid var(--border);padding:0;cursor:pointer;margin:0;overflow:hidden;position:relative;flex:none}
+.cv-sw button[aria-pressed="true"]{border-color:var(--text);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
+.cv-col{background:conic-gradient(#f44,#fc4,#4f4,#4cf,#84f,#f44)}
+.cv-col.big{width:52px;height:52px}
+.cv-col input{opacity:0;position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;cursor:pointer}
+.card.styled{border-color:transparent}
+.card.styled .top{color:#fff;background:transparent}
+.card.styled .to,.card.styled .stamp{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.4);color:#fff}
+.card.styled .hand,.card.styled .when{color:#fff}
+.card.styled .hand{text-shadow:0 1px 8px rgba(0,0,0,.3)}
+.card.styled .song{background:rgba(0,0,0,.18);border-top-color:rgba(255,255,255,.2);color:#fff}
+.card.styled .song b,.card.styled .song span{color:#fff}
+.card.styled .song span span{color:rgba(255,255,255,.85)}
+.cv-preview.styled .song{border-radius:0 0 14px 14px}

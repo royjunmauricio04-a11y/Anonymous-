@@ -30,6 +30,7 @@
  <button role="tab" data-t="submit" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.2-4.2L16.5 4.5a2 2 0 0 1 2.8 0l.2.2a2 2 0 0 1 0 2.8L8.2 18.8z"/><path d="M14 7l3 3"/></svg><span class="tl">Submit</span></button>
  <button role="tab" data-t="browse" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span class="tl">Browse</span></button>
  <button role="tab" data-t="mybox" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 13l2.2-6.2A2 2 0 0 1 7.6 5.5h8.8a2 2 0 0 1 1.9 1.3L20.5 13v4.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M3.5 13H8l1 2h6l1-2h4.5"/></svg><span class="tl">Inbox</span></button>
+ <button role="tab" data-t="profile" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="3.5"/><path d="M5 19.5c1.5-3.2 4-5 7-5s5.5 1.8 7 5"/></svg><span class="tl">Profile</span></button>
  <button role="tab" data-t="history" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span class="tl">History</span></button>
 </nav>
 
@@ -106,23 +107,91 @@
  <div id="feed"></div>
 </section>
 
-<section id="mybox" hidden>
-  <div class="box" id="who" hidden>
-  <p class="who" id="whoName"></p>
-  <p class="sub" style="margin:0">This is your link. Share your link so people can send you a song without a name.</p>
-  <div class="row" style="margin-top:10px"><input id="link" readonly aria-label="Your link"><button class="btn dark" id="copy">Copy</button></div>
-  <p class="sub" id="linkNote" hidden style="margin:8px 0 0"></p>
-  <div class="share" id="share"></div>
-  <div class="warn" id="pinNudge" hidden style="margin:14px 0 0">
-   <b>Add a PIN.</b> Without it you cannot get this username or your Inbox back if you change phones or clear your browser.
-   <div class="row" style="margin-top:10px"><input id="pinNew" type="password" maxlength="20" placeholder="New PIN (4 to 20 characters)" autocomplete="off"><button class="btn dark" id="pinSave">Save</button></div>
+<section id="profile" hidden>
+  <div id="pf" hidden>
+    <div class="pf-head">
+      <button type="button" class="pf-av" id="pfAv" aria-label="Change profile photo">
+        <span id="pfInit">?</span>
+        <i aria-hidden="true">&#9998;</i>
+      </button>
+      <input type="file" id="pfFile" accept="image/*" hidden>
+      <h2 class="pf-name" id="pfName">@you</h2>
+      <button type="button" class="pf-link" id="pfLink" aria-label="Share your link">your.link</button>
+      <div class="pf-stats" role="group" aria-label="Stats">
+        <div><b id="stMsg">0</b><span>Messages</span></div>
+        <div><b id="stView">0</b><span>Views</span></div>
+        <div><b id="stSong">0</b><span>Songs</span></div>
+      </div>
+    </div>
+
+    <div class="pf-boost" id="pfBoost">
+      <div class="pf-bt"><b>Complete your profile</b><em id="pfPct">0%</em></div>
+      <div class="pf-bar"><i id="pfBar" style="width:0"></i></div>
+      <p id="pfHint">Finish the steps below to get more messages.</p>
+    </div>
+
+    <p class="pf-h">Basics</p>
+    <ul class="pf-list" id="pfList"></ul>
+
+    <p class="pf-h">Card background</p>
+    <div class="box pf-cust">
+      <p class="sub" style="margin:0 0 10px">Pick a gradient, solid color, or photo. This is how messages in your Inbox will look.</p>
+      <div class="card cv-preview" id="cvCard" style="margin:0 0 14px">
+        <div class="top" id="cvPrev">
+          <span class="to">To: you</span>
+          <span class="stamp">From: ???</span>
+          <p class="hand">This is how your cards will look.</p>
+        </div>
+        <div class="song">
+          <span class="art" style="background:rgba(255,255,255,.25)"></span>
+          <span><b>Song title</b><span>Artist</span></span>
+        </div>
+      </div>
+
+      <p class="cv-label">Gradients</p>
+      <div class="cv-sw" id="cvSw"></div>
+
+      <p class="cv-label" style="margin-top:14px">Solid color</p>
+      <div class="cv-row">
+        <label class="cv-col big" aria-label="Pick a color"><input type="color" id="cvCol" value="#E5334B"></label>
+        <span class="sub" style="margin:0">Tap the circle to choose any color</span>
+      </div>
+
+      <p class="cv-label" style="margin-top:14px">Photo background</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button type="button" class="btn ghost" id="cvUp">Upload background photo</button>
+        <input type="file" id="cvFile" accept="image/*" hidden>
+      </div>
+      <div id="cvDimWrap" style="margin-top:12px">
+        <label for="cvDim">Photo darkness (makes text easier to read)</label>
+        <input type="range" id="cvDim" min="0" max="70" value="35" style="width:100%">
+      </div>
+
+      <div class="row" style="margin-top:16px;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn ghost" id="cvClr">Reset</button>
+        <button type="button" class="btn dark" id="cvSave">Save background</button>
+      </div>
+    </div>
   </div>
 
-  <button class="link" id="swap">Use a different username</button>
- </div>
- <h2 class="sec">Your messages</h2>
- <p class="sub">Only messages sent through your personal link appear here. Public Browse posts are separate and are not delivered to your Inbox.</p>
- <div id="mine" style="margin-top:14px"><div class="empty">Your private messages will appear here.</div></div>
+  <div class="box" id="who" hidden style="margin-top:16px">
+    <p class="who" id="whoName" hidden></p>
+    <p class="sub" style="margin:0">Share this link so people can send you a song without a name.</p>
+    <div class="row" style="margin-top:10px"><input id="link" readonly aria-label="Your link"><button class="btn dark" id="copy">Copy</button></div>
+    <p class="sub" id="linkNote" hidden style="margin:8px 0 0"></p>
+    <div class="share" id="share"></div>
+    <div class="warn" id="pinNudge" hidden style="margin:14px 0 0">
+      <b>Add a PIN.</b> Without it you cannot get this username or your Inbox back if you change phones or clear your browser.
+      <div class="row" style="margin-top:10px"><input id="pinNew" type="password" maxlength="20" placeholder="New PIN (4 to 20 characters)" autocomplete="off"><button class="btn dark" id="pinSave">Save</button></div>
+    </div>
+    <button class="link" id="swap" type="button">Use a different username</button>
+  </div>
+</section>
+
+<section id="mybox" hidden>
+  <h2 class="sec">Your messages</h2>
+  <p class="sub">Only messages sent through your personal link appear here. Public Browse posts are separate and are not delivered to your Inbox.</p>
+  <div id="mine" style="margin-top:14px"><div class="empty">Your private messages will appear here.</div></div>
 </section>
 
 <section id="history" hidden>

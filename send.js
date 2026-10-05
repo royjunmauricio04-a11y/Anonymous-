@@ -280,6 +280,16 @@
   /* ---- start ---- */
   if (!/^[A-Za-z0-9._]{3,20}$/.test(to)) { miss('This link is missing a name. Ask your friend to send it again.'); return; }
   if (!REMOTE) { miss('This page needs the online database. Add your Supabase keys in config.js.'); return; }
+  /* count link view once per username per day on this device */
+  try {
+    var vk = 'anon-viewed-' + to.toLowerCase();
+    var day = new Date().toISOString().slice(0, 10);
+    if (lget(vk, '') !== day) {
+      lset(vk, day);
+      rpc('record_link_view', { p_username: to }).catch(function () {});
+    }
+  } catch (e) {}
+
   api('settings?select=key,value').catch(function () { return []; }).then(function (rows) {
     var st = {}; rows.forEach(function (x) { st[x.key] = x.value; });
     if (st.maintenance === 'true') { $('sMaintTxt').textContent = st.maintenance_note || 'We will be right back.'; show('sMaint'); return; }
