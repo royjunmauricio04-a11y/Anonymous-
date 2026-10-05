@@ -504,3 +504,15 @@ body.kb-open .tabs{display:none}
 /* the personal-link page (send.html) has its own full-colour layout: keep the app-only rules off it */
 body.lp::before{display:none}
 body.lp main:not(.lp-center){padding-bottom:0}
+
+/* send.html layout fixes: sheet bleeds edge to edge, fills the screen, no doubled safe-area padding */
+body.lp #sForm{max-width:none;padding:0}
+body.lp #sForm:not([hidden]){min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+body.lp .lp-sheet{flex:1 0 auto;width:100%;min-height:0}
+body.lp .lp-hero{width:100%;padding-top:18px}
+body.lp .lp-sub{text-wrap:balance}
+body.lp .lp-sheet .msg{min-height:0;margin:10px 0 0}
+body.lp .lp-sheet .msg:empty{display:none}
+body.lp .lp-lock{margin-top:14px}
+:root:has(body.lp){padding-bottom:0}
+@media (min-width:560px){body.lp .lp-sheet{border-radius:28px 28px 0 0}}
