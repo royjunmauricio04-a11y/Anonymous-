@@ -360,3 +360,28 @@ body.lp{background:var(--accent)}
 .report-link{display:block;margin:18px auto 0}
 .report-box{margin-top:6px}
 .report-box .chips{justify-content:center}
+
+/* ---------- polish: touch, spacing, loading, status bars ---------- */
+html{-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+button,a,[role="button"],.tabs button,.card{touch-action:manipulation}
+/* leave room under the last item so the floating help button never sits on top of it */
+main{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+.support-fab{transition:transform .15s,box-shadow .15s,opacity .15s}
+body.kb-open .support-fab{opacity:0;pointer-events:none;transform:scale(.8)}
+
+/* card header: To / From pills on the left, time on the right */
+.thead{display:flex;align-items:center;gap:6px;min-width:0}
+.thead .stamp{margin-left:0}
+.thead .to{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.when{margin-left:auto;flex:none;color:var(--muted);font-size:.76rem;font-weight:500;white-space:nowrap}
+
+/* loading placeholders instead of a blank page */
+.skel-card{height:156px;border-radius:16px;margin:14px 0;border:1px solid var(--border);
+  background:linear-gradient(90deg,var(--surface) 0%,var(--border) 50%,var(--surface) 100%);background-size:200% 100%;animation:skelMove 1.3s linear infinite}
+@keyframes skelMove{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skel-card{animation:none}}
+
+/* offline bar (the announcement bar is styled above) */
+.netbar{margin:0 0 14px;padding:10px 14px;border-radius:12px;background:var(--surface);border:1px dashed var(--muted);color:var(--muted);font-size:.88rem;text-align:center}
+.netbar[hidden]{display:none}
+#feedMore{margin:18px 0 6px}

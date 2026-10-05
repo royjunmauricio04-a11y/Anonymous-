@@ -94,9 +94,9 @@
   }
 
   function fromRow(r) {
-    return { id: r.id, to: r.to_name, key: r.to_key, type: r.delivery_type || 'direct', text: r.body, song: r.song, artist: r.artist, color: r.art || '', prev: r.preview || '', bot: !!r.is_bot, parent: r.parent_id || null, t: Date.parse(r.created_at) || 0 };
+    return { id: r.id, to: r.to_name, key: r.to_key, type: r.delivery_type || 'direct', text: r.body, song: r.song, artist: r.artist, color: r.art || '', prev: r.preview || '', bot: !!r.is_bot, parent: r.parent_id || null, t: Date.parse(r.created_at) || 0, ts: r.created_at || '' };
   }
-  function fetchMsgs(key) {
+  function fetchMsgs(key, before) {
     key = key ? String(key).trim().toLowerCase() : '';
     if (!REMOTE) {
       return Promise.resolve(lget(LS, []).filter(function (m) { return key ? (m.type !== 'public' && String(m.key).toLowerCase() === key) : m.type === 'public'; }));
@@ -104,6 +104,7 @@
     var q = 'messages?select=id,to_name,to_key,delivery_type,body,song,artist,art,preview,is_bot,parent_id,created_at&order=created_at.desc&limit=' + (key ? 100 : 50);
     /* Inbox: the database only ever returns direct messages addressed to the signed-in account */
     q += key ? '&delivery_type=eq.direct' : '&delivery_type=eq.public';
+    if (before) q += '&created_at=lt.' + encodeURIComponent(before);
     return api(q).then(function (rows) { return rows.map(fromRow); });
   }
   function saveMsg(m) {
@@ -173,6 +174,42 @@
       throw { msg: msg || dbHint(e), taken: true };
     });
   }
+
+  /* ---------- small helpers: time ago, loading skeletons ---------- */
+  function ago(t) {
+    var s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    if (s < 604800) return Math.floor(s / 86400) + 'd ago';
+    try { return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } catch (e) { return ''; }
+  }
+  function skel(n) { var h = ''; for (var i = 0; i < n; i++) h += '<div class="skel-card" aria-hidden="true"></div>'; return '<div role="status" aria-label="Loading">' + h + '</div>'; }
+
+  /* a thin bar under the top bar: used for the announcement and for "you are offline" */
+  function topBar(id, cls) {
+    var el = $(id);
+    if (!el) {
+      el = document.createElement('div'); el.id = id; el.className = cls; el.setAttribute('role', 'status'); el.hidden = true;
+      var tb = document.querySelector('.topbar');
+      if (tb && tb.parentNode) tb.parentNode.insertBefore(el, tb.nextSibling); else document.body.insertBefore(el, document.body.firstChild);
+    }
+    return el;
+  }
+  function netBar() {
+    var off = navigator.onLine === false, el = topBar('netbar', 'netbar');
+    el.textContent = 'You are offline. Showing what was loaded earlier.'; el.hidden = !off;
+  }
+  window.addEventListener('offline', netBar);
+  window.addEventListener('online', function () { netBar(); try { if (cur === 'browse') loadFeed(); checkInbox(false); } catch (e) {} });
+  netBar();
+
+  /* hide the floating help button while typing, so it never covers the keyboard or the Send button */
+  function isField(el) { return !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName); }
+  document.addEventListener('focusin', function (e) { if (isField(e.target)) document.body.classList.add('kb-open'); });
+  document.addEventListener('focusout', function () {
+    setTimeout(function () { if (!isField(document.activeElement)) document.body.classList.remove('kb-open'); }, 80);
+  });
 
   /* ---------- tabs ---------- */
   var maint = null;
@@ -533,7 +570,7 @@
   }
   function cardH(m, isNew) {
     return '<div class="card' + (isNew ? ' new' : '') + '" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Open message to ' + esc(m.to) + '">' +
-      '<div class="top"><span class="to">To: ' + esc(m.to) + '</span> <span class="stamp">' + (m.ex ? 'Sample' : m.bot ? 'Bot' : m.parent ? 'Reply' : 'From: ???') + '</span><p class="hand clip">' + esc(m.text) + '</p></div>' +
+      '<div class="top"><div class="thead"><span class="to">To: ' + esc(m.to) + '</span><span class="stamp">' + (m.ex ? 'Sample' : m.bot ? 'Bot' : m.parent ? 'Reply' : 'From: ???') + '</span>' + (m.t && !m.ex ? '<time class="when">' + esc(ago(m.t)) + '</time>' : '') + '</div><p class="hand clip">' + esc(m.text) + '</p></div>' +
       '<div class="song">' + art(m.color, m.song + ' ' + m.artist) + '<span><b>' + esc(m.song) + '</b><span>' + esc(m.artist) + '</span></span>' + pbtn(m, '') + '</div>' +
       reactBar(m) + '</div>';
   }
@@ -563,13 +600,31 @@
     }).catch(function () {});
   }
   setInterval(function () { if (!document.hidden && cur !== 'mybox') checkInbox(false); }, 45000);
-  var feedTop = null;
+  var feedTop = null, feedAll = [], feedMore = false, feedExpanded = false;
+  function paintFeed() {
+    show($('feed'), feedAll, 'No messages yet. Send the first one.', false);
+    if (feedMore) {
+      $('feed').insertAdjacentHTML('beforeend', '<button type="button" class="btn ghost full" id="feedMore">Load older messages</button>');
+      $('feedMore').onclick = loadMoreFeed;
+    }
+  }
+  function loadMoreFeed() {
+    var last = feedAll[feedAll.length - 1]; if (!last || !last.ts) return;
+    var b = $('feedMore'); b.disabled = true; b.textContent = 'Loading...';
+    fetchMsgs('', last.ts).then(function (a) {
+      var have = {}; feedAll.forEach(function (m) { have[m.id] = 1; });
+      feedAll = feedAll.concat(a.filter(function (m) { return !have[m.id]; }));
+      feedMore = a.length >= 50; feedExpanded = true; paintFeed();
+    }).catch(function () { b.disabled = false; b.textContent = 'Could not load. Tap to try again.'; });
+  }
   function loadFeed() {
+    if (feedExpanded) return;   /* do not reset the list after the person loaded older messages */
+    if (!feedReady) $('feed').innerHTML = skel(3);
     fetchMsgs('').then(function (a) {
       var top = a[0] && a[0].id;
       if (feedReady && top === feedTop) return;
       feedTop = top; feedReady = true;
-      show($('feed'), a, 'No messages yet. Send the first one.', false);
+      feedAll = a; feedMore = REMOTE && a.length >= 50; paintFeed();
     }).catch(function (e) { $('feed').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>'; });
   }
   setInterval(function () { if (cur === 'browse' && !document.hidden) loadFeed(); }, 20000);
@@ -590,7 +645,7 @@
       if (navigator.share) navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: l }).catch(function () {});
       else $('copy').click();
     };
-    $('mine').innerHTML = '<div class="empty">Loading your private messages...</div>';
+    $('mine').innerHTML = skel(2);
     $('pinNudge').hidden = !(profile && profile.has_pin === false);
     fetchMsgs(u).then(function (a) {
       show($('mine'), a, 'No direct messages yet. Share your personal link so someone can send you one.', false);
@@ -726,7 +781,7 @@
     var big = https ? '<img class="bigart" alt="" src="' + esc(m.color.replace('100x100', '600x600')) + '">' : '<span class="bigart" data-q="' + esc(m.song + ' ' + m.artist) + '" style="background:' + col + '"></span>';
     var isPublic = m.type === 'public' || m.ex;
     var subTxt = m.bot ? 'A song picked by the Anonymous bot.' :
-      (m.type === 'direct' ? 'Someone sent you a song. They want you to hear this one.' : 'An anonymous note on Browse.');
+      (m.type === 'direct' ? 'Someone sent you a song. They want you to hear this one.' : 'An anonymous note on Browse.') + (m.t && !m.ex ? ' ' + ago(m.t) + '.' : '');
     $('detail').innerHTML = '<button class="back" id="back">&larr; Back</button><h2 class="hi">Hello, ' + esc(m.to) + '</h2>' +
       '<p class="sub" style="text-align:center">' + subTxt + '</p>' +
       '<div class="dcard">' + big +
@@ -1021,9 +1076,8 @@
     var seen = ''; try { seen = localStorage.getItem('anon-ann-seen') || ''; } catch (e) {}
     if (seen === txt) return;
     if (!el) {
-      el = document.createElement('div'); el.id = 'announce'; el.className = 'announce'; el.setAttribute('role', 'status');
+      el = topBar('announce', 'announce');
       el.innerHTML = '<span id="announceTxt"></span><button type="button" id="announceX" aria-label="Dismiss announcement">&times;</button>';
-      var tb = document.querySelector('.topbar'); (tb && tb.parentNode ? tb.parentNode : document.body).insertBefore(el, tb ? tb.nextSibling : document.body.firstChild);
       $('announceX').onclick = function () { el.hidden = true; try { localStorage.setItem('anon-ann-seen', $('announceTxt').textContent); } catch (e) {} };
     }
     $('announceTxt').textContent = txt; el.hidden = false;
