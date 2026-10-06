@@ -187,6 +187,7 @@
     }).catch(function () {}).then(function () { if (done) done(); });
   }
   function renderPick() {
+    try { drawPv(); } catch (e) {}
     if (!pick) { $('spicked').innerHTML = ''; $('sq').hidden = false; return; }
     /* always show circular play — fetch preview if missing */
     $('spicked').innerHTML =
@@ -247,9 +248,16 @@
     renderPick();
   };
 
+  /* ---- live preview of how the message will look in the owner's inbox ---- */
+  var ownerCard = null;
+  function drawPv() {
+    if (!window.CardStyle || !$('sPv')) return;
+    $('sPv').innerHTML = CardStyle.previewHtml({ to: to, text: $('sText').value.trim(), song: pick && pick[0], artist: pick && pick[1], art: pick && pick[2] });
+  }
+
   /* ---- message box: ideas + counter ---- */
   function grow() { var t = $('sText'); t.style.height = 'auto'; t.style.height = Math.min(300, Math.max(150, t.scrollHeight)) + 'px'; }
-  function count() { $('sCount').textContent = $('sText').value.length + ' / 1000'; grow(); }
+  function count() { $('sCount').textContent = $('sText').value.length + ' / 1000'; grow(); drawPv(); }
   $('sText').oninput = count;
   $('sPrompts').onclick = function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -281,6 +289,16 @@
   /* ---- start ---- */
   if (!/^[A-Za-z0-9._]{3,20}$/.test(to)) { miss('This link is missing a name. Ask your friend to send it again.'); return; }
   if (!REMOTE) { miss('This page needs the online database. Add your Supabase keys in config.js.'); return; }
+  /* count link view once per username per day on this device */
+  try {
+    var vk = 'anon-viewed-' + to.toLowerCase();
+    var day = new Date().toISOString().slice(0, 10);
+    if (lget(vk, '') !== day) {
+      lset(vk, day);
+      rpc('record_link_view', { p_username: to }).catch(function () {});
+    }
+  } catch (e) {}
+
   api('settings?select=key,value').catch(function () { return []; }).then(function (rows) {
     var st = {}; rows.forEach(function (x) { st[x.key] = x.value; });
     if (st.maintenance === 'true') { $('sMaintTxt').textContent = st.maintenance_note || 'We will be right back.'; show('sMaint'); return; }
@@ -290,6 +308,20 @@
       $('sAv').textContent = to.charAt(0).toUpperCase(); $('sName').textContent = '@' + to;
       $('sNote').textContent = 'Anonymous. @' + to + ' will never see who sent this.';
       show('sForm');
+      /* owner's photo + card design (public, optional: the page still works without it) */
+      return rpc('public_profile', { p_username: to }).then(function (p) {
+        if (!p || !p.username) return;
+        ownerCard = p.card || null;
+        if (p.avatar && /^data:image\/(jpeg|png|webp);base64,/.test(p.avatar)) {
+          $('sAv').textContent = ''; $('sAv').style.background = 'url(' + p.avatar + ') center/cover';
+        }
+        if (ownerCard && window.CardStyle) {
+          var hero = document.querySelector('.lp-hero');
+          if (CardStyle.apply(hero, ownerCard, 10)) hero.classList.add('lp-styled');
+          CardStyle.apply($('sPvWrap'), ownerCard);
+        }
+        drawPv();
+      }).catch(function () {});
     });
   }).catch(function (e) { miss(why(e)); });
 })();

@@ -30,6 +30,7 @@
  <button role="tab" data-t="submit" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.2-4.2L16.5 4.5a2 2 0 0 1 2.8 0l.2.2a2 2 0 0 1 0 2.8L8.2 18.8z"/><path d="M14 7l3 3"/></svg><span class="tl">Submit</span></button>
  <button role="tab" data-t="browse" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span class="tl">Browse</span></button>
  <button role="tab" data-t="mybox" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 13l2.2-6.2A2 2 0 0 1 7.6 5.5h8.8a2 2 0 0 1 1.9 1.3L20.5 13v4.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M3.5 13H8l1 2h6l1-2h4.5"/></svg><span class="tl">Inbox</span></button>
+ <button role="tab" data-t="profile" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="3.5"/><path d="M5 19.5c1.5-3.2 4-5 7-5s5.5 1.8 7 5"/></svg><span class="tl">Profile</span></button>
  <button role="tab" data-t="history" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span class="tl">History</span></button>
 </nav>
 
@@ -95,6 +96,7 @@
  <p class="sub" style="margin:0 0 8px;font-size:.85rem">Tap the box to see recommended songs, or type to search.</p>
  <input id="q" placeholder="Tap for recommendations or search a song" autocomplete="off">
  <div class="res" id="res" hidden></div><div id="picked"></div><button type="button" class="link" id="surprise">Surprise me with a song</button>
+ <div class="sub-pv" id="subPvWrap"><label>Preview</label><div id="subPv"></div></div>
  <button class="btn full" id="send">Send anonymously</button><p class="msg" id="msg" role="status"></p>
  <div class="sent-actions" id="sentActions" hidden><button type="button" class="btn" id="shareSent">Share as image</button><button type="button" class="btn ghost" id="seeBrowse">See it on Browse</button><button type="button" class="link" id="writeMore">Write another</button></div>
 </div></section>
@@ -106,7 +108,7 @@
  <div id="feed"></div>
 </section>
 
-<section id="mybox" hidden>
+<section id="profile" hidden>
   <div class="pf" id="pf" hidden>
    <div class="pf-head">
     <button type="button" class="pf-av" id="pfAv" aria-label="Change profile photo"><span id="pfInit"></span><i aria-hidden="true">&#9998;</i></button>
@@ -115,6 +117,7 @@
     <button type="button" class="pf-link" id="pfLink" aria-label="Share your link"></button>
    </div>
    <div class="pf-stats">
+    <div><b id="stView">0</b><span>Views</span></div>
     <div><b id="stMsg">0</b><span>Messages</span></div>
     <div><b id="stRep">0</b><span>Replies</span></div>
     <div><b id="stSong">0</b><span>Songs</span></div>
@@ -128,7 +131,7 @@
    <ul class="pf-list" id="pfList"></ul>
    <div class="pf-cust">
     <h3 class="pf-h">Message card style</h3>
-    <p class="sub" style="margin:0 0 12px">Pick how the messages in your Inbox look. Only you see this for now.</p>
+    <p class="sub" style="margin:0 0 12px">Pick how your message cards look. It shows in your Inbox, in the Submit preview, and on your link page for people who open it.</p>
     <div class="cv-sw" id="cvSw"></div>
     <div class="card" id="cvPrev" style="margin-top:14px">
      <div class="top"><div class="thead"><span class="to">To: you</span><span class="stamp">From: ???</span><time class="when">just now</time></div><p class="hand">this is how your messages will look</p></div>
@@ -156,6 +159,9 @@
 
   <button class="link" id="swap">Use a different username</button>
  </div>
+</section>
+
+<section id="mybox" hidden>
  <h2 class="sec">Your messages</h2>
  <p class="sub">Only messages sent through your personal link appear here. Public Browse posts are separate and are not delivered to your Inbox.</p>
  <div id="mine" style="margin-top:14px"><div class="empty">Your private messages will appear here.</div></div>
@@ -217,6 +223,7 @@
 </main>
 <div id="successBurst" class="success-burst" hidden aria-hidden="true">sent!</div>
 <script src="config.js"></script>
+<script src="card-style.js"></script>
 <script src="app.js"></script>
 <script>
 if ('serviceWorker' in navigator) {

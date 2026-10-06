@@ -4,7 +4,7 @@
   var REMOTE = !!(C.SUPABASE_URL && C.SUPABASE_KEY);
   var $ = function (i) { return document.getElementById(i); };
   var LS = 'anon-msgs', US = 'anon-user', SENT = 'anon-sent';
-  var SECS = ['gate', 'maint', 'home', 'submit', 'browse', 'mybox', 'history', 'detail'];
+  var SECS = ['gate', 'maint', 'home', 'submit', 'browse', 'mybox', 'profile', 'history', 'detail'];
   var cache = {}, cur = 'submit', pick = null, last = [], tmr, seen = {}, feedReady = false;
   var CAT = [
     ["Tingin", "Cup of Joe, Janine", "#3F6B55"],
@@ -411,7 +411,7 @@
   function isDirectLink() { return /(?:^#|&)to=/.test(location.hash); }
   function tab(t, fromPop) {
     if (maint !== null && t !== 'admin') { showMaint(); return; }
-    if (!profile && ['submit', 'mybox', 'history'].indexOf(t) > -1) { showGate(); return; }
+    if (!profile && ['submit', 'mybox', 'profile', 'history'].indexOf(t) > -1) { showGate(); return; }
     if (typeof au !== 'undefined') { au.pause(); rst(); }
     cur = t; window.scrollTo(0, 0);
     if (!fromPop) navTo(t);
@@ -426,7 +426,9 @@
     if (t === 'home') loadHome();
     if (t === 'history') showHistory();
     if (t === 'browse') loadFeed();
-    if (t === 'mybox') inbox();
+    if (t === 'submit') { try { drawSubPv(); } catch (e) {} }
+    if (t === 'mybox') openInbox();
+    if (t === 'profile') openProfile();
   }
   $('tabs').onclick = function (e) { var b = e.target.closest('button'); if (b) tab(b.dataset.t); };
 
@@ -730,12 +732,53 @@
       '<div class="song">' + art(m.color, m.song + ' ' + m.artist) + '<span><b>' + esc(m.song) + '</b><span>' + esc(m.artist) + '</span></span>' + pbtn(m, '') + '</div>' +
       reactBar(m) + '</div>';
   }
+
+  /* ---------- per-card designs on Browse / History ----------
+     A post to someone who made a card design wears THEIR design.
+     A post you sent from this device and that has no owner design wears YOUR design. */
+  var recCards = {}, csRules = {}, csSheet = null, csN = 0;
+  function csClass(c) {
+    var key = JSON.stringify(c); if (csRules[key]) return csRules[key];
+    var b = window.CardStyle && CardStyle.bg(c); if (!b) return '';
+    if (!csSheet) { csSheet = document.createElement('style'); document.head.appendChild(csSheet); }
+    var l = CardStyle.light(c), n = 'cs' + (++csN);
+    csSheet.appendChild(document.createTextNode('.' + n + '{--card-bg:' + b + ';--card-fg:' + (l ? '#16161a' : '#fff') + ';--card-sh:' + (l ? 'none' : '0 1px 8px rgba(0,0,0,.35)') + ';--card-glass:' + (l ? 'rgba(255,255,255,.55)' : 'rgba(10,10,14,.46)') + '}'));
+    csRules[key] = n; return n;
+  }
+  function nameKey(m) { return String((m && m.to) || '').trim().toLowerCase(); }
+  function decorate(el) {
+    if (!window.CardStyle) return;
+    var cards = [].slice.call(el.querySelectorAll('.card[data-id]'));
+    var sent = {}; lget(SENT, []).forEach(function (m) { if (m && m.id) sent[m.id] = 1; });
+    function paint() {
+      cards.forEach(function (card) {
+        var m = cache[card.dataset.id]; if (!m) return;
+        var c = recCards[nameKey(m)] || (sent[m.id] && profile && profile.card) || null;
+        var cls = c ? csClass(c) : '';
+        if (card.dataset.cs && card.dataset.cs !== cls) card.classList.remove(card.dataset.cs, 'has-style');
+        if (cls) { card.classList.add(cls, 'has-style'); card.dataset.cs = cls; } else { card.classList.remove('has-style'); delete card.dataset.cs; }
+      });
+    }
+    paint();
+    var need = [];
+    cards.forEach(function (card) {
+      var m = cache[card.dataset.id], k = nameKey(m);
+      if (m && REMOTE && /^[a-z0-9._]{3,20}$/.test(k) && !(k in recCards) && need.indexOf(k) < 0) need.push(k);
+    });
+    if (!need.length) return;
+    rpc('public_cards', { p_names: need.slice(0, 60) }).then(function (r) {
+      need.forEach(function (k) { recCards[k] = (r && r[k]) || null; });
+      paint();
+    }).catch(function () {});
+  }
+
   function show(el, a, empty, animate) {
     a.forEach(function (m) { cache[m.id] = m; });
     el.innerHTML = a.length ? a.map(function (m) {
       return cardH(m, false);
     }).join('') : '<div class="empty">' + empty + '</div>';
     hydrateArt();
+    if (el.id === 'feed' || el.id === 'hlist') decorate(el);
     var ids = a.filter(function (m) { return m.type === 'public' && !m.ex && isUuid(m.id); }).map(function (m) { return m.id; });
     if (ids.length) loadReactions(ids).then(function () {
       ids.forEach(function (id) { paintReacts(id); });
@@ -836,10 +879,11 @@
   setInterval(function () { if (cur === 'browse' && !document.hidden) loadFeed(); }, 20000);
 
 
-  function inbox() {
+  /* link box + PIN nudge live on the Profile tab */
+  function fillLinkBox() {
     var u = profile && profile.username;
     $('who').hidden = !u;
-    if (!u) return;
+    if (!u) return null;
     var base = C.SITE_URL ? C.SITE_URL.replace(/\/+$/, '') + '/' : location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
     var l = base + 'send.html?to=' + encodeURIComponent(u);
     var local = !C.SITE_URL && !/^https:/.test(location.protocol);
@@ -851,17 +895,56 @@
       if (navigator.share) navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: l }).catch(function () {});
       else $('copy').click();
     };
-    $('mine').innerHTML = skel(2);
     $('pinNudge').hidden = !(profile && profile.has_pin === false);
+    return u;
+  }
+  /* Inbox tab: only the messages, drawn in your own card design */
+  function openInbox() {
+    var u = profile && profile.username;
+    if (!u) return;
+    $('mine').innerHTML = skel(2);
     fetchMsgs(u).then(function (a) {
-      show($('mine'), a, 'No direct messages yet. Share your personal link so someone can send you one.', false);
+      show($('mine'), a, 'No direct messages yet. Share your personal link (Profile tab) so someone can send you one.', false);
       lset(SEEN, a.map(function (m) { return m.id; }).slice(0, 200)); setInboxBadge(0);
-      lastInbox = a; initProfile(); profileUI(a);
+      lastInbox = a;
+      styleCards($('mine'), profile && profile.card);
     }).catch(function (e) {
       $('mine').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>';
     });
   }
+  /* Profile tab: photo, stats, checklist, card style, link */
+  function openProfile() {
+    var u = fillLinkBox();
+    if (!u) return;
+    initProfile();
+    profileUI(lastInbox);
+    loadProfile().then(function () {
+      return fetchMsgs(u).then(function (a) { lastInbox = a; profileUI(a); });
+    }).catch(function () { profileUI(lastInbox); });
+  }
+  function inbox() { openInbox(); }
 
+
+
+  /* ---------- live card preview on Submit (uses the recipient's design when they have one) ---------- */
+  var pvStyle = {}, pvT;
+  function drawSubPv() {
+    var w = $('subPv'); if (!w || !window.CardStyle) return;
+    var to = ($('to').value || '').trim();
+    w.innerHTML = CardStyle.previewHtml({ to: to || 'someone', text: ($('text').value || '').trim(), song: pick && pick[0], artist: pick && pick[1], art: pick && pick[2] });
+    CardStyle.apply($('subPvWrap'), pvStyle[to.toLowerCase()] || (profile && profile.card) || null);   /* recipient's design if they have one, otherwise the one you made in Profile */
+  }
+  function lookPv() {
+    clearTimeout(pvT);
+    pvT = setTimeout(function () {
+      var to = ($('to').value || '').trim(), k = to.toLowerCase();
+      if (!REMOTE || !/^[A-Za-z0-9._]{3,20}$/.test(to) || k in pvStyle) { drawSubPv(); return; }
+      rpc('public_profile', { p_username: to }).then(function (p) { pvStyle[k] = (p && p.username && p.card) || null; drawSubPv(); }).catch(function () { pvStyle[k] = null; });
+    }, 450);
+  }
+  ['to', 'text'].forEach(function (id) { $(id).addEventListener('input', function () { drawSubPv(); if (id === 'to') lookPv(); }); });
+  var _rp = renderPicked; renderPicked = function () { _rp.apply(this, arguments); drawSubPv(); };
+  drawSubPv();
 
   /* ---------- profile page + message card customization ---------- */
   var GRADS = {
@@ -872,35 +955,8 @@
   var cardDraft = null, lastInbox = [];
   function refreshProfile() { profileUI(lastInbox); }
   var LIGHT_GRADS = { gold: 1 };
-  function cardBg(c) {
-    if (!c) return '';
-    if (c.kind === 'grad' && GRADS[c.v]) return GRADS[c.v];
-    if (c.kind === 'color' && /^#[0-9a-f]{6}$/i.test(c.v)) return c.v;
-    if (c.kind === 'photo' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(c.v || '')) {
-      var d = Math.min(70, Math.max(0, +c.dim || 0)) / 100;
-      return 'linear-gradient(rgba(0,0,0,' + d + '),rgba(0,0,0,' + d + ')),url(' + c.v + ') center/cover';
-    }
-    return '';
-  }
-  function cardLight(c) {   /* is the background light enough that the text must be dark? */
-    if (!c) return false;
-    if (c.kind === 'grad') return !!LIGHT_GRADS[c.v];
-    if (c.kind === 'color' && /^#[0-9a-f]{6}$/i.test(c.v)) {
-      var n = parseInt(c.v.slice(1), 16), l = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-      return l > 0.62;
-    }
-    return false;
-  }
-  /* one CSS variable on the container (not one big inline style per card), so a photo background is stored once */
-  function styleCards(root, c) {
-    var bg = cardBg(c);
-    root.classList.toggle('has-style', !!bg);
-    if (!bg) { root.style.removeProperty('--card-bg'); root.style.removeProperty('--card-fg'); root.style.removeProperty('--card-sh'); return; }
-    var light = cardLight(c);
-    root.style.setProperty('--card-bg', bg);
-    root.style.setProperty('--card-fg', light ? '#16161a' : '#fff');
-    root.style.setProperty('--card-sh', light ? 'none' : '0 1px 8px rgba(0,0,0,.25)');
-  }
+  function cardBg(c) { return CardStyle.bg(c); }
+  function styleCards(root, c) { return CardStyle.apply(root, c); }
   function shrink(file, max, q) {
     return new Promise(function (ok, no) {
       var img = new Image(), url = URL.createObjectURL(file);
@@ -925,6 +981,7 @@
     $('pfLink').textContent = ($('link').value || '').replace(/^https?:\/\//, '');
     var av = $('pfAv'); $('pfInit').textContent = profile.avatar ? '' : u.charAt(0).toUpperCase();
     av.style.backgroundImage = profile.avatar ? 'url(' + profile.avatar + ')' : '';
+    if ($('stView')) $('stView').textContent = (profile.views != null ? profile.views : 0);
     $('stMsg').textContent = msgs.length;
     $('stRep').textContent = msgs.filter(function (m) { return m.parent; }).length;
     $('stSong').textContent = Object.keys(msgs.reduce(function (o, m) { o[m.song + m.artist] = 1; return o; }, {})).length;
@@ -932,7 +989,7 @@
     var steps = [
       ['Add profile photo', 10, !!profile.avatar, function () { $('pfFile').click(); }],
       ['Share your link', 30, shared, function () { $('pfLink').click(); }],
-      ['Reply to a message', 20, msgs.some(function (m) { return m.parent; }), function () { $('mine').scrollIntoView({ behavior: 'smooth' }); }],
+      ['Reply to a message', 20, msgs.some(function (m) { return m.parent; }), function () { tab('mybox'); }],
       ['Add a PIN', 20, profile.has_pin !== false, function () { $('pinNew').scrollIntoView({ behavior: 'smooth', block: 'center' }); }],
       ['Customize your card', 20, !!profile.card, function () { $('cvSw').scrollIntoView({ behavior: 'smooth', block: 'center' }); }]
     ];
@@ -1494,3 +1551,6 @@
   boot();
 
 })();
+
+/* hide the support button while scrolling so it never sits on top of Play buttons */
+(function () { var t; window.addEventListener('scroll', function () { document.body.classList.add('scrolling'); clearTimeout(t); t = setTimeout(function () { document.body.classList.remove('scrolling'); }, 700); }, { passive: true }); })();

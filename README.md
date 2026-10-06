@@ -1,5 +1,13 @@
 # Anonymous: gabay sa setup at update (Taglish)
 
+## v6.2: Views at pag-update
+- Sa **Browse** at **History**, ang post para sa taong may card design ay suot ang design niya. Ang post na ipinadala mo mismo (sa device mo) ay suot ang design mo kung walang design ang tatanggap. Kailangan ng `profile-upgrade.sql` ulit (may bagong `public_cards`).
+- Hiwalay na ulit ang **Inbox** (mga message lang) at ang **Profile** tab (litrato, stats, checklist, card style, link at PIN). Bumalik ang Profile button sa ibaba.
+- Ang card design na ginawa mo sa Profile ay ginagamit sa Inbox, sa Submit preview, at sa link page ng bisita.
+- Bumalik na ang **Views** (ilang beses binuksan ang link mo) sa Inbox profile. Para gumana: i-run sa Supabase SQL Editor ang `profile-upgrade.sql` (o ang buong `setup.sql`, kumpleto na ito ulit).
+- Ang `setup.sql` ay kasama na ulit ang `admin-upgrade.sql` at `profile-upgrade.sql` sa dulo, kaya hindi na nawawala ang profile photo, card style, views at blocked words kapag ni-run ulit.
+- Hindi na tinatakpan ng Support button ang Play button (nawawala ito habang nag-i-scroll), at hindi na natatakpan ng bottom bar ang footer.
+
 ## Ano ang bago sa bersyong ito (v5)
 - **Na-fix ang bug:** hindi natatanggap ng may-ari ang message galing sa link page. Ang Inbox ay naghahanap gamit ang username na may capital letters (hal. "RoyJun"), pero lowercase ang naka-save, kaya laging walang laman. Ngayon, ang Inbox ay nagpapakita ng lahat ng direct message na para sa account mo, kahit anong spelling.
 - **Bagong send.html:** malaking pulang header na may pangalan, mga ideya ng message na pipindutin, bilang ng letra, preview ng kanta bago mag-send, at success screen na may cover ng kanta.

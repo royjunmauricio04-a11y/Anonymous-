@@ -412,8 +412,11 @@ body::before{content:"";position:fixed;left:-20%;right:-20%;top:0;height:58vh;z-
 .tabs .tl{display:block;line-height:1}
 .tabs svg{display:block}
 .tabs .badge{position:absolute;top:3px;left:calc(50% + 6px);margin:0;min-width:18px;height:18px;line-height:18px;font-size:.66rem;box-shadow:0 0 0 2px var(--bg)}
-main{padding-bottom:calc(var(--navh) + 40px + env(safe-area-inset-bottom,0px))}
-.support-fab{bottom:calc(var(--navh) + 12px + env(safe-area-inset-bottom,0px));width:52px;height:52px}
+main{padding-bottom:calc(var(--navh) + 84px + env(safe-area-inset-bottom,0px))}
+.support-fab{bottom:calc(var(--navh) + 12px + env(safe-area-inset-bottom,0px));width:46px;height:46px}
+.support-fab svg{width:22px;height:22px}
+/* fade out while scrolling so it never covers a Play button */
+body.scrolling .support-fab{opacity:0;pointer-events:none;transform:scale(.85)}
 .toast{bottom:calc(var(--navh) + 12px + env(safe-area-inset-bottom,0px))}
 /* no nav on the sign-up screen, in maintenance, or on a direct link: sit lower */
 body:has(#tabs[hidden]) .support-fab,body:has(#tabs[hidden]) .toast{bottom:calc(20px + env(safe-area-inset-bottom,0px))}
@@ -524,7 +527,7 @@ body.lp .lp-lock{margin-top:14px}
 .pf-av i{position:absolute;right:-2px;bottom:-2px;width:32px;height:32px;border-radius:50%;background:var(--bg);color:var(--text);border:1px solid var(--border);font-style:normal;font-size:.95rem;display:grid;place-items:center}
 .pf-name{margin:14px 0 8px;font-size:1.5rem;font-weight:800;letter-spacing:-.01em}
 .pf-link{border:0;background:var(--surface);color:var(--muted);font:600 .88rem 'Plus Jakarta Sans',sans-serif;padding:9px 18px;border-radius:999px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pf-stats{display:grid;grid-template-columns:repeat(3,1fr);margin:20px 0 0}
+.pf-stats{display:grid;grid-template-columns:repeat(4,1fr);margin:20px 0 0}
 .pf-stats b{display:block;font-size:1.7rem;font-weight:800;line-height:1.1}
 .pf-stats span{color:var(--muted);font-size:.85rem;font-weight:600}
 .pf-boost{margin:22px 0 0;padding:18px;border-radius:22px;color:#111113;background:linear-gradient(120deg,#FFE0B8,#FFE9E5)}
@@ -605,3 +608,47 @@ body.lp .lp-center .btn.ghost{background:transparent;color:#fff;border-color:rgb
 .pf-cust .row{flex-wrap:wrap}
 .pf-cust .row .btn{flex:1 1 40%;white-space:nowrap}
 .pf-cust .row #cvSave{flex-basis:100%;background:var(--grad);border-color:transparent;color:#fff}
+
+/* ---- styled message cards: song row + buttons follow the card design ---- */
+.has-style .card .song{background:var(--card-glass,rgba(10,10,14,.46));border-top-color:rgba(255,255,255,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.has-style .card .song b,.has-style .card .song span{color:var(--card-fg,#fff)}
+.has-style .card .song span span{opacity:.75}
+.has-style .card .rbar,.has-style .card .reacts{background:var(--card-glass,rgba(10,10,14,.46));border-top-color:rgba(255,255,255,.18)}
+.has-style .card:active{background:var(--card-bg)}
+.has-style .card .hand{font-size:1.7rem}
+.pv-card{cursor:default;margin:8px 0 0}.pv-card:active{transform:none}
+.pv-card .art{width:44px;height:44px;border-radius:10px;object-fit:cover;flex:none}
+.pv-card .hand{overflow-wrap:anywhere}
+/* link page + submit: preview block */
+.lp-pv,.sub-pv{margin-top:18px}
+.lp-pv label,.sub-pv label{margin-top:0;font-weight:700;font-size:.9rem}
+/* link page hero wears the owner's card design */
+.lp-hero.lp-styled{background:var(--card-bg);max-width:none;color:var(--card-fg,#fff);text-shadow:var(--card-sh,none);border-radius:0 0 28px 28px;margin:0 auto}
+.lp-hero.lp-styled>*{max-width:520px;margin-left:auto;margin-right:auto}
+.lp-hero.lp-styled .lp-brand{display:flex;justify-content:center}
+body.lp:has(.lp-styled){background:var(--bg)}
+.lp-sheet{margin-top:-34px}
+.lp-hero.lp-styled+.lp-sheet{margin-top:-28px}
+.lp-hero.lp-styled+.lp-sheet{margin-top:0;border-radius:0}
+.lp-hero.lp-styled{padding-bottom:40px}
+
+/* profile stats: even columns, centred numbers and labels */
+.pf-stats{grid-template-columns:repeat(4,1fr);text-align:center;gap:4px;padding:0 4px}
+.pf-stats>div{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.pf-stats b{font-variant-numeric:tabular-nums}
+.pf-stats span{font-size:.78rem;white-space:nowrap}
+.tabs button{font-size:.64rem}
+
+/* per-card design (Browse, History): same look as .has-style .card */
+.card.has-style{background:var(--card-bg);border-color:transparent}
+.card.has-style .top,.card.has-style .hand,.card.has-style .when{color:var(--card-fg,#fff)}
+.card.has-style .to,.card.has-style .stamp{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.45);color:var(--card-fg,#fff)}
+.card.has-style .hand{text-shadow:var(--card-sh,none);font-size:1.7rem}
+.card.has-style .song{background:var(--card-glass,rgba(10,10,14,.46));border-top-color:rgba(255,255,255,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.card.has-style .song b,.card.has-style .song span{color:var(--card-fg,#fff)}
+.card.has-style .song span span{opacity:.75}
+.card.has-style .reacts{background:var(--card-glass,rgba(10,10,14,.46));border-top-color:rgba(255,255,255,.18)}
+.card.has-style:active{background:var(--card-bg)}
+.card.has-style .react-btn,.has-style .card .react-btn{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:var(--card-fg,#fff)}
+.card.has-style .react-btn.on,.has-style .card .react-btn.on{background:rgba(255,255,255,.3)}
+.card.has-style .react-btn .n,.has-style .card .react-btn .n{color:var(--card-fg,#fff)}
