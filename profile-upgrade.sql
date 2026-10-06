@@ -126,3 +126,37 @@ begin
 end $$;
 revoke all on function public.send_message(text,text,text,text,text,text,text,text,uuid,boolean) from public, anon;
 grant execute on function public.send_message(text,text,text,text,text,text,text,text,uuid,boolean) to authenticated;
+
+-- ---------- Link-page background (separate from the message card design) ----------
+alter table public.users add column if not exists page_bg jsonb check (page_bg is null or char_length(page_bg::text) <= 300000);
+
+create or replace function public.my_profile() returns json
+language sql security definer set search_path = public, pg_catalog as $$
+  select coalesce((select json_build_object('username', username, 'has_pin', pin_hash is not null, 'avatar', avatar, 'card', card_style, 'views', coalesce(link_views, 0), 'page', page_bg)
+                     from public.users where auth_id = auth.uid() limit 1), '{}'::json)
+$$;
+
+create or replace function public.public_profile(p_username text)
+returns json
+language sql stable security definer set search_path = public, pg_catalog as $$
+  select coalesce((select json_build_object('username', username, 'avatar', avatar, 'card', card_style, 'page', page_bg)
+                     from public.users
+                    where lower(username) = lower(btrim(p_username)) limit 1), '{}'::json)
+$$;
+revoke all on function public.public_profile(text) from public;
+grant execute on function public.public_profile(text) to anon, authenticated;
+
+create or replace function public.set_page_bg(p_bg jsonb) returns boolean
+language plpgsql security definer set search_path = public, pg_catalog as $$
+begin
+  if p_bg is not null then
+    if coalesce(p_bg->>'kind', '') not in ('grad','color','photo') then raise exception 'invalid_style'; end if;
+    if (p_bg->>'kind') = 'photo' and (p_bg->>'v') !~ '^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$' then raise exception 'invalid_image'; end if;
+    if char_length(p_bg::text) > 300000 then raise exception 'too_large'; end if;
+  end if;
+  update public.users set page_bg = p_bg where auth_id = auth.uid();
+  if not found then raise exception 'no_profile'; end if;
+  return true;
+end $$;
+revoke all on function public.set_page_bg(jsonb) from public, anon;
+grant execute on function public.set_page_bg(jsonb) to authenticated;

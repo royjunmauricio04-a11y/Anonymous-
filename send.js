@@ -248,6 +248,10 @@
   };
 
   var ownerCard = null;
+  /* always open the page from the very top (some in-app browsers, like Facebook's, restore a scrolled position) */
+  function top0() { window.scrollTo(0, 0); requestAnimationFrame(function () { window.scrollTo(0, 0); }); setTimeout(function () { window.scrollTo(0, 0); }, 250); }
+  try { history.scrollRestoration = 'manual'; } catch (e) {}
+  window.addEventListener('pageshow', top0);
 
   /* ---- message box: ideas + counter ---- */
   function grow() { var t = $('sText'); t.style.height = 'auto'; t.style.height = Math.min(300, Math.max(150, t.scrollHeight)) + 'px'; }
@@ -301,7 +305,7 @@
       document.title = 'Send @' + to + ' an anonymous song';
       $('sAv').textContent = to.charAt(0).toUpperCase(); $('sName').textContent = '@' + to;
       $('sNote').textContent = 'Anonymous. @' + to + ' will never see who sent this.';
-      show('sForm');
+      show('sForm'); top0();
       /* owner's photo + card design (public, optional: the page still works without it) */
       return rpc('public_profile', { p_username: to }).then(function (p) {
         if (!p || !p.username) return;
@@ -309,10 +313,8 @@
         if (p.avatar && /^data:image\/(jpeg|png|webp);base64,/.test(p.avatar)) {
           $('sAv').textContent = ''; $('sAv').style.background = 'url(' + p.avatar + ') center/cover';
         }
-        if (ownerCard && window.CardStyle) {
-          var hero = document.querySelector('.lp-hero');
-          if (CardStyle.apply(hero, ownerCard, 10)) hero.classList.add('lp-styled');
-        }
+        if (p.page && window.CardStyle) CardStyle.hero(document.querySelector('.lp-hero'), p.page);
+        top0();
       }).catch(function () {});
     });
   }).catch(function (e) { miss(why(e)); });

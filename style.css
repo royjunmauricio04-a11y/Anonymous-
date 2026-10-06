@@ -623,7 +623,7 @@ body.lp .lp-center .btn.ghost{background:transparent;color:#fff;border-color:rgb
 .lp-pv,.sub-pv{margin-top:18px}
 .lp-pv label,.sub-pv label{margin-top:0;font-weight:700;font-size:.9rem}
 /* link page hero wears the owner's card design */
-.lp-hero.lp-styled{background:var(--card-bg);max-width:none;color:var(--card-fg,#fff);text-shadow:var(--card-sh,none);border-radius:0 0 28px 28px;margin:0 auto}
+.lp-hero.lp-styled{background:var(--pg-bg,#1b1b20);max-width:none;color:var(--pg-fg,#fff);text-shadow:var(--pg-sh,none);border-radius:0 0 28px 28px;margin:0 auto}
 .lp-hero.lp-styled>*{max-width:520px;margin-left:auto;margin-right:auto}
 .lp-hero.lp-styled .lp-brand{display:flex;justify-content:center}
 body.lp:has(.lp-styled){background:var(--bg)}
@@ -655,3 +655,20 @@ body.lp:has(.lp-styled){background:var(--bg)}
 
 .cv-opt{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;font-size:.88rem;color:var(--muted);font-weight:500}
 .cv-opt input{flex:none;width:20px;height:20px;margin:1px 0 0}
+
+body.lp{overflow-anchor:none}
+
+/* photo header: the WHOLE photo is visible, framed by a blurred copy of itself */
+.lp-hero.lp-photo{position:relative;isolation:isolate;overflow:hidden;min-height:300px}
+.lp-hero.lp-photo::before{content:'';position:absolute;inset:-30px;z-index:-2;background:var(--pg-img) center/cover no-repeat;filter:blur(22px) brightness(.75);transform:scale(1.1)}
+.lp-hero.lp-photo::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,var(--pg-dim,.3)),rgba(0,0,0,var(--pg-dim,.3))),var(--pg-img) center/contain no-repeat}
+/* editor preview of the page background */
+.pg-prev{max-width:none;padding:16px 14px 18px;border-radius:20px;margin-top:14px;text-align:center;color:#fff;min-height:0}
+.pg-prev:not(.lp-styled){background:var(--accent)}
+.pg-prev.lp-photo{min-height:190px}
+.pg-prev .lp-av{width:56px;height:56px;font-size:1.5rem;margin:4px auto 8px;box-shadow:0 0 0 4px rgba(255,255,255,.28)}
+.pg-prev .lp-name{font-size:1.15rem}
+.pg-prev .lp-sub{font-size:1.3rem}
+/* reset the decorative circle / music note on photo headers so they cannot tilt or shrink the photo layers */
+.lp-hero.lp-photo::before{right:auto;top:-30px;left:-30px;width:calc(100% + 60px);height:calc(100% + 60px);inset:auto;border-radius:0;transform:scale(1.1);font-size:0}
+.lp-hero.lp-photo::after{left:0;top:0;right:0;bottom:0;width:auto;height:auto;transform:none;font-size:0;color:transparent;border-radius:0}

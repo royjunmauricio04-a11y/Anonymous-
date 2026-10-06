@@ -1018,6 +1018,7 @@
     styleCards($('mine'), profile.card);
     cardDraft = profile.card ? JSON.parse(JSON.stringify(profile.card)) : null;
     drawCustom();
+    initPage(); pageDraft = profile.page ? JSON.parse(JSON.stringify(profile.page)) : null; drawPage();
   }
   function drawCustom() {
     var sw = $('cvSw');
@@ -1028,6 +1029,41 @@
     $('cvDim').value = (cardDraft && cardDraft.dim) || 35;
     $('cvDim').parentNode.querySelector('label[for=cvDim]').hidden = $('cvDim').hidden = !(cardDraft && cardDraft.kind === 'photo');
   }
+
+  /* ---------- link-page background editor (separate from the message card) ---------- */
+  var pageDraft = null;
+  function drawPage() {
+    var sw = $('pgSw'); if (!sw || !profile) return;
+    sw.innerHTML = Object.keys(GRADS).map(function (k) {
+      return '<button data-g="' + k + '" aria-label="' + k + '" aria-pressed="' + !!(pageDraft && pageDraft.kind === 'grad' && pageDraft.v === k) + '" style="background:' + GRADS[k] + '"></button>';
+    }).join('') + '<label class="cv-col" aria-label="Pick a color"><input type="color" id="pgCol" value="' + (pageDraft && pageDraft.kind === 'color' ? pageDraft.v : '#E5334B') + '"></label>';
+    $('pgName').textContent = '@' + profile.username;
+    var av = $('pgAv'); av.textContent = profile.avatar ? '' : profile.username.charAt(0).toUpperCase();
+    av.style.background = profile.avatar ? 'url(' + profile.avatar + ') center/cover' : '';
+    CardStyle.hero($('pgPrev'), pageDraft);
+    var ph = !!(pageDraft && pageDraft.kind === 'photo');
+    $('pgDim').hidden = !ph; $('pgDimL').hidden = !ph; $('pgDim').value = (pageDraft && pageDraft.dim != null) ? pageDraft.dim : 30;
+  }
+  var pgOn = false;
+  function initPage() {
+    if (pgOn || !$('pgBox')) return; pgOn = true;
+    $('pgSw').onclick = function (e) { var b = e.target.closest('button[data-g]'); if (!b) return; pageDraft = { kind: 'grad', v: b.dataset.g }; drawPage(); };
+    $('pgSw').oninput = function (e) { if (e.target.id === 'pgCol') { pageDraft = { kind: 'color', v: e.target.value }; CardStyle.hero($('pgPrev'), pageDraft); } };
+    $('pgUp').onclick = function () { $('pgFile').click(); };
+    $('pgFile').onchange = function () {
+      var f = this.files[0]; this.value = ''; if (!f) return;
+      shrink(f, 900, 0.72).then(function (d) {
+        if (d.length > 260000) { toast('That photo is too big. Try another.', true); return; }
+        pageDraft = { kind: 'photo', v: d, dim: +$('pgDim').value || 30 }; drawPage();
+      }).catch(function () { toast('Could not read that image.', true); });
+    };
+    $('pgDim').oninput = function () { if (pageDraft && pageDraft.kind === 'photo') { pageDraft.dim = +this.value; CardStyle.hero($('pgPrev'), pageDraft); } };
+    $('pgClr').onclick = function () { pageDraft = null; drawPage(); };
+    $('pgSave').onclick = function () {
+      saveRpc('set_page_bg', { p_bg: pageDraft }, 'Link page background saved.').then(function () { profile.page = pageDraft; }).catch(function () {});
+    };
+  }
+
   function initProfile() {
     if (!$('pf') || $('pf').dataset.on) return; $('pf').dataset.on = 1;
     $('pfAv').onclick = function () { $('pfFile').click(); };

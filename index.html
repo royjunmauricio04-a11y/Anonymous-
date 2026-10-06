@@ -131,7 +131,7 @@
    <ul class="pf-list" id="pfList"></ul>
    <div class="pf-cust">
     <h3 class="pf-h">Message card style</h3>
-    <p class="sub" style="margin:0 0 12px">Pick how your message cards look. It shows in your Inbox, in the Submit preview, and on your link page for people who open it.</p>
+    <p class="sub" style="margin:0 0 12px">Pick how your message cards look. It shows in your Inbox, in the Submit preview and on the posts you send.</p>
     <div class="cv-sw" id="cvSw"></div>
     <div class="card" id="cvPrev" style="margin-top:14px">
      <div class="top"><div class="thead"><span class="to">To: you</span><span class="stamp">From: ???</span><time class="when">just now</time></div><p class="hand">this is how your messages will look</p></div>
@@ -147,6 +147,19 @@
     </div>
    </div>
   </div>
+   <div class="pf-cust" id="pgBox">
+    <h3 class="pf-h">Link page background</h3>
+    <p class="sub" style="margin:0 0 12px">The top of your link page, what people see when they open your link. Your photo shows whole, not cropped.</p>
+    <div class="cv-sw" id="pgSw"></div>
+    <div class="lp-hero pg-prev" id="pgPrev"><div class="lp-av" id="pgAv"></div><h4 class="lp-name" id="pgName"></h4><p class="lp-sub">send me an anonymous song</p></div>
+    <label for="pgDim" id="pgDimL" hidden>Photo darkness</label><input type="range" id="pgDim" min="0" max="70" value="30" hidden>
+    <div class="row" style="margin-top:12px;gap:8px">
+     <button type="button" class="btn ghost" id="pgUp">Use my photo</button>
+     <input type="file" id="pgFile" accept="image/*" hidden>
+     <button type="button" class="btn ghost" id="pgClr">Reset</button>
+     <button type="button" class="btn" id="pgSave">Save</button>
+    </div>
+   </div>
   <div class="box" id="who" hidden>
   <p class="who" id="whoName"></p>
   <p class="sub" style="margin:0">This is your link. Share your link so people can send you a song without a name.</p>

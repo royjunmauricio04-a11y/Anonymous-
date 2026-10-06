@@ -46,5 +46,24 @@
       '<p class="hand">' + esc(m.text || 'your message will look like this') + '</p></div>' +
       '<div class="song">' + art + '<span><b>' + esc(m.song || 'Your song') + '</b><span>' + esc(m.artist || 'Your artist') + '</span></span></div></div>';
   }
-  w.CardStyle = { previewHtml: previewHtml, GRADS: GRADS, bg: bg, light: light, apply: apply };
+  /* link-page header: photos are shown WHOLE (contain) over a blurred copy of themselves; colours/gradients fill it */
+  function hero(root, c) {
+    root.classList.remove('lp-styled', 'lp-photo');
+    ['--pg-bg', '--pg-img', '--pg-dim', '--pg-fg', '--pg-sh'].forEach(function (k) { root.style.removeProperty(k); });
+    if (!c) return false;
+    var photo = c.kind === 'photo' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(c.v || '');
+    var b = photo ? '' : bg(c);
+    if (!photo && !b) return false;
+    var l = !photo && light(c);
+    root.classList.add('lp-styled');
+    root.style.setProperty('--pg-fg', l ? '#16161a' : '#fff');
+    root.style.setProperty('--pg-sh', l ? 'none' : '0 1px 10px rgba(0,0,0,.5)');
+    if (photo) {
+      root.classList.add('lp-photo');
+      root.style.setProperty('--pg-img', 'url(' + c.v + ')');
+      root.style.setProperty('--pg-dim', String(Math.min(85, Math.max(0, +c.dim || 0)) / 100));
+    } else root.style.setProperty('--pg-bg', b);
+    return true;
+  }
+  w.CardStyle = { hero: hero, previewHtml: previewHtml, GRADS: GRADS, bg: bg, light: light, apply: apply };
 })(window);
