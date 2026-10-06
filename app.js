@@ -1422,14 +1422,14 @@
     if (!REMOTE) { bub('bot', 'The support chat needs the online database. Add your keys in config.js.'); return; }
     setBusy(true);
     fresh().then(function () { return fetch(C.SUPABASE_URL + '/functions/v1/' + (C.CHAT_FUNCTION || 'support-chat'), { method: 'POST', headers: fnHeaders(), body: JSON.stringify({ messages: chat.slice(-20) }) }); })
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d; return d; }); })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw { error: d && d.error, status: r.status, msg: d && (d.message || d.msg) }; return d; }); })
       .then(function (d) {
         chat.push({ role: 'assistant', content: d.reply }); bub('bot', d.reply); songChip(d.song);
         if (d.crisis) { $('crisisBox').textContent = CRISIS_TXT; $('crisisBox').hidden = false; }
         if (d.escalate) askConsent(d.summary || mySummary());
       })
       .catch(function (e) {
-        bub('bot', (e && CHAT_ERR[e.error]) || 'I could not answer just now. Please try again in a moment, or send your concern to a real person with the link below.');
+        bub('bot', (e && CHAT_ERR[e.error]) || ('I could not answer just now. Please try again in a moment, or send your concern to a real person with the link below.  [code: ' + ((e && (e.error || e.status || e.msg || e.message)) || '?') + ']'));
       }).then(function () { setBusy(false); });
   }
   function newChat() {
