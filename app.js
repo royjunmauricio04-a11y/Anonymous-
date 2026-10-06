@@ -1421,7 +1421,7 @@
     $('chatin').value = ''; $('chips').hidden = true; bub('me', t); chat.push({ role: 'user', content: t });
     if (!REMOTE) { bub('bot', 'The support chat needs the online database. Add your keys in config.js.'); return; }
     setBusy(true);
-    fresh().then(function () { return fetch(C.SUPABASE_URL + '/functions/v1/support-chat', { method: 'POST', headers: fnHeaders(), body: JSON.stringify({ messages: chat.slice(-20) }) }); })
+    fresh().then(function () { return fetch(C.SUPABASE_URL + '/functions/v1/' + (C.CHAT_FUNCTION || 'support-chat'), { method: 'POST', headers: fnHeaders(), body: JSON.stringify({ messages: chat.slice(-20) }) }); })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d; return d; }); })
       .then(function (d) {
         chat.push({ role: 'assistant', content: d.reply }); bub('bot', d.reply); songChip(d.song);
