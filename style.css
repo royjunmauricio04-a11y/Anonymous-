@@ -652,3 +652,6 @@ body.lp:has(.lp-styled){background:var(--bg)}
 .card.has-style .react-btn,.has-style .card .react-btn{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:var(--card-fg,#fff)}
 .card.has-style .react-btn.on,.has-style .card .react-btn.on{background:rgba(255,255,255,.3)}
 .card.has-style .react-btn .n,.has-style .card .react-btn .n{color:var(--card-fg,#fff)}
+
+.cv-opt{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;font-size:.88rem;color:var(--muted);font-weight:500}
+.cv-opt input{flex:none;width:20px;height:20px;margin:1px 0 0}

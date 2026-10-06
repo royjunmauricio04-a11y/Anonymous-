@@ -106,8 +106,9 @@
     });
   }
 
+  var NOCARD = false, NOUSECARD = false;
   function fromRow(r) {
-    return { id: r.id, to: r.to_name, key: r.to_key, type: r.delivery_type || 'direct', text: r.body, song: r.song, artist: r.artist, color: r.art || '', prev: r.preview || '', bot: !!r.is_bot, parent: r.parent_id || null, t: Date.parse(r.created_at) || 0, ts: r.created_at || '' };
+    return { id: r.id, to: r.to_name, key: r.to_key, type: r.delivery_type || 'direct', text: r.body, song: r.song, artist: r.artist, color: r.art || '', prev: r.preview || '', bot: !!r.is_bot, card: r.card || null, parent: r.parent_id || null, t: Date.parse(r.created_at) || 0, ts: r.created_at || '' };
   }
   function matchQ(m, q) {
     q = String(q || '').toLowerCase(); if (!q) return true;
@@ -118,13 +119,17 @@
     if (!REMOTE) {
       return Promise.resolve(lget(LS, []).filter(function (m) { return key ? (m.type !== 'public' && String(m.key).toLowerCase() === key) : m.type === 'public'; }).filter(function (m) { return matchQ(m, search); }));
     }
-    var q = 'messages?select=id,to_name,to_key,delivery_type,body,song,artist,art,preview,is_bot,parent_id,created_at&order=created_at.desc&limit=' + (key ? 100 : 50);
+    var q = 'messages?select=id,to_name,to_key,delivery_type,body,song,artist,art,preview,is_bot,parent_id,created_at' + (NOCARD ? '' : ',card') + '&order=created_at.desc&limit=' + (key ? 100 : 50);
     /* Inbox: the database only ever returns direct messages addressed to the signed-in account */
     q += key ? '&delivery_type=eq.direct' : '&delivery_type=eq.public';
     if (before) q += '&created_at=lt.' + encodeURIComponent(before);
     var sq = search ? String(search).replace(/[(),*%\\"]/g, ' ').replace(/\s+/g, ' ').trim() : '';
     if (sq) { var pat = '*' + sq + '*'; q += '&or=' + encodeURIComponent('(to_name.ilike.' + pat + ',body.ilike.' + pat + ',song.ilike.' + pat + ',artist.ilike.' + pat + ')'); }
-    return api(q).then(function (rows) { return rows.map(fromRow); });
+    return api(q).then(function (rows) { return rows.map(fromRow); }).catch(function (e) {
+      /* the database has not been upgraded yet (no card column): fall back to the old query once */
+      if (!NOCARD) { NOCARD = true; return fetchMsgs(key, before, search); }
+      throw e;
+    });
   }
   function saveMsg(m) {
     if (!REMOTE) { var a = lget(LS, []); a.unshift(m); lset(LS, a); return Promise.resolve(m); }
@@ -140,7 +145,17 @@
     };
     /* always send p_parent_id: only the 9-argument send_message can match, so PostgREST never answers HTTP 300 */
     payload.p_parent_id = m.parent || null;
-    return rpc('send_message', payload).then(function (id) {
+    var useCard = lget('anon-card-send', true) !== false;
+    var call = function () {
+      var p = Object.assign({}, payload);
+      if (!NOUSECARD) p.p_use_card = useCard;
+      return rpc('send_message', p).catch(function (e) {
+        /* old database (no p_use_card yet): send the old way once */
+        if (!NOUSECARD && e && (e.status === 404 || e.status === 300 || /PGRST20|function/i.test(String(e.msg || e.message || e.code || '')))) { NOUSECARD = true; return call(); }
+        throw e;
+      });
+    };
+    return call().then(function (id) {
       /* server returns the real UUID — keep it so reactions work later */
       if (id && (typeof id === 'string' || typeof id === 'number')) m.id = String(id).replace(/^"|"$/g, '');
       return m;
@@ -753,7 +768,7 @@
     function paint() {
       cards.forEach(function (card) {
         var m = cache[card.dataset.id]; if (!m) return;
-        var c = recCards[nameKey(m)] || (sent[m.id] && profile && profile.card) || null;
+        var c = m.card || recCards[nameKey(m)] || (sent[m.id] && profile && profile.card) || null;   /* sender's design (saved on the post) > recipient's > yours on this device */
         var cls = c ? csClass(c) : '';
         if (card.dataset.cs && card.dataset.cs !== cls) card.classList.remove(card.dataset.cs, 'has-style');
         if (cls) { card.classList.add(cls, 'has-style'); card.dataset.cs = cls; } else { card.classList.remove('has-style'); delete card.dataset.cs; }
@@ -1042,6 +1057,8 @@
       }).catch(function () { toast('Could not read that image.', true); });
     };
     $('cvDim').oninput = function () { if (cardDraft && cardDraft.kind === 'photo') { cardDraft.dim = +this.value; styleCards($('cvPrev').parentNode, cardDraft); } };
+    $('cvSend').checked = lget('anon-card-send', true) !== false;
+    $('cvSend').onchange = function () { lset('anon-card-send', this.checked); toast(this.checked ? 'Your design will show on new posts.' : 'New posts will use the default design.'); };
     $('cvClr').onclick = function () { cardDraft = null; drawCustom(); };
     $('cvSave').onclick = function () {
       saveRpc('set_card_style', { p_card: cardDraft }, 'Card style saved.').then(function () {

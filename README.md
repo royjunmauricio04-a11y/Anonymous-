@@ -1,6 +1,7 @@
 # Anonymous: gabay sa setup at update (Taglish)
 
 ## v6.2: Views at pag-update
+- Ang card design ng nag-send ay naka-save na sa mismong post (column `card`), kaya nakikita ito ng lahat sa Browse. Kinukuha ito ng server mula sa saved profile ng nag-send. May checkbox sa Profile para patayin. **I-run ulit ang `profile-upgrade.sql`** (may bagong 10-argument na `send_message`). Hangga't hindi pa na-run, gumagana pa rin ang pag-send at Browse, pero hindi pa nakikita ng iba ang design.
 - Sa **Browse** at **History**, ang post para sa taong may card design ay suot ang design niya. Ang post na ipinadala mo mismo (sa device mo) ay suot ang design mo kung walang design ang tatanggap. Kailangan ng `profile-upgrade.sql` ulit (may bagong `public_cards`).
 - Hiwalay na ulit ang **Inbox** (mga message lang) at ang **Profile** tab (litrato, stats, checklist, card style, link at PIN). Bumalik ang Profile button sa ibaba.
 - Ang card design na ginawa mo sa Profile ay ginagamit sa Inbox, sa Submit preview, at sa link page ng bisita.
