@@ -2,7 +2,7 @@
    - network first, so new deploys show up right away
    - keeps a copy of every page/script/style it loads, so the app still opens with a weak or no signal
    - handles taps on notifications (opens the app) */
-var CACHE = 'anon-shell-v5';
+var CACHE = 'anon-shell-v6';
 var SHELL = [
   './',
   './index.html',

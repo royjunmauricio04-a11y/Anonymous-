@@ -473,7 +473,7 @@
     ]).then(function (res) {
       if (g !== gen) return;
       var st = res[0], words = res[1], pool = res[2], s = st.settings || {};
-      var on = s.bot_enabled === 'true', mt = s.maintenance === 'true', upgraded = words !== null;
+      var on = s.bot_enabled === 'true', mt = s.maintenance === 'true', cp = s.chat_paused === 'true', upgraded = words !== null;
       var html = '<h2 class="a-h">Controls</h2>' + (upgraded ? '' : upgradeNote());
 
       html += '<div class="a-block"><h3>Announcement</h3><p class="sub">A short notice pinned at the top of the app for everyone. Leave empty to hide it.</p>' +
@@ -483,6 +483,9 @@
       html += '<div class="a-block"><div class="a-switch-row"><div><h3>Maintenance mode</h3><p class="sub" style="margin:0">' + (mt ? 'On: visitors see the maintenance screen.' : 'Off: the app is open to everyone.') + '</p></div>' +
         '<button class="a-switch warn" role="switch" aria-checked="' + mt + '" aria-label="Maintenance mode" id="mtSw"></button></div>' +
         '<label for="anote">Message for visitors</label><div class="a-field" style="margin-top:0"><input id="anote" maxlength="200" value="' + esc(s.maintenance_note || '') + '"><button class="a-btn" id="anoteSave">Save</button></div></div>';
+
+      html += '<div class="a-block"><div class="a-switch-row"><div><h3>Pause Support Buddy</h3><p class="sub" style="margin:0">' + (cp ? 'Paused: the AI chat is off. People can still send their concern to you as a request.' : 'Off: Support Buddy answers normally.') + '</p></div>' +
+        '<button class="a-switch warn" role="switch" aria-checked="' + cp + '" aria-label="Pause Support Buddy" id="cpSw"></button></div></div>';
 
       html += '<div class="a-block"><div class="a-switch-row"><div><h3>Posting bot</h3><p class="sub" style="margin:0">' + (on ? 'Running. Posts one message from its pool every ' + esc(s.bot_interval_min) + ' min.' : 'Stopped. Its posts carry a Bot stamp.') + '</p></div>' +
         '<button class="a-switch" role="switch" aria-checked="' + on + '" aria-label="Posting bot" id="botSw"></button></div>' +
@@ -511,6 +514,7 @@
       var again = function () { keepScroll(function () { return refreshCurrent(); }); };
       $('mtSw').onclick = function () { rpcA('admin_set', { k: 'maintenance', v: mt ? 'false' : 'true' }).then(function () { toast(mt ? 'Maintenance is off.' : 'Maintenance is on.'); again(); }).catch(aErr); };
       $('anoteSave').onclick = function () { rpcA('admin_set', { k: 'maintenance_note', v: $('anote').value }).then(function () { toast('Message saved.'); }).catch(aErr); };
+      $('cpSw').onclick = function () { rpcA('admin_set', { k: 'chat_paused', v: cp ? 'false' : 'true' }).then(function () { toast(cp ? 'Support Buddy is back on.' : 'Support Buddy is paused.'); again(); }).catch(aErr); };
       $('botSw').onclick = function () { rpcA('admin_set', { k: 'bot_enabled', v: on ? 'false' : 'true' }).then(function () { toast(on ? 'Bot stopped.' : 'Bot started.'); again(); }).catch(aErr); };
       $('aiv').onchange = function () { rpcA('admin_set', { k: 'bot_interval_min', v: $('aiv').value }).then(function () { toast('Interval saved.'); again(); }).catch(aErr); };
       $('anow').onclick = function () { rpcA('admin_post_now').then(function () { toast('Posted one bot message.'); }).catch(aErr); };

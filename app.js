@@ -1414,6 +1414,7 @@
   var CHAT_ERR = {
     slow_down: 'You are sending messages quickly. Take a breath and try again in a minute.',
     busy: 'Support Buddy is resting for today because many people used it. You can still send your concern to a real person with the link below.',
+    paused: 'Support Buddy is taking a break right now. You can still send your concern to a real person with the link below, and the admin team will read it.',
     not_configured: 'The AI helper is not switched on yet. You can still send your concern to a real person with the link below.'
   };
   function sendChat(text) {
@@ -1421,7 +1422,10 @@
     $('chatin').value = ''; $('chips').hidden = true; bub('me', t); chat.push({ role: 'user', content: t });
     if (!REMOTE) { bub('bot', 'The support chat needs the online database. Add your keys in config.js.'); return; }
     setBusy(true);
-    fresh().then(function () { return fetch(C.SUPABASE_URL + '/functions/v1/' + (C.CHAT_FUNCTION || 'support-chat'), { method: 'POST', headers: fnHeaders(), body: JSON.stringify({ messages: chat.slice(-20) }) }); })
+    /* admin can pause the AI chat (Maintenance Center). Check right now so it takes effect immediately; if the check fails, carry on. */
+    api('settings?select=value&key=eq.chat_paused').catch(function () { return []; }).then(function (rows) {
+      if (rows && rows[0] && rows[0].value === 'true') { var pe = { error: 'paused' }; throw pe; }
+    }).then(function () { return fresh(); }).then(function () { return fetch(C.SUPABASE_URL + '/functions/v1/' + (C.CHAT_FUNCTION || 'support-chat'), { method: 'POST', headers: fnHeaders(), body: JSON.stringify({ messages: chat.slice(-20) }) }); })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw { error: d && d.error, status: r.status, msg: d && (d.message || d.msg) }; return d; }); })
       .then(function (d) {
         chat.push({ role: 'assistant', content: d.reply }); bub('bot', d.reply); songChip(d.song);
@@ -1429,6 +1433,7 @@
         if (d.escalate) askConsent(d.summary || mySummary());
       })
       .catch(function (e) {
+        if (e && e.error === 'paused' && /(kill myself|suicid|end my life|want to die|self[- ]?harm|hurt myself|magpakamatay|mamatay|mag[- ]?suicide|saktan ang sarili)/i.test(t)) { $('crisisBox').textContent = CRISIS_TXT; $('crisisBox').hidden = false; }
         bub('bot', (e && CHAT_ERR[e.error]) || ('I could not answer just now. Please try again in a moment, or send your concern to a real person with the link below.  [code: ' + ((e && (e.error || e.status || e.msg || e.message)) || '?') + ']'));
       }).then(function () { setBusy(false); });
   }
