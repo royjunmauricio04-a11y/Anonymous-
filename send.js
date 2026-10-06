@@ -187,7 +187,6 @@
     }).catch(function () {}).then(function () { if (done) done(); });
   }
   function renderPick() {
-    try { drawPv(); } catch (e) {}
     if (!pick) { $('spicked').innerHTML = ''; $('sq').hidden = false; return; }
     /* always show circular play — fetch preview if missing */
     $('spicked').innerHTML =
@@ -248,16 +247,11 @@
     renderPick();
   };
 
-  /* ---- live preview of how the message will look in the owner's inbox ---- */
   var ownerCard = null;
-  function drawPv() {
-    if (!window.CardStyle || !$('sPv')) return;
-    $('sPv').innerHTML = CardStyle.previewHtml({ to: to, text: $('sText').value.trim(), song: pick && pick[0], artist: pick && pick[1], art: pick && pick[2] });
-  }
 
   /* ---- message box: ideas + counter ---- */
   function grow() { var t = $('sText'); t.style.height = 'auto'; t.style.height = Math.min(300, Math.max(150, t.scrollHeight)) + 'px'; }
-  function count() { $('sCount').textContent = $('sText').value.length + ' / 1000'; grow(); drawPv(); }
+  function count() { $('sCount').textContent = $('sText').value.length + ' / 1000'; grow(); }
   $('sText').oninput = count;
   $('sPrompts').onclick = function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -318,9 +312,7 @@
         if (ownerCard && window.CardStyle) {
           var hero = document.querySelector('.lp-hero');
           if (CardStyle.apply(hero, ownerCard, 10)) hero.classList.add('lp-styled');
-          CardStyle.apply($('sPvWrap'), ownerCard);
         }
-        drawPv();
       }).catch(function () {});
     });
   }).catch(function (e) { miss(why(e)); });
