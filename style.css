@@ -672,3 +672,25 @@ body.lp{overflow-anchor:none}
 /* reset the decorative circle / music note on photo headers so they cannot tilt or shrink the photo layers */
 .lp-hero.lp-photo::before{right:auto;top:-30px;left:-30px;width:calc(100% + 60px);height:calc(100% + 60px);inset:auto;border-radius:0;transform:scale(1.1);font-size:0}
 .lp-hero.lp-photo::after{left:0;top:0;right:0;bottom:0;width:auto;height:auto;transform:none;font-size:0;color:transparent;border-radius:0}
+
+/* ---------- link page: the owner's background covers the WHOLE page (header, message box, song picker, footer) ---------- */
+#sForm.lp-styled{position:relative;isolation:isolate;background:var(--pg-bg,#1b1b20);color:var(--pg-fg,#fff);text-shadow:var(--pg-sh,none)}
+/* photo: blurred copy fills the screen, the whole photo sits on top; both stay fixed while the form scrolls */
+#sForm.lp-photo{background:#111}
+#sForm.lp-photo::before{content:'';position:fixed;left:-30px;top:-30px;width:calc(100% + 60px);height:calc(100% + 60px);z-index:-2;background:var(--pg-img) center/cover no-repeat;filter:blur(22px) brightness(.75);transform:scale(1.1)}
+#sForm.lp-photo::after{content:'';position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,calc(var(--pg-dim,.3) + .12)),rgba(0,0,0,calc(var(--pg-dim,.3) + .12))),var(--pg-img) center/contain no-repeat}
+/* header and sheet become see-through so the page background shows behind everything */
+#sForm.lp-styled .lp-hero{background:none;text-shadow:inherit;color:inherit}
+#sForm.lp-styled .lp-sheet{background:transparent;border-radius:0}
+#sForm.lp-styled .lp-song label,#sForm.lp-styled .lp-song .sub,#sForm.lp-styled .lp-lock,#sForm.lp-styled .lp-own p{color:var(--pg-fg,#fff)}
+#sForm.lp-styled .lp-song .sub,#sForm.lp-styled .lp-lock,#sForm.lp-styled .lp-own p{opacity:.85}
+#sForm.lp-styled .lp-own{border-top-color:currentColor;border-top-color:rgba(127,127,127,.45)}
+/* inputs stay readable on any background: light frosted panels with dark text */
+#sForm.lp-styled .lp-prompts button,#sForm.lp-styled .lp-field textarea,#sForm.lp-styled .lp-song input{background:rgba(255,255,255,.88);color:#111113;border-color:transparent;text-shadow:none}
+#sForm.lp-styled .lp-field textarea:focus,#sForm.lp-styled .lp-song input:focus{background:#fff;border-color:#111113}
+#sForm.lp-styled .lp-field textarea::placeholder,#sForm.lp-styled .lp-song input::placeholder{color:#6b6b74}
+#sForm.lp-styled .lp-count{color:#66666F;text-shadow:none}
+#sForm.lp-styled .lp-pick,#sForm.lp-styled .res{color:var(--text);text-shadow:none}
+#sForm.lp-styled .lp-own .btn.ghost{color:inherit;border-color:currentColor;text-shadow:none}
+#sForm.lp-styled .lp-send,#sForm.lp-styled .lp-send:active{text-shadow:none}
+#sForm.lp-styled .lp-sheet,#sForm.lp-styled .lp-hero{box-shadow:none}

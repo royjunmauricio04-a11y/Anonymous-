@@ -313,7 +313,7 @@
         if (p.avatar && /^data:image\/(jpeg|png|webp);base64,/.test(p.avatar)) {
           $('sAv').textContent = ''; $('sAv').style.background = 'url(' + p.avatar + ') center/cover';
         }
-        if (p.page && window.CardStyle) CardStyle.hero(document.querySelector('.lp-hero'), p.page);
+        if (p.page && window.CardStyle) CardStyle.hero($('sForm'), p.page)   /* the design now paints the WHOLE page (header + message box + song picker), not just the header */;
         top0();
       }).catch(function () {});
     });
