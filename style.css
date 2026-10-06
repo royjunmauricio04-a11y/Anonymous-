@@ -674,23 +674,42 @@ body.lp{overflow-anchor:none}
 .lp-hero.lp-photo::after{left:0;top:0;right:0;bottom:0;width:auto;height:auto;transform:none;font-size:0;color:transparent;border-radius:0}
 
 /* ---------- link page: the owner's background covers the WHOLE page (header, message box, song picker, footer) ---------- */
-#sForm.lp-styled{position:relative;isolation:isolate;background:var(--pg-bg,#1b1b20);color:var(--pg-fg,#fff);text-shadow:var(--pg-sh,none)}
+body.lp main.lp-styled{position:relative;isolation:isolate;background:var(--pg-bg,#1b1b20);color:var(--pg-fg,#fff);text-shadow:var(--pg-sh,none)}
 /* photo: blurred copy fills the screen, the whole photo sits on top; both stay fixed while the form scrolls */
-#sForm.lp-photo{background:#111}
-#sForm.lp-photo::before{content:'';position:fixed;left:-30px;top:-30px;width:calc(100% + 60px);height:calc(100% + 60px);z-index:-2;background:var(--pg-img) center/cover no-repeat;filter:blur(22px) brightness(.75);transform:scale(1.1)}
-#sForm.lp-photo::after{content:'';position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,calc(var(--pg-dim,.3) + .12)),rgba(0,0,0,calc(var(--pg-dim,.3) + .12))),var(--pg-img) center/contain no-repeat}
+body.lp main.lp-photo{background:#111}
+body.lp main.lp-photo::before{content:'';position:fixed;left:-30px;top:-30px;width:calc(100% + 60px);height:calc(100% + 60px);z-index:-2;background:var(--pg-img) center/cover no-repeat;filter:blur(22px) brightness(.75);transform:scale(1.1)}
+body.lp main.lp-photo::after{content:'';position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,calc(var(--pg-dim,.3) + .12)),rgba(0,0,0,calc(var(--pg-dim,.3) + .12))),var(--pg-img) center/contain no-repeat}
 /* header and sheet become see-through so the page background shows behind everything */
-#sForm.lp-styled .lp-hero{background:none;text-shadow:inherit;color:inherit}
-#sForm.lp-styled .lp-sheet{background:transparent;border-radius:0}
-#sForm.lp-styled .lp-song label,#sForm.lp-styled .lp-song .sub,#sForm.lp-styled .lp-lock,#sForm.lp-styled .lp-own p{color:var(--pg-fg,#fff)}
-#sForm.lp-styled .lp-song .sub,#sForm.lp-styled .lp-lock,#sForm.lp-styled .lp-own p{opacity:.85}
-#sForm.lp-styled .lp-own{border-top-color:currentColor;border-top-color:rgba(127,127,127,.45)}
+body.lp main.lp-styled .lp-hero{background:none;text-shadow:inherit;color:inherit}
+body.lp main.lp-styled .lp-sheet{background:transparent;border-radius:0}
+body.lp main.lp-styled .lp-song label,body.lp main.lp-styled .lp-song .sub,body.lp main.lp-styled .lp-lock,body.lp main.lp-styled .lp-own p{color:var(--pg-fg,#fff)}
+body.lp main.lp-styled .lp-song .sub,body.lp main.lp-styled .lp-lock,body.lp main.lp-styled .lp-own p{opacity:.85}
+body.lp main.lp-styled .lp-own{border-top-color:currentColor;border-top-color:rgba(127,127,127,.45)}
 /* inputs stay readable on any background: light frosted panels with dark text */
-#sForm.lp-styled .lp-prompts button,#sForm.lp-styled .lp-field textarea,#sForm.lp-styled .lp-song input{background:rgba(255,255,255,.88);color:#111113;border-color:transparent;text-shadow:none}
-#sForm.lp-styled .lp-field textarea:focus,#sForm.lp-styled .lp-song input:focus{background:#fff;border-color:#111113}
-#sForm.lp-styled .lp-field textarea::placeholder,#sForm.lp-styled .lp-song input::placeholder{color:#6b6b74}
-#sForm.lp-styled .lp-count{color:#66666F;text-shadow:none}
-#sForm.lp-styled .lp-pick,#sForm.lp-styled .res{color:var(--text);text-shadow:none}
-#sForm.lp-styled .lp-own .btn.ghost{color:inherit;border-color:currentColor;text-shadow:none}
-#sForm.lp-styled .lp-send,#sForm.lp-styled .lp-send:active{text-shadow:none}
-#sForm.lp-styled .lp-sheet,#sForm.lp-styled .lp-hero{box-shadow:none}
+body.lp main.lp-styled .lp-prompts button,body.lp main.lp-styled .lp-field textarea,body.lp main.lp-styled .lp-song input{background:rgba(255,255,255,.88);color:#111113;border-color:transparent;text-shadow:none}
+body.lp main.lp-styled .lp-field textarea:focus,body.lp main.lp-styled .lp-song input:focus{background:#fff;border-color:#111113}
+body.lp main.lp-styled .lp-field textarea::placeholder,body.lp main.lp-styled .lp-song input::placeholder{color:#6b6b74}
+body.lp main.lp-styled .lp-count{color:#66666F;text-shadow:none}
+body.lp main.lp-styled .lp-pick,body.lp main.lp-styled .res{color:var(--text);text-shadow:none}
+body.lp main.lp-styled .lp-own .btn.ghost{color:inherit;border-color:currentColor;text-shadow:none}
+body.lp main.lp-styled .lp-send,body.lp main.lp-styled .lp-send:active{text-shadow:none}
+body.lp main.lp-styled .lp-sheet,body.lp main.lp-styled .lp-hero{box-shadow:none}
+
+/* sent / not-found / maintenance screens wear the same background (they used to turn white) */
+body.lp main.lp-styled.lp-center{background:var(--pg-bg,#1b1b20);color:var(--pg-fg,#fff)}
+body.lp main.lp-photo.lp-center{background:#111}
+body.lp main.lp-styled .lp-done h1{color:var(--pg-fg,#fff)}
+body.lp main.lp-styled .lp-done .sub,body.lp main.lp-styled.lp-center .sub{color:var(--pg-fg,#fff);opacity:.92}
+body.lp main.lp-styled.lp-center .btn.ghost{color:var(--pg-fg,#fff);border-color:currentColor}
+
+/* song suggestions + picked song: see-through frosted glass so the page background shows through, blurred */
+body.lp main.lp-styled .lp-song .res,body.lp main.lp-styled .lp-pick{
+  background:var(--pg-glass,rgba(10,10,14,.42));color:var(--pg-fg,#fff);text-shadow:none;
+  border:1px solid rgba(255,255,255,.22);
+  -webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3);
+  box-shadow:0 10px 30px rgba(0,0,0,.18)}
+body.lp main.lp-styled .res button{background:none;color:var(--pg-fg,#fff);border-bottom-color:rgba(255,255,255,.18)}
+body.lp main.lp-styled .res button:hover,body.lp main.lp-styled .res button:active{background:rgba(255,255,255,.14)}
+body.lp main.lp-styled .res b,body.lp main.lp-styled .lp-pick b{color:var(--pg-fg,#fff)}
+body.lp main.lp-styled .res span,body.lp main.lp-styled .lp-pick span,body.lp main.lp-styled .res-head{color:var(--pg-fg,#fff);opacity:.78}
+body.lp main.lp-styled .res-head{opacity:.7}

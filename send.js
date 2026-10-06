@@ -11,8 +11,15 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function lget(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }
   function lset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  var curId = 'sLoad', pageStyle = null;
+  /* the owner's background goes on whichever screen is showing (form, sent, ...) and off the others */
+  function paint() {
+    if (!window.CardStyle) return;
+    ['sForm', 'sDone', 'sMiss', 'sMaint'].forEach(function (x) { CardStyle.hero($(x), x === curId ? pageStyle : null); });
+  }
   function show(id) {
     ['sLoad', 'sForm', 'sDone', 'sMiss', 'sMaint'].forEach(function (x) { $(x).hidden = x !== id; });
+    curId = id; paint();
     document.body.className = 'lp';   /* every state (form, sent, not found, maintenance) lives on the brand colour */
     window.scrollTo(0, 0);
   }
@@ -22,6 +29,8 @@
   var to = new URLSearchParams(location.search).get('to') || (location.hash.match(/to=([^&]+)/) || [])[1] || '';
   try { to = decodeURIComponent(to); } catch (e) {}
   to = to.trim();
+  /* short links like https://site/dreamy (same idea as ngl.link/name) */
+  if (!to) { var seg = location.pathname.replace(/^\/+|\/+$/g, ''); try { seg = decodeURIComponent(seg); } catch (e) {} if (seg && seg.indexOf('/') < 0 && !/\.(html?|js|css|json|png|svg|ico|txt|xml)$/i.test(seg)) to = seg; }
 
   /* ---- session (shared with the main app) ---- */
   function sget() { return lget(AUTH, null); }
@@ -313,7 +322,7 @@
         if (p.avatar && /^data:image\/(jpeg|png|webp);base64,/.test(p.avatar)) {
           $('sAv').textContent = ''; $('sAv').style.background = 'url(' + p.avatar + ') center/cover';
         }
-        if (p.page && window.CardStyle) CardStyle.hero($('sForm'), p.page)   /* the design now paints the WHOLE page (header + message box + song picker), not just the header */;
+        if (p.page) { pageStyle = p.page; paint(); }   /* the design paints the WHOLE page, on every screen */
         top0();
       }).catch(function () {});
     });

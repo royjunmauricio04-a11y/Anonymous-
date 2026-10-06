@@ -122,3 +122,8 @@ Private direct messages are never shown in the admin. Messages do not store who 
 Never put the Anthropic key or the Supabase service-role/secret key in any file in this repo.
 Set them only as Edge Function secrets (Supabase > Edge Functions > support-chat > Secrets, or `supabase secrets set`).
 `config.js` may only contain the public `anon` key.
+
+## Short link na parang NGL (`site.com/username`)
+1. Render Dashboard > ang Static Site mo > **Redirects/Rewrites** > Add Rule: Source `/*`, Destination `/send.html`, Action **Rewrite**. (Ang mga totoong file tulad ng style.css at index.html ay gumagana pa rin.)
+2. Sa `config.js`, gawing `SHORT_LINKS: true`.
+3. I-deploy. Ang link sa Profile ay magiging `https://anonymous-ztsp.onrender.com/dreamy`. Gumagana pa rin ang lumang `send.html?to=dreamy`.

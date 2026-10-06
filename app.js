@@ -901,6 +901,7 @@
     if (!u) return null;
     var base = C.SITE_URL ? C.SITE_URL.replace(/\/+$/, '') + '/' : location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
     var l = base + 'send.html?to=' + encodeURIComponent(u);
+    if (C.SHORT_LINKS) l = base + encodeURIComponent(u);   /* NGL-style short link; needs the rewrite rule in README */
     var local = !C.SITE_URL && !/^https:/.test(location.protocol);
     $('linkNote').hidden = !local;
     if (local) $('linkNote').textContent = 'This link only works on this device. After you host the app, set SITE_URL in config.js.';

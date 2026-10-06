@@ -49,7 +49,7 @@
   /* link-page header: photos are shown WHOLE (contain) over a blurred copy of themselves; colours/gradients fill it */
   function hero(root, c) {
     root.classList.remove('lp-styled', 'lp-photo');
-    ['--pg-bg', '--pg-img', '--pg-dim', '--pg-fg', '--pg-sh'].forEach(function (k) { root.style.removeProperty(k); });
+    ['--pg-bg', '--pg-img', '--pg-dim', '--pg-fg', '--pg-sh', '--pg-glass'].forEach(function (k) { root.style.removeProperty(k); });
     if (!c) return false;
     var photo = c.kind === 'photo' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(c.v || '');
     var b = photo ? '' : bg(c);
@@ -58,6 +58,7 @@
     root.classList.add('lp-styled');
     root.style.setProperty('--pg-fg', l ? '#16161a' : '#fff');
     root.style.setProperty('--pg-sh', l ? 'none' : '0 1px 10px rgba(0,0,0,.5)');
+    root.style.setProperty('--pg-glass', l ? 'rgba(255,255,255,.42)' : 'rgba(10,10,14,.42)');
     if (photo) {
       root.classList.add('lp-photo');
       root.style.setProperty('--pg-img', 'url(' + c.v + ')');
