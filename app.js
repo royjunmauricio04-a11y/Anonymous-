@@ -329,7 +329,20 @@
     if (line) lines.push(line);
     return lines;
   }
-  function cardBlob(m) {
+  /* the song's cover picture (m.color holds the https art link). Resolves null when it cannot be loaded: the card then shows the music note */
+  function loadArt(m) {
+    var u = String(m.color || m.art || '');
+    if (!/^https:\/\//.test(u)) return Promise.resolve(null);
+    u = u.replace(/\/\d+x\d+(bb)?\.(jpg|png|webp)/, '/600x600bb.$2');
+    return new Promise(function (res) {
+      var im = new Image(), done = function (v) { clearTimeout(t); res(v); }, t = setTimeout(function () { res(null); }, 7000);
+      im.crossOrigin = 'anonymous';
+      im.onload = function () { done(im.naturalWidth ? im : null); };
+      im.onerror = function () { done(null); };
+      im.src = u;
+    });
+  }
+  function cardBlob(m, art) {
     var W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     var g = cv.getContext('2d'), base = /^#[0-9a-f]{6}$/i.test(m.color || '') ? m.color : hashColor(String(m.song) + String(m.artist));
     var bg = g.createLinearGradient(0, 0, W * .6, H); bg.addColorStop(0, shade(base, .15)); bg.addColorStop(1, shade(base, -.6));
@@ -338,14 +351,14 @@
     g.textBaseline = 'alphabetic'; g.fillStyle = '#fff';
     g.font = '800 46px "Plus Jakarta Sans", system-ui, sans-serif'; g.globalAlpha = .9;
     try { g.letterSpacing = '10px'; } catch (e) {}
-    g.fillText('ANONYMOUS', 90, 170);
+    g.fillText('ANONYMOUS', 90, 510);   /* everything lives in the middle 1080x1080 (y 420-1500): story, square and 4:5 crops all keep the whole card */
     try { g.letterSpacing = '0px'; } catch (e) {}
     g.globalAlpha = 1;
     g.font = '700 54px "Plus Jakarta Sans", system-ui, sans-serif'; g.globalAlpha = .85;
-    var to = 'To: ' + String(m.to); while (g.measureText(to).width > 900 && to.length > 6) to = to.slice(0, -2); g.fillText(to === 'To: ' + m.to ? to : to + '…', 90, 330); g.globalAlpha = 1;
+    var to = 'To: ' + String(m.to); while (g.measureText(to).width > 900 && to.length > 6) to = to.slice(0, -2); g.fillText(to === 'To: ' + m.to ? to : to + '…', 90, 590); g.globalAlpha = 1;
     /* message: shrink the text until it fits */
-    var size = 104, lines, maxLines = 11, top = 420, boxH = 880;
-    for (; size >= 52; size -= 6) {
+    var size = 104, lines, maxLines = 11, top = 640, boxH = 500;
+    for (; size >= 46; size -= 6) {
       g.font = '700 ' + size + 'px Caveat, "Segoe Script", cursive';
       lines = wrapLines(g, m.text, 900);
       if (lines.length * size * 1.15 <= boxH && lines.length <= maxLines) break;
@@ -358,21 +371,22 @@
     var used = lines.length * size * 1.15, y0 = top + Math.max(0, (boxH - used) * .42);   /* short notes sit in the middle, not stuck to the top */
     lines.forEach(function (ln, i) { g.fillText(ln, 90, y0 + size + i * size * 1.15); });
     /* song card */
-    var y = 1440; g.fillStyle = 'rgba(0,0,0,.28)'; rrect(g, 70, y, 940, 230, 40); g.fill();
+    var y = 1170; g.fillStyle = 'rgba(0,0,0,.28)'; rrect(g, 70, y, 940, 230, 40); g.fill();
     g.fillStyle = shade(base, -.25); rrect(g, 100, y + 35, 160, 160, 28); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '700 84px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('\u266A', 180, y + 140); g.textAlign = 'left';
+    if (art) { g.save(); rrect(g, 100, y + 35, 160, 160, 28); g.clip(); g.drawImage(art, 100, y + 35, 160, 160); g.restore(); }
+    else { g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '700 84px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('\u266A', 180, y + 140); g.textAlign = 'left'; }
     function fit(txt, font, w) { g.font = font; while (g.measureText(txt).width > w && txt.length > 4) txt = txt.slice(0, -2); return txt; }
     g.fillStyle = '#fff'; var st = String(m.song); g.fillText(fit(st, '800 56px "Plus Jakarta Sans", system-ui, sans-serif', 680) + (g.measureText(st).width > 680 ? '…' : ''), 300, y + 105);
     g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '500 40px "Plus Jakarta Sans", system-ui, sans-serif'; var ar = String(m.artist); g.fillText(fit(ar, g.font, 680) + (g.measureText(ar).width > 680 ? '…' : ''), 300, y + 165);
-    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '700 44px Caveat, cursive'; g.fillText('say what you never said, with a song.', 90, 1790);
-    g.font = '500 34px "Plus Jakarta Sans", system-ui, sans-serif'; g.globalAlpha = .7; g.fillText(location.host || 'anonymous', 90, 1850); g.globalAlpha = 1;
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '700 44px Caveat, cursive'; g.fillText('say what you never said, with a song.', 90, 1438);
+    g.font = '500 34px "Plus Jakarta Sans", system-ui, sans-serif'; g.globalAlpha = .7; g.fillText(location.host || 'anonymous', 90, 1478); g.globalAlpha = 1;
     return new Promise(function (res) { cv.toBlob(res, 'image/png'); });
   }
   function shareCard(m, btn) {
     if (!m) return;
     var old = btn ? btn.textContent : ''; if (btn) { btn.disabled = true; btn.textContent = 'Making your image...'; }
     var fonts = (document.fonts && document.fonts.load) ? Promise.all([document.fonts.load('700 80px Caveat'), document.fonts.load('800 40px "Plus Jakarta Sans"')]).catch(function () {}) : Promise.resolve();
-    fonts.then(function () { return cardBlob(m); }).then(function (blob) {
+    fonts.then(function () { return loadArt(m); }).then(function (art) { return cardBlob(m, art); }).then(function (blob) {
       if (!blob) throw 0;
       var file; try { file = new File([blob], 'anonymous-note.png', { type: 'image/png' }); } catch (e) {}
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
