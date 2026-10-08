@@ -342,44 +342,74 @@
       im.src = u;
     });
   }
+  /* shared dark-plum backdrop (message card + link card) */
+  function plumBg(g, W, H) {
+    var bg = g.createLinearGradient(0, 0, W * .5, H); bg.addColorStop(0, '#2B1236'); bg.addColorStop(.55, '#150B24'); bg.addColorStop(1, '#0B0613');
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    [[.12, .22, 420, 'rgba(229,51,75,.30)'], [.92, .62, 460, 'rgba(255,138,76,.20)'], [.2, .9, 380, 'rgba(120,80,220,.22)']].forEach(function (o) {
+      var r = g.createRadialGradient(W * o[0], H * o[1], 0, W * o[0], H * o[1], o[2]); r.addColorStop(0, o[3]); r.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = r; g.fillRect(0, 0, W, H);
+    });
+    g.fillStyle = 'rgba(255,255,255,.10)'; g.textAlign = 'center';
+    [[130, 330, 90, -14], [930, 420, 70, 12], [980, 1500, 110, 10], [90, 1560, 80, -10], [860, 250, 60, 8], [200, 1700, 64, 14]].forEach(function (n) {
+      g.save(); g.translate(n[0], n[1]); g.rotate(n[3] * Math.PI / 180); g.font = '700 ' + n[2] + 'px system-ui, sans-serif'; g.fillText('♪', 0, 0); g.restore();
+    });
+  }
+  /* a received (or sent) note as a picture: message in the middle, the song with its cover under it.
+     Everything sits inside the middle 1080x1080 (y 420-1500) so story, square and 4:5 crops all keep the whole card. */
   function cardBlob(m, art) {
     var W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-    var g = cv.getContext('2d'), base = /^#[0-9a-f]{6}$/i.test(m.color || '') ? m.color : hashColor(String(m.song) + String(m.artist));
-    var bg = g.createLinearGradient(0, 0, W * .6, H); bg.addColorStop(0, shade(base, .15)); bg.addColorStop(1, shade(base, -.6));
-    g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    g.fillStyle = 'rgba(255,255,255,.07)'; g.beginPath(); g.arc(W * .9, H * .12, 360, 0, 7); g.fill(); g.beginPath(); g.arc(W * .05, H * .78, 280, 0, 7); g.fill();
-    g.textBaseline = 'alphabetic'; g.fillStyle = '#fff';
-    g.font = '800 46px "Plus Jakarta Sans", system-ui, sans-serif'; g.globalAlpha = .9;
-    try { g.letterSpacing = '10px'; } catch (e) {}
-    g.fillText('ANONYMOUS', 90, 510);   /* everything lives in the middle 1080x1080 (y 420-1500): story, square and 4:5 crops all keep the whole card */
-    try { g.letterSpacing = '0px'; } catch (e) {}
-    g.globalAlpha = 1;
-    g.font = '700 54px "Plus Jakarta Sans", system-ui, sans-serif'; g.globalAlpha = .85;
-    var to = 'To: ' + String(m.to); while (g.measureText(to).width > 900 && to.length > 6) to = to.slice(0, -2); g.fillText(to === 'To: ' + m.to ? to : to + '…', 90, 590); g.globalAlpha = 1;
-    /* message: shrink the text until it fits */
-    var size = 104, lines, maxLines = 11, top = 640, boxH = 500;
-    for (; size >= 46; size -= 6) {
-      g.font = '700 ' + size + 'px Caveat, "Segoe Script", cursive';
-      lines = wrapLines(g, m.text, 900);
-      if (lines.length * size * 1.15 <= boxH && lines.length <= maxLines) break;
+    var g = cv.getContext('2d'), SANS = '"Plus Jakarta Sans", system-ui, sans-serif', HAND = 'Caveat, "Segoe Script", cursive';
+    var base = /^#[0-9a-f]{6}$/i.test(m.color || '') ? m.color : hashColor(String(m.song) + String(m.artist));
+    plumBg(g, W, H);
+    var x0 = 90, cw = 900, y0 = 450, ch = 950, hh = 290;
+    g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 80; g.shadowOffsetY = 30; g.fillStyle = '#FFF9F4'; rrect(g, x0, y0, cw, ch, 64); g.fill(); g.restore();
+    /* header */
+    g.save(); rrect(g, x0, y0, cw, ch, 64); g.clip();
+    var hg = g.createLinearGradient(x0, y0, x0 + cw, y0 + hh); hg.addColorStop(0, '#E5334B'); hg.addColorStop(.55, '#FF6A4C'); hg.addColorStop(1, '#FFB34D');
+    g.fillStyle = hg; g.fillRect(x0, y0, cw, hh);
+    g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.arc(x0 + cw - 40, y0 + 20, 180, 0, 7); g.fill(); g.beginPath(); g.arc(x0 + 30, y0 + hh, 110, 0, 7); g.fill();
+    g.restore();
+    drawMask(g, x0 + 44, y0 + 40, 70, '#fff', '#E5334B');
+    g.fillStyle = 'rgba(0,0,0,.22)'; rrect(g, x0 + cw - 44 - 190, y0 + 40, 190, 58, 29); g.fill();
+    g.fillStyle = '#fff'; g.font = '700 30px ' + SANS; g.textAlign = 'center'; g.fillText('From: ???', x0 + cw - 44 - 95, y0 + 79);
+    g.save(); g.shadowColor = 'rgba(0,0,0,.18)'; g.shadowBlur = 12; g.shadowOffsetY = 4; g.fillStyle = '#fff';
+    g.font = '700 84px ' + HAND; g.fillText('a song for', W / 2, y0 + 175);
+    var to = String(m.to || 'you'), ts = 112; g.font = '700 ' + ts + 'px ' + HAND;
+    while (g.measureText(to).width > 780 && ts > 52) { ts -= 6; g.font = '700 ' + ts + 'px ' + HAND; }
+    while (g.measureText(to).width > 780 && to.length > 4) to = to.slice(0, -2) + '…';
+    g.fillText(to, W / 2, y0 + 262); g.restore();
+    /* message (shrinks to fit, centred) */
+    var my = y0 + hh + 40, mh = 380, size = 96, lines;
+    for (; size >= 44; size -= 4) {
+      g.font = '700 ' + size + 'px ' + HAND; lines = wrapLines(g, m.text, 780);
+      if (lines.length * size * 1.1 <= mh) break;
     }
-    if (lines.length > maxLines || lines.length * size * 1.15 > boxH) {
-      var cap = Math.max(1, Math.min(maxLines, Math.floor(boxH / (size * 1.15))));
+    if (lines.length * size * 1.1 > mh) {
+      var cap = Math.max(1, Math.floor(mh / (size * 1.1)));
       lines = lines.slice(0, cap); lines[cap - 1] = lines[cap - 1].replace(/\s*\S*$/, '') + '…';
     }
-    g.fillStyle = '#fff'; g.font = '700 ' + size + 'px Caveat, "Segoe Script", cursive';
-    var used = lines.length * size * 1.15, y0 = top + Math.max(0, (boxH - used) * .42);   /* short notes sit in the middle, not stuck to the top */
-    lines.forEach(function (ln, i) { g.fillText(ln, 90, y0 + size + i * size * 1.15); });
-    /* song card */
-    var y = 1170; g.fillStyle = 'rgba(0,0,0,.28)'; rrect(g, 70, y, 940, 230, 40); g.fill();
-    g.fillStyle = shade(base, -.25); rrect(g, 100, y + 35, 160, 160, 28); g.fill();
-    if (art) { g.save(); rrect(g, 100, y + 35, 160, 160, 28); g.clip(); g.drawImage(art, 100, y + 35, 160, 160); g.restore(); }
-    else { g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '700 84px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('\u266A', 180, y + 140); g.textAlign = 'left'; }
-    function fit(txt, font, w) { g.font = font; while (g.measureText(txt).width > w && txt.length > 4) txt = txt.slice(0, -2); return txt; }
-    g.fillStyle = '#fff'; var st = String(m.song); g.fillText(fit(st, '800 56px "Plus Jakarta Sans", system-ui, sans-serif', 680) + (g.measureText(st).width > 680 ? '…' : ''), 300, y + 105);
-    g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '500 40px "Plus Jakarta Sans", system-ui, sans-serif'; var ar = String(m.artist); g.fillText(fit(ar, g.font, 680) + (g.measureText(ar).width > 680 ? '…' : ''), 300, y + 165);
-    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '700 44px Caveat, cursive'; g.fillText('say what you never said, with a song.', 90, 1438);
-    g.font = '500 34px "Plus Jakarta Sans", system-ui, sans-serif'; g.globalAlpha = .7; g.fillText(location.host || 'anonymous', 90, 1478); g.globalAlpha = 1;
+    g.fillStyle = '#17171A'; g.font = '700 ' + size + 'px ' + HAND;
+    var used = lines.length * size * 1.1, ty = my + (mh - used) / 2;
+    lines.forEach(function (ln, i) { g.fillText(ln, W / 2, ty + size * .85 + i * size * 1.1); });
+    /* song panel */
+    var px = x0 + 40, pw = cw - 80, py = y0 + ch - 40 - 190, ph = 190;
+    g.fillStyle = '#F1E9E1'; rrect(g, px, py, pw, ph, 40); g.fill();
+    var ax = px + 30, ay = py + 30, as = 130;
+    g.fillStyle = shade(base, -.25); rrect(g, ax, ay, as, as, 26); g.fill();
+    if (art) { g.save(); rrect(g, ax, ay, as, as, 26); g.clip(); g.drawImage(art, ax, ay, as, as); g.restore(); }
+    else { g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '700 70px system-ui, sans-serif'; g.fillText('♪', ax + as / 2, ay + 92); }
+    var tx = ax + as + 28, tw = px + pw - 30 - 84 - 24 - tx;
+    function fit(txt, font) { g.font = font; if (g.measureText(txt).width <= tw) return txt; while (g.measureText(txt + '…').width > tw && txt.length > 3) txt = txt.slice(0, -1); return txt + '…'; }
+    g.textAlign = 'left';
+    g.fillStyle = '#17171A'; g.fillText(fit(String(m.song), '800 46px ' + SANS), tx, py + 92);
+    g.fillStyle = '#6B6B74'; g.fillText(fit(String(m.artist), '500 34px ' + SANS), tx, py + 142);
+    var cx = px + pw - 30 - 42, cy = py + ph / 2, pg = g.createLinearGradient(cx - 42, cy - 42, cx + 42, cy + 42); pg.addColorStop(0, '#E5334B'); pg.addColorStop(1, '#FF8A4C');
+    g.fillStyle = pg; g.beginPath(); g.arc(cx, cy, 42, 0, 7); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(cx - 11, cy - 18); g.lineTo(cx - 11, cy + 18); g.lineTo(cx + 19, cy); g.closePath(); g.fill();
+    /* brand under the card */
+    g.textAlign = 'left'; drawMask(g, W / 2 - 150, 1428, 54, '#fff', '#2B1236');
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '800 44px ' + SANS; g.fillText('Anonymous', W / 2 - 84, 1469); g.textAlign = 'center';
     return new Promise(function (res) { cv.toBlob(res, 'image/png'); });
   }
   function shareCard(m, btn) {
@@ -395,6 +425,77 @@
       var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'anonymous-note.png';
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
       toast('Image saved. Post it on your story.');
+    }).catch(function () { toast('Could not make the image. Try again.', true); })
+      .then(function () { if (btn) { btn.disabled = false; btn.textContent = old; } });
+  }
+
+  /* ---------- link sticker for stories (our own design, no third-party logos or artwork) ---------- */
+  function drawMask(g, x, y, w, color, eye) {
+    g.save(); g.translate(x, y); g.scale(w / 40, w / 40);
+    g.fillStyle = color; g.fill(new Path2D('M2 8c6-4 12-4 18-1 6-3 12-3 18 1 0 8-5 13-10 13-4 0-6-3-8-3s-4 3-8 3C7 21 2 16 2 8z'));
+    g.fillStyle = eye; g.beginPath(); g.ellipse(12.5, 12, 4.2, 2.6, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(27.5, 12, 4.2, 2.6, 0, 0, 7); g.fill();
+    g.restore();
+  }
+  function loadImg(src) {
+    return new Promise(function (res) {
+      if (!/^data:image\/(jpeg|png|webp);base64,/.test(src || '')) return res(null);
+      var im = new Image(); im.onload = function () { res(im.naturalWidth ? im : null); }; im.onerror = function () { res(null); }; im.src = src;
+    });
+  }
+  function storyBlob(user, link, av) {
+    var W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var g = cv.getContext('2d'), SANS = '"Plus Jakarta Sans", system-ui, sans-serif', HAND = 'Caveat, "Segoe Script", cursive';
+    plumBg(g, W, H);
+    /* the card */
+    var x0 = 90, cw = 900, y0 = 470, ch = 900, hh = 400;
+    g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 80; g.shadowOffsetY = 30; g.fillStyle = '#FFF9F4'; rrect(g, x0, y0, cw, ch, 64); g.fill(); g.restore();
+    g.save(); rrect(g, x0, y0, cw, ch, 64); g.clip();
+    var hg = g.createLinearGradient(x0, y0, x0 + cw, y0 + hh); hg.addColorStop(0, '#E5334B'); hg.addColorStop(.55, '#FF6A4C'); hg.addColorStop(1, '#FFB34D');
+    g.fillStyle = hg; g.fillRect(x0, y0, cw, hh);
+    g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.arc(x0 + cw - 40, y0 + 30, 190, 0, 7); g.fill(); g.beginPath(); g.arc(x0 + 40, y0 + hh - 10, 120, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.22)'; g.font = '700 120px system-ui, sans-serif'; g.fillText('♫', x0 + 90, y0 + 150);
+    g.restore();
+    drawMask(g, W / 2 - 38, y0 + 38, 76, '#fff', '#E5334B');
+    g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = '700 104px ' + HAND; g.save(); g.shadowColor = 'rgba(0,0,0,.18)'; g.shadowBlur = 12; g.shadowOffsetY = 4;
+    g.fillText('send me an', W / 2, y0 + 185); g.fillText('anonymous song', W / 2, y0 + 275); g.restore();
+    /* avatar on the seam */
+    var ar = 92, ay = y0 + hh;
+    g.fillStyle = '#FFF9F4'; g.beginPath(); g.arc(W / 2, ay, ar + 14, 0, 7); g.fill();
+    g.save(); g.beginPath(); g.arc(W / 2, ay, ar, 0, 7); g.clip();
+    if (av) { var s = Math.max(2 * ar / av.width, 2 * ar / av.height), dw = av.width * s, dh = av.height * s; g.drawImage(av, W / 2 - dw / 2, ay - dh / 2, dw, dh); }
+    else { var ag = g.createLinearGradient(W / 2 - ar, ay - ar, W / 2 + ar, ay + ar); ag.addColorStop(0, '#E5334B'); ag.addColorStop(1, '#FF8A4C'); g.fillStyle = ag; g.fillRect(W / 2 - ar, ay - ar, 2 * ar, 2 * ar);
+      g.fillStyle = '#fff'; g.font = '800 96px ' + SANS; g.textBaseline = 'middle'; g.fillText(String(user).charAt(0).toUpperCase(), W / 2, ay + 6); g.textBaseline = 'alphabetic'; }
+    g.restore();
+    /* name + line */
+    g.fillStyle = '#17171A'; var nm = '@' + user, ns = 62; g.font = '800 ' + ns + 'px ' + SANS; while (g.measureText(nm).width > 760 && ns > 30) { ns -= 3; g.font = '800 ' + ns + 'px ' + SANS; }
+    g.fillText(nm, W / 2, ay + ar + 86);
+    g.fillStyle = '#6B6B74'; g.font = '500 36px ' + SANS;
+    wrapLines(g, 'Pick a song, write a message. I will never know it was you.', 700).forEach(function (ln, i) { g.fillText(ln, W / 2, ay + ar + 150 + i * 50); });
+    /* link pill */
+    var px = x0 + 50, pw = cw - 100, py = y0 + ch - 160, ph = 100;
+    g.fillStyle = '#17171A'; rrect(g, px, py, pw, ph, 50); g.fill();
+    var pg = g.createLinearGradient(px, py, px + ph, py + ph); pg.addColorStop(0, '#E5334B'); pg.addColorStop(1, '#FF8A4C');
+    g.fillStyle = pg; g.beginPath(); g.arc(px + 50, py + 50, 36, 0, 7); g.fill();
+    g.fillStyle = '#fff'; g.font = '700 40px system-ui, sans-serif'; g.textBaseline = 'middle'; g.fillText('♪', px + 50, py + 53);
+    var lk = String(link).replace(/^https?:\/\//, ''), ls = 38; g.textAlign = 'left'; g.font = '700 ' + ls + 'px ' + SANS;
+    while (g.measureText(lk).width > pw - 150 && ls > 28) { ls -= 2; g.font = '700 ' + ls + 'px ' + SANS; }
+    while (g.measureText(lk).width > pw - 150 && lk.length > 8) lk = lk.slice(0, -2) + '\u2026';
+    g.fillStyle = '#fff'; g.fillText(lk, px + 110, py + 52); g.textBaseline = 'alphabetic'; g.textAlign = 'center';
+    /* brand under the card (inside the safe middle square) */
+    drawMask(g, W / 2 - 150, 1418, 54, '#fff', '#2B1236');
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '800 44px ' + SANS; g.textAlign = 'left'; g.fillText('Anonymous', W / 2 - 84, 1459); g.textAlign = 'center';
+    return new Promise(function (res) { cv.toBlob(res, 'image/png'); });
+  }
+  function shareStory(user, link, avatar, btn) {
+    var old = btn ? btn.textContent : ''; if (btn) { btn.disabled = true; btn.textContent = 'Making your story...'; }
+    var fonts = (document.fonts && document.fonts.load) ? Promise.all([document.fonts.load('700 80px Caveat'), document.fonts.load('800 40px "Plus Jakarta Sans"')]).catch(function () {}) : Promise.resolve();
+    Promise.all([fonts, loadImg(avatar)]).then(function (r) { return storyBlob(user, link, r[1]); }).then(function (blob) {
+      if (!blob) throw 0;
+      var file; try { file = new File([blob], 'anonymous-link-story.png', { type: 'image/png' }); } catch (e) {}
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file], title: 'Anonymous' }).catch(function () {});
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'anonymous-link-story.png';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+      toast('Image saved. Post it on your story and add your link sticker.');
     }).catch(function () { toast('Could not make the image. Try again.', true); })
       .then(function () { if (btn) { btn.disabled = false; btn.textContent = old; } });
   }
@@ -920,7 +1021,8 @@
     $('linkNote').hidden = !local;
     if (local) $('linkNote').textContent = 'This link only works on this device. After you host the app, set SITE_URL in config.js.';
     $('whoName').textContent = '@' + u; $('link').value = l;
-    $('share').innerHTML = '<a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(l) + '">Facebook</a><button id="nat">Share to IG, Messenger, more</button>';
+    $('share').innerHTML = '<a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(l) + '">Facebook</a><button id="nat">Share to IG, Messenger, more</button><button id="storyBtn">Share link as story</button>';
+    $('storyBtn').onclick = function () { shareStory(u, l, profile && profile.avatar, $('storyBtn')); };
     $('nat').onclick = function () {
       if (navigator.share) navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: l }).catch(function () {});
       else $('copy').click();
