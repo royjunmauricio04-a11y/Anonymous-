@@ -11,7 +11,11 @@
   "theme_color": "#E5334B",
   "lang": "en",
   "dir": "ltr",
-  "categories": ["social", "entertainment", "lifestyle"],
+  "categories": [
+    "social",
+    "entertainment",
+    "lifestyle"
+  ],
   "icons": [
     {
       "src": "icon-192.png",
@@ -31,5 +35,22 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/home.png",
+      "sizes": "540x960",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Home"
+    },
+    {
+      "src": "screenshots/start.png",
+      "sizes": "540x960",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Pick a username"
+    }
+  ],
+  "prefer_related_applications": false
 }

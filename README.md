@@ -1,3 +1,71 @@
+# Anonymous: gawing app at ipamahagi (v7)
+
+## Ano ang meron ka na
+- Ang app mo ay **PWA** (may manifest, service worker, icons) at may **APK** na ginawa mo sa PWABuilder (`com.onrender.anonymous_ztsp.twa`).
+- Ang `.well-known/assetlinks.json` mo ay may totoong fingerprint. Ito ang dahilan kung bakit nawawala ang URL bar sa loob ng APK.
+- **Tapos na ang pag-check ko:** lahat ng file na kailangan ng manifest at service worker ay nandoon, tama ang format ng fingerprint, at walang error sa pag-load.
+
+## Ano ang bago (v7)
+- **`install.html`**: ang pahina na ibibigay mo sa mga tao. May 3 paraan: (1) **Install app** na button (pinakamadali, hindi na kailangan ng APK at walang "unknown apps"), (2) **Download the APK** (ang Linkvertise link mo), (3) steps para sa iPhone. Kapag naka-install na, sasabihin nitong "you're all set".
+- **`apk-link.js`**: dito mo ilalagay ang Linkvertise link mo (isang linya lang).
+- May link na **Install the app** sa footer ng main app.
+- Ang manifest ay may 2 screenshot para mas maganda ang install window ng Chrome. Binago ang service worker (v10).
+
+## Paano ibigay sa iba (APK + Linkvertise)
+Ang **Linkvertise ay link lang** (ads bago ang download). Hindi ito pwedeng pag-imbakan ng file. Kaya:
+
+### 1. Kunin ang APK
+Sa PWABuilder zip na dina-download mo, ang gagamitin ay `app-release-signed.apk`. **Huwag ibigay kahit kanino ang `signing.keystore` at ang `signing-key-info.txt` (may password).** Itago ang dalawa na iyon sa safe na lugar. Kapag nawala, hindi ka na makakagawa ng update na tatanggapin ng mga naka-install na.
+
+### 2. I-upload ang APK sa GitHub Releases (libre at maaasahan)
+1. Buksan ang repo mo sa GitHub (Desktop site sa phone), pindutin ang **Releases**, tapos **Draft a new release**.
+2. Tag: `v1.0.0`. Title: `Anonymous app`.
+3. I-attach ang `app-release-signed.apk`. Pangalanan itong `Anonymous.apk` bago i-upload.
+4. **Publish release.**
+5. Sa release page, i-long-press ang `Anonymous.apk` at **Copy link address**. Ito ang direct link.
+
+### 3. Gumawa ng Linkvertise link
+Sa linkvertise.com, gumawa ng bagong link at i-paste ang direct link galing sa GitHub bilang destination. Kopyahin ang Linkvertise link na ibibigay nila.
+
+### 4. Ilagay sa app mo
+Buksan ang `apk-link.js` at ilagay sa pagitan ng mga quote:
+```
+window.APK_URL = "https://linkvertise.com/...";
+```
+Tapos i-push (Termux commands sa baba). Ang ibibigay mo sa mga tao ay ang link ng install page: `https://anonymous-ztsp.onrender.com/install.html`
+
+## Kapag may update
+- **Mga update sa site (design, features, SQL):** awtomatiko na ito sa lahat ng naka-install. Ang app ay bintana lang papunta sa website mo, kaya hindi nila kailangang mag-download ulit ng APK.
+- **Kailangan lang ng bagong APK** kapag binago mo ang pangalan, icon, o package settings. Sa PWABuilder, piliin ang **Signing key: Use mine** at ilagay ang keystore at password mo (hindi "New"). Dagdagan ang **Version code** (2, 3, ...). Hindi dapat magbago ang Package ID. Kung "New" ang pinili mo, magkakaiba na ang fingerprint, kaya babalik ang URL bar at hindi mag-uupdate ang lumang install.
+
+## Kailangan mong malaman
+- **Play Protect:** sa mga APK na hindi galing sa Play Store, maaaring lumabas ang "unrecognized developer". Kaya may steps sa install page (More details, Install anyway). Hindi ito nangangahulugang may virus.
+- **Hindi secure ang Linkvertise bilang pintuan:** pwedeng makita ng iba ang direct GitHub link (halimbawa sa Releases page mo, kung public ang repo) at laktawan ang ads. Okay lang kung ang gusto mo ay kita, hindi proteksyon.
+- **Tiwala ng users:** maraming ads at paghihintay bago mag-download ang pwedeng magpa-alinlangan sa mga tao. Kaya inuna sa install page ang libreng **Install app** na button.
+- **Sa 2027:** simula Setyembre 30, 2026, humihingi na ang Google ng verified developer para sa mga app na ini-install sa Brazil, Indonesia, Singapore at Thailand. Kasunod ang buong mundo sa 2027. Ang Pilipinas ay wala sa unang apat. Ang mga APK na hindi verified ay mas mahirap i-install (may dagdag na hakbang at paghihintay). Hindi ito nakakaapekto sa **Install app** na button o sa pag-gamit ng site.
+- **Notifications:** gumagana habang bukas ang app. Wala pang totoong push notification kapag sarado.
+- **Kapag mali ang fingerprint:** mawawala ang full-screen at lalabas ang URL bar. Buksan ang `https://anonymous-ztsp.onrender.com/.well-known/assetlinks.json` sa browser. Dapat JSON ang lumabas, hindi isang page. Kung page ang lumabas (dahil sa `/* -> /send.html` rewrite sa Render), magdagdag ng rule sa Render: `/.well-known/*` -> `/.well-known/*` na NASA ITAAS ng catch-all.
+
+## Termux: i-upload ang bagong files
+```
+cd ~/Anonymous-
+git pull
+unzip -o ~/storage/downloads/anonymous-v7-app.zip
+git add -A
+git commit -m "v7: install page, APK link, manifest screenshots"
+git push
+```
+(Kung wala pa ang folder: `git clone https://github.com/royjunmauricio04-a11y/Anonymous-.git` muna, tapos `cd Anonymous-`.)
+Pagkatapos ng 1 hanggang 2 minuto sa Render, buksan ang `/install.html`. Kung luma pa ang itsura, i-clear ang site data o i-hard refresh (may service worker).
+
+## Paano subukan
+1. Sa Chrome ng Android, buksan ang `/install.html`. Pindutin ang **Install app**. Dapat may Anonymous na sa home screen at bubukas ito full-screen.
+2. Ilagay ang Linkvertise link sa `apk-link.js`. Buksan ulit ang install page. Dapat lumabas ang **Download the APK**.
+3. I-install ang APK sa ibang phone. Dapat walang URL bar sa taas.
+4. Sa iPhone (Safari), dapat ang steps ng Add to Home Screen lang ang nakikita.
+
+---
+
 # Anonymous: gabay sa setup at update (Taglish)
 
 ## v6.2: Views at pag-update

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Install Anonymous</title>
+<meta name="description" content="Install Anonymous on your phone. Free. Send an anonymous song and message.">
+<meta name="theme-color" content="#E5334B">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.ins{max-width:480px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top,0px)) 18px 48px}
+.ins-hero{text-align:center;padding:12px 0 22px}
+.ins-hero img{width:92px;height:92px;border-radius:22px;box-shadow:0 8px 24px rgba(229,51,75,.28)}
+.ins-hero h1{display:block;font-size:1.8rem;margin:14px 0 4px;padding:0}
+.ins-card{border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:14px;background:var(--bg)}
+.ins-card h2{font-size:1.05rem;margin:0 0 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ins-card p{margin:0 0 12px;color:var(--muted);font-size:.92rem}
+.ins-card ol{margin:12px 0 0;padding-left:20px;color:var(--text);font-size:.92rem}
+.ins-card li{margin:6px 0}
+.ins-card details{margin-top:10px}
+.ins-card summary{cursor:pointer;font-weight:600;font-size:.9rem}
+.ins-tag{font-size:.72rem;font-weight:700;color:#fff;background:var(--accent);padding:2px 9px;border-radius:999px}
+.ins-ok{text-align:center;padding:26px 18px;border:1px solid var(--border);border-radius:18px;margin-bottom:14px}
+.ins-ok h2{font-family:'Caveat',cursive;font-size:2.4rem;margin:0}
+.btn[disabled]{opacity:.55}
+</style>
+</head><body>
+<main class="ins">
+ <div class="ins-hero">
+  <img src="icon-192.png" alt="Anonymous app icon" width="92" height="92">
+  <h1>Install Anonymous</h1>
+  <p class="sub" style="margin:0">Free. Opens like a real app on your phone.</p>
+ </div>
+
+ <section id="done" class="ins-ok" hidden>
+  <h2>you're all set.</h2>
+  <p class="sub" style="margin:6px 0 14px">Anonymous is already installed on this phone.</p>
+  <a class="btn full" href="index.html">Open Anonymous</a>
+ </section>
+
+ <section id="android" class="ins-card">
+  <h2>Android <span class="ins-tag">Easiest</span></h2>
+  <p>Installs straight from your browser. No file download and no "unknown apps" setting.</p>
+  <button class="btn full" id="pwaBtn" style="margin-top:0">Install app</button>
+  <p id="pwaHint" hidden style="margin:10px 0 0">If nothing happens: open the <b>&#8942; menu</b> in Chrome, then tap <b>Install app</b> (or <b>Add to Home screen</b>). Make sure you opened this page in Chrome, not inside Facebook or Messenger.</p>
+ </section>
+
+ <section id="apk" class="ins-card">
+  <h2>Android APK file</h2>
+  <p>A normal app file you can share. Use this if the button above does not work.</p>
+  <a class="btn ghost full" id="apkBtn" target="_blank" rel="noopener" hidden style="margin-top:0">Download the APK</a>
+  <p id="apkSoon" style="margin:0">The APK download is coming soon. Use the Install button above for now.</p>
+  <details>
+   <summary>How to install the APK</summary>
+   <ol>
+    <li>Tap <b>Download the APK</b> and finish the steps on the next page.</li>
+    <li>Open the downloaded file (<b>Anonymous.apk</b>).</li>
+    <li>If Android asks, tap <b>Settings</b> and allow <b>Install unknown apps</b> for your browser or Files app. Then go back and tap <b>Install</b>.</li>
+    <li>If Play Protect says it does not recognize the developer, tap <b>More details</b>, then <b>Install anyway</b>.</li>
+    <li>Tap <b>Open</b>. You can turn the unknown apps setting off again.</li>
+   </ol>
+  </details>
+  <details>
+   <summary>Is it safe?</summary>
+   <p style="margin:8px 0 0">The app only opens this website inside a full-screen window. Your account and messages live on the website, not in the file. Only install the APK from the link on this page.</p>
+  </details>
+ </section>
+
+ <section id="ios" class="ins-card">
+  <h2>iPhone</h2>
+  <p>Open this page in <b>Safari</b>, then:</p>
+  <ol style="margin-top:0">
+   <li>Tap the <b>Share</b> button.</li>
+   <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
+   <li>Tap <b>Add</b>.</li>
+  </ol>
+ </section>
+
+ <p class="fine"><a href="index.html" style="color:inherit">Or just use it in your browser</a></p>
+</main>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="apk-link.js"></script>
+<script src="install.js"></script>
+</body></html>
