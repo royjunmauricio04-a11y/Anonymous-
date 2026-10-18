@@ -14,7 +14,7 @@
 <meta property="og:title" content="Anonymous Maintenance Center">
 <meta property="og:description" content="Admin only.">
 <meta property="og:image" content="https://anonymous-ztsp.onrender.com/og-image.png">
-<meta property="og:url" content="https://anonymous-ztsp.onrender.com/admin.html">
+<meta property="og:url" content="https://anonymous-ztsp.onrender.com/admin">
 <meta name="twitter:card" content="summary_large_image">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -23,6 +23,7 @@
 /* apply the saved theme before first paint (same key as the main app) */
 try { var m = JSON.parse(localStorage.getItem('anon-theme')); if (m === 'dark' || m === 'light') document.documentElement.setAttribute('data-theme', m); } catch (e) {}
 </script>
+<script>try{if(/\/admin\.html$/.test(location.pathname))history.replaceState(null,'','/admin'+location.search+location.hash)}catch(e){}</script>
 </head><body class="adm">
 
 <main id="alogin" class="a-login">

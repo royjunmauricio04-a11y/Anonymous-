@@ -30,7 +30,12 @@
   try { to = decodeURIComponent(to); } catch (e) {}
   to = to.trim();
   /* short links like https://site/dreamy (same idea as ngl.link/name) */
-  if (!to) { var seg = location.pathname.replace(/^\/+|\/+$/g, ''); try { seg = decodeURIComponent(seg); } catch (e) {} if (seg && seg.indexOf('/') < 0 && !/\.(html?|js|css|json|png|svg|ico|txt|xml)$/i.test(seg)) to = seg; }
+  var PAGES = { admin: 'admin.html', install: 'install.html', index: 'index.html', home: 'index.html', send: 'send.html' };   /* /admin, /install ... are pages, not usernames */
+  if (!to) {
+    var seg = location.pathname.replace(/^\/+|\/+$/g, ''); try { seg = decodeURIComponent(seg); } catch (e) {}
+    if (seg && PAGES[seg.toLowerCase()] && seg.toLowerCase() !== 'send') { location.replace('/' + PAGES[seg.toLowerCase()] + location.search + location.hash); return; }   /* works even if the Render rule is missing */
+    if (seg && seg.indexOf('/') < 0 && !/\.(html?|js|css|json|png|svg|ico|txt|xml)$/i.test(seg)) to = seg;
+  }
 
   /* ---- session (shared with the main app) ---- */
   function sget() { return lget(AUTH, null); }
@@ -73,6 +78,7 @@
     if (e && e.off) return e.status === 429 ? 'Too many tries from this network. Please wait a few minutes.' : 'Sending is not switched on yet. The site owner must turn on Anonymous sign-ins in Supabase.';
     if (m === 'rate_limited') return 'You are sending too fast. Please try again in a while.';
     if (m === 'recipient_not_found') return 'That link is not connected to anyone.';
+    if (m === 'blocked_sender') return 'This person is not accepting messages from you.';
     if (m === 'blocked_content') return 'That message has a word that is not allowed here. Please change it and try again.';
     if (e && (e.status === 300)) return 'Sending is being fixed on our side. Please try again later.';
     if (!e || !e.status) return 'Could not reach the database. Check your connection.';
@@ -313,7 +319,7 @@
       if (ok !== true) { miss('This link is not connected to anyone yet. Check the spelling, or ask your friend to open Anonymous first.'); return; }
       document.title = 'Send @' + to + ' an anonymous song';
       $('sAv').textContent = to.charAt(0).toUpperCase(); $('sName').textContent = '@' + to;
-      $('sNote').textContent = 'Anonymous. @' + to + ' will never see who sent this.';
+      $('sNote').textContent = 'Anonymous. @' + to + ' will never see who sent this. Abusive messages can be blocked and reported.';
       show('sForm'); top0();
       /* owner's photo + card design (public, optional: the page still works without it) */
       return rpc('public_profile', { p_username: to }).then(function (p) {

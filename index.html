@@ -18,6 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script>try{if(/\/index\.html$/.test(location.pathname))history.replaceState(null,'','/'+location.search+location.hash)}catch(e){}</script>
 </head><body><main>
 <div class="topbar">
  <h1 id="homeLink" role="link" tabindex="0" aria-label="Home" style="cursor:pointer"><svg class="logo" viewBox="0 0 40 24" aria-hidden="true"><path d="M2 8c6-4 12-4 18-1 6-3 12-3 18 1 0 8-5 13-10 13-4 0-6-3-8-3s-4 3-8 3C7 21 2 16 2 8z" fill="var(--pink)"/><ellipse cx="12.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/><ellipse cx="27.5" cy="12" rx="4.2" ry="2.6" fill="var(--bg)"/></svg>Anonymous</h1>
@@ -122,6 +123,10 @@
     <div><b id="stRep">0</b><span>Replies</span></div>
     <div><b id="stSong">0</b><span>Songs</span></div>
    </div>
+   <h3 class="pf-h">Activity</h3>
+   <div class="act" id="actList"><p class="sub" style="margin:0">Loading...</p></div>
+   <h3 class="pf-h">Safety</h3>
+   <div class="pf-safety"><p class="sub" id="blkTxt" style="margin:0 0 10px"></p><button type="button" class="btn ghost small" id="unblockAll" hidden>Unblock everyone</button></div>
    <div class="pf-boost">
     <div class="pf-bt"><b>Complete your profile</b><em id="pfPct">0%</em></div>
     <div class="pf-bar"><i id="pfBar"></i></div>
@@ -196,7 +201,7 @@
   </div>
   <div class="support-body">
    <div class="box faq" style="margin-bottom:14px">
-    <details><summary>Is it really anonymous?</summary><p>Your account is used to prevent spam and protect your Inbox, but your username is not shown to the recipient when you send anonymously.</p></details>
+    <details><summary>Is it really anonymous?</summary><p>Your username is never shown to the person you send to, and the app never shows anyone's location, phone or device. For private messages the system keeps a hidden code so a receiver can block someone who is being abusive. The receiver cannot see that code.</p></details>
     <details><summary>Can I delete a message?</summary><p>No. Once it is posted it cannot be removed, so check it before you send.</p></details>
     <details><summary>Why only 30 seconds of the song?</summary><p>The player uses the free 30-second preview. Tap the arrow to open the full song in Spotify.</p></details>
     <details><summary>How do I get my messages?</summary><p>Claim a username to create a personal link. Messages sent through that link appear in your Inbox. Public Browse posts are not delivered to anyone’s Inbox.</p></details>
@@ -231,7 +236,7 @@
 <section id="detail" hidden></section>
 <div id="toast" class="toast" role="status" hidden></div>
 <footer class="foot">
- <div class="flinks"><button class="link" id="footerSupport">Support & FAQ</button><a class="link" id="fb" hidden>Send feedback</a><a class="link" href="install.html">Install the app</a></div>
+ <div class="flinks"><button class="link" id="footerSupport">Support & FAQ</button><a class="link" id="fb" hidden>Send feedback</a><a class="link" href="/install">Install the app</a></div>
  <p class="fine" id="fine"></p><p class="fine">&copy; Anonymous</p>
 </footer>
 </main>
