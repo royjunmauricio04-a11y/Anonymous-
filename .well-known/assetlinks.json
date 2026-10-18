@@ -1,12 +1,8 @@
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "com.onrender.anonymous_ztsp.twa",
-      "sha256_cert_fingerprints": [
-        "15:6D:E7:35:D2:BF:F1:F9:72:90:C1:3C:9F:D4:A4:38:DD:13:31:C2:D6:07:51:C5:41:74:E0:61:6F:F5:38:18"
-      ]
-    }
-  }
-]
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.onrender.anonymous_ztsp.twa",
+        "sha256_cert_fingerprints": ["57:E4:77:EE:95:B6:9C:1B:71:E6:03:6C:60:76:1F:34:4C:52:16:6B:4E:D3:6F:90:E4:FD:02:47:FC:6D:43:1A"]
+      }
+    }]
