@@ -109,7 +109,7 @@ HUMAN HELP
 
 HOW ANONYMOUS WORKS (use these facts for app questions)
 - Sign up with a name and a PIN, no email. The app adds a random 4-digit number to the end of the name (for example rjay_4821), so many people can pick the same name. To log in again on a new phone, people need the FULL username with the number plus the PIN. The PIN keeps their Inbox. If someone has no PIN and clears their browser, they cannot get the account back.
-- Every user has a personal link. Friends open it, write a message, pick a song, and send. The sender stays hidden. The message goes to the owner's private Inbox.
+- Every user has a personal link. Friends open it, write a message, pick a song, and send. The sender stays hidden: the app never shows senders' names, locations or devices, and there is no way to pay or watch ads to reveal them. The message goes to the owner's private Inbox. A receiver can report a private message (then an admin can read it) or block the sender, and blocking works without ever revealing who it was.
 - Browse shows public anonymous posts. Messages cannot be deleted after posting. The player plays a 30 second preview.
 - Posts marked Bot are automatic posts by the app. Support chats are not saved. A support ticket is created only after the user agrees, and an admin may reply later.
 

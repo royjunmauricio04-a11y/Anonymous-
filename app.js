@@ -47,6 +47,7 @@
     try { console.warn('[anonymous] request failed', e.status, code, msg); } catch (x2) {}
     if (e.status === 300 || code === 'PGRST203') return 'Posting has a problem on our side. Please try again later.';
     if (msg === 'blocked_content') return 'That message has a word that is not allowed here. Please change it and try again.';
+    if (msg === 'blocked_sender') return 'This person is not accepting messages from you.';
     if (msg === 'rate_limited') return 'You are sending too fast. Please try again in a while.';
     if (code === 'PGRST202') return 'This feature is not ready yet. Please try again later.';
     if (code === '42501' || e.status === 401 || e.status === 403) return 'Please log in again to do that.';
@@ -1115,6 +1116,7 @@
     av.style.backgroundImage = profile.avatar ? 'url(' + profile.avatar + ')' : '';
     if ($('stView')) $('stView').textContent = (profile.views != null ? profile.views : 0);
     $('stMsg').textContent = msgs.length;
+    loadActivity(msgs); refreshBlocks();
     $('stRep').textContent = msgs.filter(function (m) { return m.parent; }).length;
     $('stSong').textContent = Object.keys(msgs.reduce(function (o, m) { o[m.song + m.artist] = 1; return o; }, {})).length;
     var shared = !!lget('anon-shared', false);
@@ -1339,12 +1341,66 @@
     };
   }
 
+  /* ---------- safety: block the sender of a private message (you never learn who it was) ---------- */
+  function openBlock(m) {
+    var box = $('blockBox'); if (!box) return;
+    if (!box.hidden) { box.hidden = true; return; }
+    box.innerHTML = '<p class="sub" style="margin:10px 0 8px">Block this sender? They will not be able to message you again. You will not see who they are.</p>' +
+      '<div class="row"><button type="button" class="btn danger" id="blockYes">Block</button><button type="button" class="btn ghost" id="blockNo">Cancel</button></div><p class="msg" id="blockMsg" role="status"></p>';
+    box.hidden = false;
+    $('blockNo').onclick = function () { box.hidden = true; };
+    $('blockYes').onclick = function () {
+      $('blockYes').disabled = true;
+      rpc('block_sender', { p_message_id: m.id }).then(function (res) {
+        if (res && res.ok) {
+          $('blockMsg').className = 'msg ok-pop'; $('blockMsg').textContent = 'Blocked. That sender cannot message you again.';
+          var bb = $('blockBtn'); if (bb) bb.hidden = true; refreshBlocks();
+        } else {
+          $('blockMsg').className = 'msg err'; $('blockMsg').textContent = 'This message was sent before blocking existed, so it cannot be blocked. New messages can.';
+          $('blockYes').disabled = false;
+        }
+      }).catch(function (err) {
+        var c = ''; try { c = JSON.parse(err.text).code; } catch (x) {}
+        $('blockMsg').className = 'msg err';
+        $('blockMsg').textContent = c === 'PGRST202' ? 'Blocking is not switched on yet.' : dbHint(err);
+        $('blockYes').disabled = false;
+      });
+    };
+  }
+  function refreshBlocks() {
+    var t = $('blkTxt'), b = $('unblockAll'); if (!t || !REMOTE || !profile) return;
+    rpc('block_count', {}).then(function (n) {
+      n = Number(n) || 0;
+      t.textContent = n ? 'You have blocked ' + n + (n === 1 ? ' sender' : ' senders') + '. They cannot message you, and you cannot see who they are.'
+        : 'You have not blocked anyone. If a private message is hurtful, open it and tap Block sender.';
+      b.hidden = !n;
+    }).catch(function () { t.textContent = 'If a private message is hurtful, open it and tap Block sender or Report.'; b.hidden = true; });
+  }
+  function loadActivity(msgs) {
+    var box = $('actList'); if (!box || !REMOTE) return;
+    var ev = msgs.filter(function (m) { return m.t; }).map(function (m) { return { t: m.t, k: 'msg', s: m.song, a: m.artist }; });
+    rpc('my_recent_views', {}).catch(function () { return []; }).then(function (vs) {
+      (vs || []).forEach(function (v) { var t = Date.parse(v); if (t) ev.push({ t: t, k: 'view' }); });
+      ev.sort(function (a, b) { return b.t - a.t; });
+      box.innerHTML = ev.length ? ev.slice(0, 15).map(function (e) {
+        var msg = e.k === 'msg';
+        return '<div class="act-row"><span class="act-ic' + (msg ? ' m' : '') + '" aria-hidden="true">' + (msg ? '&#9993;' : '&#128065;') + '</span><div><b>' +
+          (msg ? 'New private message' : 'Someone opened your link') + '</b><span>' + (msg ? esc(e.s) + ' &middot; ' + esc(e.a) + ' &middot; ' : '') + esc(ago(e.t)) + '</span></div></div>';
+      }).join('') : '<p class="sub" style="margin:0">Nothing yet. Share your link and it will show up here.</p>';
+    });
+  }
+  $('unblockAll').onclick = function () {
+    if (!window.confirm('Unblock everyone? Blocked senders will be able to message you again.')) return;
+    rpc('unblock_all', {}).then(function () { toast('Everyone is unblocked.'); refreshBlocks(); }).catch(function (e) { toast(dbHint(e), true); });
+  };
+
   /* ---------- detail view ---------- */
   function openD(id) {
     var m = cache[id]; if (!m) return;
     var hex = /^#[0-9a-f]{3,8}$/i.test(m.color), https = /^https:\/\//.test(m.color), col = hex ? m.color : '#27424F';
     var big = https ? '<img class="bigart" alt="" src="' + esc(m.color.replace('100x100', '600x600')) + '">' : '<span class="bigart" data-q="' + esc(m.song + ' ' + m.artist) + '" style="background:' + col + '"></span>';
     var isPublic = m.type === 'public' || m.ex;
+    var isPrivateIn = m.type === 'direct' && !m.bot && !m.ex && isUuid(m.id) && REMOTE && !!profile;
     var subTxt = m.bot ? 'A song picked by the Anonymous bot.' :
       (m.type === 'direct' ? 'Someone sent you a song. They want you to hear this one.' : 'An anonymous note on Browse.') + (m.t && !m.ex ? ' ' + ago(m.t) + '.' : '');
     $('detail').innerHTML = '<button class="back" id="back">&larr; Back</button><h2 class="hi">Hello, ' + esc(m.to) + '</h2>' +
@@ -1356,7 +1412,11 @@
       (isPublic && !m.ex && isUuid(m.id) ? '<div class="react-bar">' + reactBar(m) + '</div>' : '') +
       '<button type="button" class="btn ghost full reply-btn" id="replySong">Reply with a song</button>' +
       '<button type="button" class="btn ghost full share-btn" id="shareCard">Share as image</button>' +
-      (isPublic && !m.ex && !m.bot && isUuid(m.id) && REMOTE ? '<button type="button" class="link report-link" id="reportBtn">Report this post</button><div id="reportBox" class="report-box" hidden></div>' : '');
+      (isPublic && !m.ex && !m.bot && isUuid(m.id) && REMOTE ? '<button type="button" class="link report-link" id="reportBtn">Report this post</button><div id="reportBox" class="report-box" hidden></div>' : '') +
+      (isPrivateIn ? '<section class="safety"><h3>Safety</h3>' +
+        '<button type="button" class="srow" id="reportBtn"><span class="sic" aria-hidden="true">!</span><span>Report this message</span><i aria-hidden="true">&rsaquo;</i></button><div id="reportBox" class="report-box" hidden></div>' +
+        '<button type="button" class="srow bad" id="blockBtn"><span class="sic" aria-hidden="true">&#8856;</span><span>Block sender</span><i aria-hidden="true">&rsaquo;</i></button><div id="blockBox" class="report-box" hidden></div>' +
+        '<p class="sub safety-note">Nobody can see who sent this, including you and us. Blocking stops that sender from messaging you again. If you report it, an admin can read this message.</p></section>' : '');
     SECS.forEach(function (x) { $(x).hidden = true; });
     try { if (!(history.state && history.state.t === 'detail')) history.pushState({ t: 'detail' }, ''); } catch (e) {}
     $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0); hydrateArt();
@@ -1364,6 +1424,7 @@
       loadReactions([m.id]).then(function () { paintReacts(m.id); });
     }
     if ($('reportBtn')) $('reportBtn').onclick = function () { openReport(m); };
+    if ($('blockBtn')) $('blockBtn').onclick = function () { openBlock(m); };
     $('shareCard').onclick = function () { shareCard(m, $('shareCard')); };
     $('back').onclick = function () {
       au.pause(); rst(); closeReactPicker();
@@ -1595,7 +1656,7 @@
   /* ---------- boot ---------- */
   var h = location.hash.match(/(?:^#|&)to=([^&]+)/), redirecting = false;
   if (h) { redirecting = true; location.replace('send.html?to=' + h[1]); }      /* old personal links open the new link page */
-  if (location.hash === '#admin') { redirecting = true; location.replace('admin.html'); }
+  if (location.hash === '#admin') { redirecting = true; location.replace('/admin'); }
   h = null;
   $('fine').textContent = REMOTE ? '' : 'Demo mode: data is saved on this device only. Connect Supabase to use real accounts and private Inbox access.';
   if (C.SUPPORT_EMAIL) { ['fb', 'fb2'].forEach(function (id) { $(id).href = 'mailto:' + C.SUPPORT_EMAIL + '?subject=Anonymous%20feedback'; $(id).hidden = false; }); $('fb2').style.display = 'block'; }

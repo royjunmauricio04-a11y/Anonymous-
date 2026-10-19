@@ -713,3 +713,24 @@ body.lp main.lp-styled .res button:hover,body.lp main.lp-styled .res button:acti
 body.lp main.lp-styled .res b,body.lp main.lp-styled .lp-pick b{color:var(--pg-fg,#fff)}
 body.lp main.lp-styled .res span,body.lp main.lp-styled .lp-pick span,body.lp main.lp-styled .res-head{color:var(--pg-fg,#fff);opacity:.78}
 body.lp main.lp-styled .res-head{opacity:.7}
+
+/* safety, activity and blocked senders (private messages + profile) */
+.btn.danger{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.small{padding:8px 16px;font-size:.85rem}
+.safety{margin-top:26px;border-top:1px solid var(--border);padding-top:14px}
+.safety h3{margin:0 0 8px;font-size:.95rem;color:var(--muted)}
+.srow{display:flex;align-items:center;gap:12px;width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin:0 0 8px;font:600 .95rem 'Plus Jakarta Sans',sans-serif;cursor:pointer;text-align:left}
+.srow:active{background:var(--surface)}
+.srow span:nth-child(2){flex:1}
+.srow i{font-style:normal;color:var(--muted);font-size:1.3rem}
+.srow.bad{color:var(--accent)}
+.sic{width:32px;height:32px;border-radius:50%;background:var(--surface);display:grid;place-items:center;flex:none;font-weight:800}
+.safety-note{margin:6px 0 0;font-size:.82rem}
+.act{border:1px solid var(--border);border-radius:16px;background:var(--bg);padding:6px 14px}
+.act-row{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.act-row:last-child{border-bottom:0}
+.act-row b{display:block;font-size:.92rem}
+.act-row span{color:var(--muted);font-size:.8rem}
+.act-ic{width:34px;height:34px;border-radius:50%;background:var(--surface);display:grid;place-items:center;flex:none;font-size:1rem}
+.act-ic.m{background:var(--accent);color:#fff}
+.pf-safety{border:1px solid var(--border);border-radius:16px;padding:14px;background:var(--bg)}

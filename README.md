@@ -1,3 +1,69 @@
+# Anonymous: v8 (malinis na address, Block at Report, Activity)
+
+## 1. Malinis na address (walang .html)
+| Dati | Ngayon |
+|---|---|
+| `/admin.html` | **`/admin`** |
+| `/install.html` | **`/install`** |
+| `/index.html` | **`/`** (ang mismong address ng site) |
+| `/send.html?to=pangalan` | `/pangalan` (ginagawa na ito dati ng short link) |
+
+Gumagana na ito agad kahit wala kang gagawin: kapag binuksan ang `/admin`, dadalhin ka ng app sa tamang page at ipapakita ang `/admin` sa address bar. Pero para hindi na dumaan sa dagdag na hakbang, magdagdag ng 2 rule sa Render:
+
+1. Render Dashboard, tapos ang Static Site mo, tapos **Redirects/Rewrites**.
+2. **Burahin muna ang rule na `/*` -> `/send.html`.** (Ayon sa Render docs, ang bagong rule ay napupunta sa dulo, at ang unang tumugma mula sa itaas ang ginagamit. Kapag nasa itaas ang `/*`, hindi na aabot ang iba.)
+3. Magdagdag ng mga rule na ito, ayon sa pagkakasunod. Source, Destination, Action **Rewrite**:
+   - `/admin` -> `/admin.html`
+   - `/install` -> `/install.html`
+4. Idagdag ulit ang huling rule: `/*` -> `/send.html` (Rewrite). Dapat ito ang NASA DULO.
+5. Subukan: buksan ang `https://anonymous-ztsp.onrender.com/admin`. Dapat lumabas ang login ng admin, at `/admin` ang nasa address bar.
+Tandaan: hindi pwedeng i-redirect ng Render ang mga `.html` na totoong file, kaya ang lumang `/admin.html` ay gumagana pa rin at ginagawa lang itong `/admin` sa address bar.
+
+## 2. Bagong features (v8)
+- **Block sender (sa private message):** buksan ang message sa Inbox, tapos **Safety**, tapos **Block sender**. Hindi na makakapag-message ang taong iyon sa iyo. **Hindi mo malalaman kung sino siya.** Kapag nag-block, ang makikita niya ay "This person is not accepting messages from you."
+- **Report this message:** pwede na ring i-report ang private message. Ito lang ang paraan para mabasa ito ng admin (ikaw ang pumayag sa pag-report).
+- **Recent views / Activity (Profile tab):** listahan ng "New private message" at "Someone opened your link" na may oras. Walang pangalan, lokasyon, o device.
+- **Blocked senders:** nakikita kung ilan ang naka-block, at may **Unblock everyone** kung nagkamali ka.
+- Ang admin report list ay nagsasabi na kung private ang na-report.
+
+### Hindi ko ginawa (sinadya)
+Ang mga "Sender Hints" na gaya ng sa NGL (lokasyon, phone/device details, kung sino ang nagpadala, "watch ad o Pro para i-reveal"). Dahil:
+1. Sinira nito ang pangako ng app mo sa nagpapadala: "They will never know it was you."
+2. Kukuha ito ng lokasyon at device ng mga taong hindi pumayag.
+3. Ang NGL mismo ay pinagbawalan ng US FTC noong 2024 dahil sa mga pekeng mensahe at mapanlinlang na "hints". Kung peke ang hints, panlilinlang ito. Kung totoo, paglabag sa privacy.
+Ang pwede at ligtas: Block, Report, Views, Activity (nandito na).
+
+### Paalala sa privacy (nabago na sa FAQ)
+Para gumana ang Block, may **nakatagong code** ang bawat private message na nag-uugnay dito sa device account ng nagpadala. Hindi ito nakikita sa app, sa admin page, o sa API, at walang nakalagay na pangalan. Pero ang may hawak ng database (ikaw, sa Supabase) ay teknikal na makakabasa ng table na `message_senders` sa SQL Editor. Huwag mo itong gamitin para alamin kung sino ang nagpadala. Iyon ang pangako mo sa mga user. Ang public posts ay walang ganitong code.
+Limitasyon: pwedeng mag-clear ng browser data ang nag-block at gumawa ng bagong anonymous account. Hindi ito perpektong proteksyon, pero sapat laban sa karaniwang pang-aabuso. Ang mga lumang message (bago ang upgrade na ito) ay hindi ma-block dahil walang code.
+
+## 3. SQL para sa database (hinati sa maliliit na parte)
+Nasa folder na `sql/`. 4 na parte lang. Sa Supabase, SQL Editor, New query:
+1. Buksan ang `sql/safety-upgrade-01-of-04.sql`, kopyahin ang LAHAT, i-paste, Run. Hintayin ang "Success".
+2. Gawin ang pareho sa `02`, `03`, at `04`, ayon sa numero.
+3. I-run ang `sql/safety-check.sql`. Dapat: `new_tables = 3`, `new_functions = 4`, `send_message_versions = 1`.
+Ligtas i-run ulit. Kung "Run this query?" ang tanong dahil may `drop`, pindutin ang Run. (Ang buong bersyon ay nasa `safety-upgrade.sql` at kasama na sa `setup.sql` para sa bagong database.)
+Kung hindi mo ito patatakbuhin, gumagana pa rin ang buong site. Hindi lang lalabas ang Block at Recent views.
+
+## 4. Termux: i-upload
+```
+cd ~/Anonymous-
+git pull
+unzip -o ~/storage/downloads/anonymous-v8.zip
+git add -A
+git commit -m "v8: clean URLs, block and report private messages, activity"
+git push
+```
+Sa Render, maghintay ng 1 hanggang 2 minuto. Kung luma pa ang itsura, i-clear ang site data (may service worker).
+
+## 5. Paano subukan
+1. `/admin` at `/install` ay bumubukas nang walang `.html`. Ang `/admin.html` ay gumagana pa rin.
+2. Gumawa ng 2 account. Magpadala ng private message mula sa isa. Sa kabila, buksan ang message sa Inbox. Dapat may **Safety** (Report, Block sender).
+3. Block sender, tapos subukang magpadala ulit mula sa unang account. Dapat lumabas ang "not accepting messages".
+4. Profile tab: dapat may Activity, at "Blocked 1 sender" na may Unblock everyone.
+
+---
+
 # Anonymous: gawing app at ipamahagi (v7)
 
 ## Ano ang meron ka na
