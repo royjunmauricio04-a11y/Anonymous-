@@ -107,9 +107,10 @@
     });
   }
 
-  var NOCARD = false, NOUSECARD = false;
+  /* CARDMODE: 'id' = posts point to a shared design (messages.card_id), 'inline' = old database that stored the whole design on each post, 'none' = no design columns at all */
+  var CARDMODE = 'id', NOUSECARD = false, cardStore = {}, cardBusy = {};
   function fromRow(r) {
-    return { id: r.id, to: r.to_name, key: r.to_key, type: r.delivery_type || 'direct', text: r.body, song: r.song, artist: r.artist, color: r.art || '', prev: r.preview || '', bot: !!r.is_bot, card: r.card || null, parent: r.parent_id || null, t: Date.parse(r.created_at) || 0, ts: r.created_at || '' };
+    return { id: r.id, to: r.to_name, key: r.to_key, type: r.delivery_type || 'direct', text: r.body, song: r.song, artist: r.artist, color: r.art || '', prev: r.preview || '', bot: !!r.is_bot, card: r.card || null, cardId: r.card_id || null, parent: r.parent_id || null, t: Date.parse(r.created_at) || 0, ts: r.created_at || '' };
   }
   function matchQ(m, q) {
     q = String(q || '').toLowerCase(); if (!q) return true;
@@ -120,15 +121,16 @@
     if (!REMOTE) {
       return Promise.resolve(lget(LS, []).filter(function (m) { return key ? (m.type !== 'public' && String(m.key).toLowerCase() === key) : m.type === 'public'; }).filter(function (m) { return matchQ(m, search); }));
     }
-    var q = 'messages?select=id,to_name,to_key,delivery_type,body,song,artist,art,preview,is_bot,parent_id,created_at' + (NOCARD ? '' : ',card') + '&order=created_at.desc&limit=' + (key ? 100 : 50);
+    var q = 'messages?select=id,to_name,to_key,delivery_type,body,song,artist,art,preview,is_bot,parent_id,created_at' + (CARDMODE === 'id' ? ',card_id' : CARDMODE === 'inline' ? ',card' : '') + '&order=created_at.desc&limit=' + (key ? 100 : 50);
     /* Inbox: the database only ever returns direct messages addressed to the signed-in account */
     q += key ? '&delivery_type=eq.direct' : '&delivery_type=eq.public';
     if (before) q += '&created_at=lt.' + encodeURIComponent(before);
     var sq = search ? String(search).replace(/[(),*%\\"]/g, ' ').replace(/\s+/g, ' ').trim() : '';
     if (sq) { var pat = '*' + sq + '*'; q += '&or=' + encodeURIComponent('(to_name.ilike.' + pat + ',body.ilike.' + pat + ',song.ilike.' + pat + ',artist.ilike.' + pat + ')'); }
     return api(q).then(function (rows) { return rows.map(fromRow); }).catch(function (e) {
-      /* the database has not been upgraded yet (no card column): fall back to the old query once */
-      if (!NOCARD) { NOCARD = true; return fetchMsgs(key, before, search); }
+      var t = String((e && e.text) || '');
+      if (CARDMODE === 'id' && /card_id/.test(t)) { CARDMODE = 'inline'; try { console.warn('[anonymous] messages.card_id is missing: run card-share-upgrade.sql'); } catch (x) {} return fetchMsgs(key, before, search); }
+      if (CARDMODE === 'inline' && /card/.test(t) && /column|42703|PGRST204/.test(t)) { CARDMODE = 'none'; try { console.warn('[anonymous] messages.card is missing: run profile-upgrade.sql'); } catch (x) {} return fetchMsgs(key, before, search); }
       throw e;
     });
   }
@@ -157,6 +159,7 @@
       });
     };
     return call().then(function (id) {
+      if (NOUSECARD && useCard && profile && profile.card) setTimeout(function () { toast('Posted, but your card design could not be attached. Ask the site owner to run profile-upgrade.sql.', true); }, 1400);
       /* server returns the real UUID — keep it so reactions work later */
       if (id && (typeof id === 'string' || typeof id === 'number')) m.id = String(id).replace(/^"|"$/g, '');
       return m;
@@ -864,6 +867,21 @@
       reactBar(m) + '</div>';
   }
 
+  /* ---------- designs that travel with a post ----------
+     A post stores only a small id. The design itself (maybe a photo) is fetched ONCE per design and kept here. */
+  function loadCardStyles(ids) {
+    var need = [];
+    ids.forEach(function (id) { if (id && !(id in cardStore) && !cardBusy[id] && need.indexOf(id) < 0) need.push(id); });
+    need = need.slice(0, 40);
+    if (!need.length || !REMOTE) return Promise.resolve();
+    need.forEach(function (id) { cardBusy[id] = 1; });
+    return rpc('get_cards', { p_ids: need }).then(function (r) {
+      need.forEach(function (id) { cardStore[id] = (r && r[id]) || null; delete cardBusy[id]; });
+    }).catch(function () { need.forEach(function (id) { delete cardBusy[id]; }); });   /* not remembered on failure, so it is tried again later */
+  }
+  function styleFor(m) { return (m && (m.card || (m.cardId && cardStore[m.cardId]))) || null; }
+  function isSentHere(m) { return !!(m && lget(SENT, []).some(function (x) { return x && x.id === m.id; })); }
+
   /* ---------- per-card designs on Browse / History ----------
      A post to someone who made a card design wears THEIR design.
      A post you sent from this device and that has no owner design wears YOUR design. */
@@ -884,13 +902,14 @@
     function paint() {
       cards.forEach(function (card) {
         var m = cache[card.dataset.id]; if (!m) return;
-        var c = m.card || recCards[nameKey(m)] || (sent[m.id] && profile && profile.card) || null;   /* sender's design (saved on the post) > recipient's > yours on this device */
+        var c = styleFor(m) || recCards[nameKey(m)] || (sent[m.id] && profile && profile.card) || null;   /* sender's design (saved on the post) > recipient's > yours on this device */
         var cls = c ? csClass(c) : '';
         if (card.dataset.cs && card.dataset.cs !== cls) card.classList.remove(card.dataset.cs, 'has-style');
         if (cls) { card.classList.add(cls, 'has-style'); card.dataset.cs = cls; } else { card.classList.remove('has-style'); delete card.dataset.cs; }
       });
     }
     paint();
+    loadCardStyles(cards.map(function (card) { var m = cache[card.dataset.id]; return m && m.cardId; })).then(paint);
     var need = [];
     cards.forEach(function (card) {
       var m = cache[card.dataset.id], k = nameKey(m);
@@ -1405,10 +1424,10 @@
       (m.type === 'direct' ? 'Someone sent you a song. They want you to hear this one.' : 'An anonymous note on Browse.') + (m.t && !m.ex ? ' ' + ago(m.t) + '.' : '');
     $('detail').innerHTML = '<button class="back" id="back">&larr; Back</button><h2 class="hi">Hello, ' + esc(m.to) + '</h2>' +
       '<p class="sub" style="text-align:center">' + subTxt + '</p>' +
-      '<div class="dcard">' + big +
+      '<div class="dstage" id="dstage"><div class="dcard">' + big +
       '<div class="dinfo"><b>' + esc(m.song) + '</b><span>' + esc(m.artist) + '</span><em class="pv">30s preview</em></div>' + pbtn(m, ' circle') + '</div>' +
       '<p id="pnote" class="sub" style="text-align:center;min-height:1.2em"></p>' +
-      '<p class="sub" style="text-align:center;margin-top:22px">Also, here is a message from the sender:</p><p class="hand">' + esc(m.text) + '</p>' +
+      '<p class="sub" style="text-align:center;margin-top:22px">Also, here is a message from the sender:</p><p class="hand">' + esc(m.text) + '</p></div>' +
       (isPublic && !m.ex && isUuid(m.id) ? '<div class="react-bar">' + reactBar(m) + '</div>' : '') +
       '<button type="button" class="btn ghost full reply-btn" id="replySong">Reply with a song</button>' +
       '<button type="button" class="btn ghost full share-btn" id="shareCard">Share as image</button>' +
@@ -1420,6 +1439,14 @@
     SECS.forEach(function (x) { $(x).hidden = true; });
     try { if (!(history.state && history.state.t === 'detail')) history.pushState({ t: 'detail' }, ''); } catch (e) {}
     $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0); hydrateArt();
+    function stageStyle() {
+      var st = $('dstage'); if (!st) return;
+      var c = styleFor(m) || recCards[nameKey(m)] || (isSentHere(m) && profile && profile.card) || null, cls = c ? csClass(c) : '';
+      if (st.dataset.cs && st.dataset.cs !== cls) st.classList.remove(st.dataset.cs, 'has-style');
+      if (cls) { st.classList.add(cls, 'has-style'); st.dataset.cs = cls; } else { st.classList.remove('has-style'); delete st.dataset.cs; }
+    }
+    stageStyle();
+    if (m.cardId && !(m.cardId in cardStore)) loadCardStyles([m.cardId]).then(stageStyle);
     if (isPublic && !m.ex && isUuid(m.id)) {
       loadReactions([m.id]).then(function () { paintReacts(m.id); });
     }

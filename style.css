@@ -734,3 +734,12 @@ body.lp main.lp-styled .res-head{opacity:.7}
 .act-ic{width:34px;height:34px;border-radius:50%;background:var(--surface);display:grid;place-items:center;flex:none;font-size:1rem}
 .act-ic.m{background:var(--accent);color:#fff}
 .pf-safety{border:1px solid var(--border);border-radius:16px;padding:14px;background:var(--bg)}
+
+/* the sender's design becomes the background of the whole opened message (song panel + message) */
+.dstage{margin-top:14px}
+#detail .dstage.has-style{background:var(--card-bg);border-radius:26px;padding:14px;box-shadow:0 22px 44px -24px rgba(0,0,0,.6)}
+#detail .dstage.has-style .dcard{background:var(--card-glass,rgba(10,10,14,.46));color:var(--card-fg,#fff);border-color:rgba(255,255,255,.22);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+#detail .dstage.has-style .dinfo b,#detail .dstage.has-style .dinfo span{color:var(--card-fg,#fff)}
+#detail .dstage.has-style .pv{color:var(--card-fg,#fff);border-color:rgba(255,255,255,.4)}
+#detail .dstage.has-style .sub{color:var(--card-fg,#fff);text-shadow:var(--card-sh,none)}
+#detail .dstage.has-style .hand{border:0;background:transparent;color:var(--card-fg,#fff);text-shadow:var(--card-sh,none);padding:18px 8px 10px;font-size:1.9rem;line-height:1.35}

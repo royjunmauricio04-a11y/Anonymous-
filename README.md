@@ -261,3 +261,8 @@ Set them only as Edge Function secrets (Supabase > Edge Functions > support-chat
 1. Render Dashboard > ang Static Site mo > **Redirects/Rewrites** > Add Rule: Source `/*`, Destination `/send.html`, Action **Rewrite**. (Ang mga totoong file tulad ng style.css at index.html ay gumagana pa rin.)
 2. Sa `config.js`, gawing `SHORT_LINKS: true`.
 3. I-deploy. Ang link sa Profile ay magiging `https://anonymous-ztsp.onrender.com/dreamy`. Gumagana pa rin ang lumang `send.html?to=dreamy`.
+
+## Card designs that everyone can see
+Run these SQL files once, in this order, in Supabase > SQL Editor: `setup.sql`, `admin-upgrade.sql`, `profile-upgrade.sql`, `safety-upgrade.sql`, `card-share-upgrade.sql`.
+`card-share-upgrade.sql` stores each design once and links posts by a small id, so Browse stays fast and every account sees the sender's design (also inside the opened message).
+If a design is not visible to other accounts, run `check-card.sql`: it prints OK or MISSING for each requirement.
