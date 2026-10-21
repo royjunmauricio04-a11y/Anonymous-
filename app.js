@@ -41,6 +41,7 @@
   /* ---------- auth + data layer ---------- */
   var AUTH = 'anon-auth', currentUser = null, profile = null;
 
+  function errInfo(e) { var c = ''; try { c = JSON.parse(e.text).code || ''; } catch (x) {} return e && e.status ? 'Error ' + e.status + (c ? ' ' + c : '') : 'No connection'; }
   function dbHint(e) {
     if (!e || !e.status) return 'Could not reach the server. Check your connection and try again.';
     var code = '', msg = ''; try { var j = JSON.parse(e.text); code = j.code || ''; msg = j.msg || j.message || ''; } catch (x) {}
@@ -65,30 +66,49 @@
     var old = sessionGet() || {};
     sessionSet({ access_token: d.access_token, refresh_token: d.refresh_token, user: d.user || old.user, exp: Math.floor(Date.now() / 1000) + (d.expires_in || 3600) });
   }
-  /* keep the login alive: refresh the access token shortly before it expires */
-  var freshP = null;
-  function fresh() {
+  /* keep the login alive: refresh the access token shortly before it expires (or when the server refuses it) */
+  var freshP = null, lostBusy = false;
+  function sessionLost() {            /* the saved login can never work again: say so once and go to the login screen */
+    if (lostBusy) return; lostBusy = true;
+    setTimeout(function () { try { profile = null; currentUser = null; toast('Your login ended. Please log in again.', true); tab(cur); } catch (e) {} lostBusy = false; }, 60);
+  }
+  function refreshSession(force) {
     var s = sessionGet();
-    if (!s || !s.refresh_token || (s.exp && s.exp - 60 > Date.now() / 1000)) return Promise.resolve();
+    if (!s || !s.refresh_token) return Promise.resolve(false);
+    if (!force && s.exp && s.exp - 60 > Date.now() / 1000) return Promise.resolve(true);
     if (freshP) return freshP;
     freshP = fetch(C.SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: C.SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }) })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject({ status: r.status }); }).then(storeSess)
-      .catch(function (e) { if (e && (e.status === 400 || e.status === 401 || e.status === 403)) sessionSet(null); })   /* a weak signal must never sign you out */
-      .then(function () { freshP = null; });
+      .then(function (r) { return r.ok ? r.json() : Promise.reject({ status: r.status }); }).then(function (d) { storeSess(d); return true; })
+      .catch(function (e) { if (e && (e.status === 400 || e.status === 401 || e.status === 403)) { sessionSet(null); sessionLost(); } return false; })   /* a weak signal must never sign you out */
+      .then(function (ok) { freshP = null; return ok; });
     return freshP;
   }
+  function fresh() { return refreshSession(false).then(function () {}); }
   function api(path, opt) { return fresh().then(function () { return api0(path, opt); }); }
   function rpc(name, args) { return api('rpc/' + name, { method: 'POST', body: JSON.stringify(args) }); }
-  function api0(path, opt) {
+  /* Public things (Browse, search, link page, counts) must load even when the saved login is refused or stale.
+     Private things (Inbox) never fall back, so you can never be shown "no messages" by mistake. */
+  var GUEST_RPC = { reaction_counts: 1, get_cards: 1, public_cards: 1, username_exists: 1 };
+  function api0(path, opt, retried) {
     opt = opt || {};
     var hd = { apikey: C.SUPABASE_KEY, 'Content-Type': 'application/json' };
-    var sess = sessionGet();
-    if (sess && sess.access_token) hd.Authorization = 'Bearer ' + sess.access_token;
+    var sess = sessionGet(), usedToken = false;
+    if (sess && sess.access_token && !opt.__guest) { hd.Authorization = 'Bearer ' + sess.access_token; usedToken = true; }
     else if (/^eyJ/.test(C.SUPABASE_KEY)) hd.Authorization = 'Bearer ' + C.SUPABASE_KEY;
-    opt.headers = Object.assign(hd, opt.headers);
-    return fetch(C.SUPABASE_URL + '/rest/v1/' + path, opt).then(function (r) {
-      if (!r.ok) return r.text().then(function (t) { throw { status: r.status, text: t }; });
-      return r.json().catch(function () { return null; });
+    var o = Object.assign({}, opt, { headers: Object.assign(hd, opt.headers) }); delete o.__guest;
+    return fetch(C.SUPABASE_URL + '/rest/v1/' + path, o).then(function (r) {
+      if (r.ok) return r.json().catch(function () { return null; });
+      return r.text().then(function (t) {
+        var err = { status: r.status, text: t }, code = ''; try { code = JSON.parse(t).code || ''; } catch (x) {}
+        var m = String(opt.method || 'GET').toUpperCase(), rn = (path.match(/^rpc\/([a-z_]+)/) || [])[1];
+        var guestOk = (m === 'GET' && (/delivery_type=eq\.public/.test(path) || /^settings\?/.test(path))) || (rn && GUEST_RPC[rn]);
+        var asGuest = function () { return api0(path, Object.assign({}, opt, { __guest: true }), true); };
+        if (usedToken && !retried && r.status === 401) {          /* login refused: refresh it, then try again */
+          return refreshSession(true).then(function (ok) { if (ok) return api0(path, opt, true); if (guestOk) return asGuest(); throw err; });
+        }
+        if (usedToken && !retried && guestOk && (r.status === 403 || code === '42501')) return asGuest();   /* this account is not allowed, the public is */
+        throw err;
+      });
     });
   }
 
@@ -995,7 +1015,11 @@
         showPill(a.filter(function (m) { return !known[m.id]; }).length); return;
       }
       feedPending = null; if ($('newPill')) $('newPill').hidden = true; applyFeed(a);
-    }).catch(function (e) { if (!feedReady) $('feed').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>'; });
+    }).catch(function (e) {
+      if (feedReady) return;
+      $('feed').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '<br><button type="button" class="btn ghost small" id="feedRetry" style="margin-top:12px">Try again</button><small style="display:block;margin-top:8px;opacity:.7">' + esc(errInfo(e)) + '</small></div>';
+      $('feedRetry').onclick = function () { loadFeed(true); };
+    });
   }
   $('newPill').onclick = function () {
     $('newPill').hidden = true;

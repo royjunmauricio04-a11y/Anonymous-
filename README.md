@@ -1,3 +1,35 @@
+# Fix: "Please log in again to do that." sa Browse (v9)
+
+## Ano ang nangyari
+Naka-login ka pero walang lumalabas na post sa Browse. Ang lumalabas ay "Please log in again to do that."
+Nagawa ko ulit ang problema sa test: kapag **tinanggihan ng server ang naka-save mong login** (nag-expire ang token at hindi ito na-refresh dahil mahina ang signal, VPN, o limit ng server; o kaya ay permission error), ang app ay nagpapakita ng error at **walang laman ang Browse**, kahit public ang mga post at kahit sino ay pwedeng makabasa nito.
+
+## Ano ang inayos (`app.js`, `sw.js`)
+1. Kapag tinanggihan ang login, **magre-refresh muna ang app ng token at uulitin ang request** (kusa, hindi mo mapapansin).
+2. Kapag hindi pa rin gumana, ang **mga public na bagay (Browse, search, link page, reactions, designs) ay ilo-load bilang guest**. Lalabas pa rin ang mga post.
+3. Ang **mga private na bagay ay hindi kailanman nagpapakita ng "no messages" nang mali.** Ang Inbox ay magpapakita ng error, hindi ng walang laman.
+4. Ang **mahina o nawawalang signal ay hindi ka nilo-logout.** Ang logout lang ay kung talagang patay na ang login. Kapag nangyari iyon, may lalabas na "Your login ended" at ang Inbox, Submit at Profile ay hihingi ng bagong login. Gumagana pa rin ang Browse.
+5. Kung may error pa rin, may **Try again** na button at maliit na teksto (halimbawa "Error 401 PGRST301") para malaman natin ang totoong sanhi.
+
+## Kung may error pa rin
+Patakbuhin ang `check-login.sql` sa Supabase SQL Editor (nagbabasa lang ito, walang binabago). Dapat OK ang bawat linya. Ipadala sa akin ang linyang hindi OK.
+
+## Mga disenyo ng card na hindi nakikita ng ibang account
+Nasa repo mo na ang `card-share-upgrade.sql`. Siguraduhing na-run mo ito, tapos i-run ang `check-card.sql`. Dapat OK ang lahat. Pagkatapos noon, makikita ng lahat ng account ang background ng card, kasama sa loob ng binuksang message.
+
+## Termux
+```
+cd ~/Anonymous-
+git pull
+unzip -o ~/storage/downloads/anonymous-v9-fix.zip
+git add -A
+git commit -m "v9: public posts always load, token refresh and retry, no false logout"
+git push
+```
+Sa Render, maghintay ng 1 hanggang 2 minuto. Tapos isara ang app/APK nang buo at buksan ulit. Kung luma pa rin, i-clear ang site data (may service worker, v12 na ito ngayon).
+
+---
+
 # Anonymous: v8 (malinis na address, Block at Report, Activity)
 
 ## 1. Malinis na address (walang .html)
