@@ -743,3 +743,14 @@ body.lp main.lp-styled .res-head{opacity:.7}
 #detail .dstage.has-style .pv{color:var(--card-fg,#fff);border-color:rgba(255,255,255,.4)}
 #detail .dstage.has-style .sub{color:var(--card-fg,#fff);text-shadow:var(--card-sh,none)}
 #detail .dstage.has-style .hand{border:0;background:transparent;color:var(--card-fg,#fff);text-shadow:var(--card-sh,none);padding:18px 8px 10px;font-size:1.9rem;line-height:1.35}
+
+/* Premium card, sender hints */
+.prem{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin:0 0 14px}
+.prem-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.prem-tag{font:700 .72rem 'Plus Jakarta Sans',sans-serif;background:var(--pink,#E5334B);color:#fff;border-radius:999px;padding:3px 10px}
+.prem-lock{opacity:.8}
+.hints{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin:16px 0}
+.hints h3{margin:0 0 8px;font-size:1rem}
+.hint-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:.92rem}
+.hint-row:last-of-type{border-bottom:0;margin-bottom:8px}
+.hint-row.lock{opacity:.6}

@@ -508,10 +508,13 @@
           (words.length ? '<div class="a-words">' + words.map(function (w) { return '<span class="a-word">' + esc(w) + '<button data-wd="' + esc(w) + '" aria-label="Remove ' + esc(w) + '">&times;</button></span>'; }).join('') + '</div>' : '') + '</div>';
       }
 
+      html += '<div class="a-block" id="premBlock"><h3>Premium</h3><p class="sub">Loading...</p></div>';
+
       html += '<details class="a-block"><summary>System settings</summary><div style="margin-top:10px">' + Object.keys(s).map(function (k) { return '<div class="a-kv"><span>' + esc(k) + '</span><b>' + esc(s[k]) + '</b></div>'; }).join('') + '</div></details>';
       pane().innerHTML = html;
 
       var again = function () { keepScroll(function () { return refreshCurrent(); }); };
+      loadPremiumAdmin(g);
       $('mtSw').onclick = function () { rpcA('admin_set', { k: 'maintenance', v: mt ? 'false' : 'true' }).then(function () { toast(mt ? 'Maintenance is off.' : 'Maintenance is on.'); again(); }).catch(aErr); };
       $('anoteSave').onclick = function () { rpcA('admin_set', { k: 'maintenance_note', v: $('anote').value }).then(function () { toast('Message saved.'); }).catch(aErr); };
       $('cpSw').onclick = function () { rpcA('admin_set', { k: 'chat_paused', v: cp ? 'false' : 'true' }).then(function () { toast(cp ? 'Support Buddy is back on.' : 'Support Buddy is paused.'); again(); }).catch(aErr); };
@@ -541,6 +544,47 @@
         });
       }
     }).catch(function (e) { if (g === gen) pane().innerHTML = '<div class="a-empty"><b>Could not load</b>' + esc(dbHint(e)) + '</div>'; aErr(e); });
+  }
+
+  /* Premium: price, trial length, who has it. Payment is manual: you grant Premium after you are paid. */
+  function loadPremiumAdmin(g) {
+    rpcA('admin_premium_get').then(function (d) {
+      var box = $('premBlock'); if (g !== gen || !box) return;
+      box.innerHTML = '<h3>Premium</h3><p class="sub">Set the price and the free trial. Users pay you directly (for example GCash), then you grant Premium below.</p>' +
+        '<div class="a-grid2"><div><label for="pp">Price (PHP)</label><input id="pp" inputmode="decimal" maxlength="9" value="' + esc(d.price) + '"></div>' +
+        '<div><label for="pd">Length (days)</label><input id="pd" inputmode="numeric" maxlength="4" value="' + esc(d.period_days) + '"></div></div>' +
+        '<div class="a-grid2"><div><label for="pt">Free trial (days, 0 = no trial)</label><input id="pt" inputmode="numeric" maxlength="3" value="' + esc(d.trial_days) + '"></div><div></div></div>' +
+        '<label for="pn">How to pay (shown to users)</label><div class="a-field" style="margin-top:0"><input id="pn" maxlength="200" value="' + esc(d.pay_note) + '"></div>' +
+        '<div class="a-acts"><button class="a-btn pri" id="pSave">Save Premium settings</button></div>' +
+        '<h3 style="margin-top:18px">Give or remove Premium</h3>' +
+        '<div class="a-grid2"><input id="gu" maxlength="20" placeholder="Username" autocapitalize="none"><input id="gd" inputmode="numeric" maxlength="4" placeholder="Days" value="' + esc(d.period_days) + '"></div>' +
+        '<div class="a-acts"><button class="a-btn pri" id="gGrant">Give Premium</button><button class="a-btn danger" id="gRevoke">Remove Premium</button></div>' +
+        '<p class="a-meta" style="margin:14px 0 6px">Active now: ' + d.active.length + '</p>' +
+        (d.active.length ? '<div class="a-list">' + d.active.map(function (u) {
+          var end = u.premium_until && new Date(u.premium_until) > new Date() ? u.premium_until : u.trial_ends_at;
+          var trial = !(u.premium_until && new Date(u.premium_until) > new Date());
+          return '<div class="a-row"><div class="a-row-h"><b>@' + esc(u.username) + '</b><span class="a-tag ' + (trial ? 'warn' : 'ok') + '">' + (trial ? 'Trial' : 'Paid') + '</span></div><div class="a-meta">Until ' + esc(when(end)) + '</div></div>';
+        }).join('') + '</div>' : '');
+      var num = function (id) { var v = $(id).value.trim(); return /^[0-9]+$/.test(v) ? parseInt(v, 10) : NaN; };
+      $('pSave').onclick = function () {
+        var pr = $('pp').value.trim(), pdays = num('pd'), td = num('pt');
+        if (!/^[0-9]{1,6}(\.[0-9]{1,2})?$/.test(pr) || isNaN(pdays) || isNaN(td)) { toast('Check the price and the days. Numbers only.', true); return; }
+        rpcA('admin_premium_set', { p_price: pr, p_period_days: pdays, p_trial_days: td, p_pay_note: $('pn').value.trim() }).then(function () { toast('Premium settings saved.'); }).catch(aErr);
+      };
+      $('gGrant').onclick = function () {
+        var u = $('gu').value.trim().replace(/^@/, ''), dd = num('gd');
+        if (u.length < 3 || isNaN(dd) || dd < 1) { toast('Type the username and the number of days.', true); return; }
+        rpcA('admin_grant_premium', { p_username: u, p_days: dd }).then(function () { toast('Premium given to @' + u + '.'); loadPremiumAdmin(gen); }).catch(function (e) { toast(/user_not_found|P0002/.test(JSON.stringify(e)) ? 'No account with that username.' : 'Could not save.', true); });
+      };
+      $('gRevoke').onclick = function () {
+        var u = $('gu').value.trim().replace(/^@/, ''); if (u.length < 3) { toast('Type the username.', true); return; }
+        if (!confirm('Remove Premium and trial from @' + u + '?')) return;
+        rpcA('admin_revoke_premium', { p_username: u }).then(function () { toast('Premium removed.'); loadPremiumAdmin(gen); }).catch(function (e) { toast(/user_not_found|P0002/.test(JSON.stringify(e)) ? 'No account with that username.' : 'Could not save.', true); });
+      };
+    }).catch(function (e) {
+      var box = $('premBlock'); if (g !== gen || !box) return;
+      box.innerHTML = '<h3>Premium</h3>' + (needsUpgrade(e) ? '<p class="sub">Not switched on yet. Run premium-upgrade.sql in Supabase > SQL Editor.</p>' : '<p class="sub">Could not load. ' + esc(dbHint(e)) + '</p>');
+    });
   }
 
   adminBoot();

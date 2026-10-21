@@ -1093,6 +1093,7 @@
     var u = fillLinkBox();
     if (!u) return;
     initProfile();
+    loadPremium();
     profileUI(lastInbox);
     loadProfile().then(function () {
       return fetchMsgs(u).then(function (a) { lastInbox = a; profileUI(a); });
@@ -1419,10 +1420,58 @@
       b.hidden = !n;
     }).catch(function () { t.textContent = 'If a private message is hurtful, open it and tap Block sender or Report.'; b.hidden = true; });
   }
+  /* ---------- Premium (free trial + sender hints) ---------- */
+  var prem = null;
+  function untilTxt(t) { try { return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } catch (e) { return ''; } }
+  function loadPremium() {
+    if (!REMOTE || !profile) return Promise.resolve(null);
+    return rpc('premium_status', {}).then(function (p) { prem = p; return p; }).catch(function () { prem = null; return null; })
+      .then(function (p) { paintPremium(); renderViews(); return p; });
+  }
+  function paintPremium() {
+    var c = $('premCard'); if (!c) return;
+    if (!prem) { c.hidden = true; return; }
+    c.hidden = false;
+    var price = prem.price ? '&#8369;' + esc(prem.price) + ' / ' + esc(prem.period_days) + ' days' : '';
+    if (prem.active) {
+      c.innerHTML = '<div class="prem-h"><b>Premium</b><span class="prem-tag">' + (prem.source === 'trial' ? 'Free trial' : 'Active') + '</span></div>' +
+        '<p class="sub" style="margin:6px 0 0">' + (prem.source === 'trial' ? 'Your trial ends ' : 'Active until ') + esc(untilTxt(prem.until)) + '. Sender hints and your full Recent views are unlocked.</p>' +
+        (prem.source === 'trial' ? '<p class="sub" style="margin:8px 0 0">To keep Premium after the trial: ' + esc(prem.pay_note || '') + (price ? ' (' + price + ')' : '') + '</p>' : '');
+      return;
+    }
+    c.innerHTML = '<div class="prem-h"><b>Premium</b>' + (price ? '<span class="prem-tag">' + price + '</span>' : '') + '</div>' +
+      '<p class="sub" style="margin:6px 0 10px">See more hints on private messages (how many came from the same sender, when they were sent) and your full Recent views. You still never see who it is.</p>' +
+      (prem.trial_available ? '<button type="button" class="btn full" id="premTrial">Try free for ' + esc(prem.trial_days) + (prem.trial_days === 1 ? ' day' : ' days') + '</button>'
+        : '<p class="sub" style="margin:0">' + (prem.trial_used ? 'Your free trial has ended. ' : '') + esc(prem.pay_note || '') + '</p>');
+    var tb = $('premTrial');
+    if (tb) tb.onclick = function () {
+      tb.disabled = true;
+      rpc('start_trial', {}).then(function (p) { prem = p; paintPremium(); renderViews(); toast('Your free trial has started.'); })
+        .catch(function (e) { tb.disabled = false; toast(dbHint(e), true); loadPremium(); });
+    };
+  }
+  var viewTimes = [];
+  function renderViews() {
+    var box = $('viewsList'); if (!box) return;
+    box.innerHTML = viewTimes.length ? viewTimes.slice(0, 50).map(function (t) {
+      return '<div class="act-row"><span class="act-ic" aria-hidden="true">&#128065;</span><div><b>Someone opened your link</b><span>' + esc(ago(t)) + '</span></div></div>';
+    }).join('') : '<p class="sub" style="margin:0">No views yet. Share your link and they will show up here.</p>';
+    var total = profile && profile.views != null ? Number(profile.views) : 0;
+    if (prem && !prem.active && total > viewTimes.length) {
+      box.innerHTML += '<p class="sub prem-lock" style="margin:10px 0 0">&#128274; ' + (total - viewTimes.length) + ' older views are hidden. Unlock them with Premium.</p>';
+    }
+  }
+  if ($('viewsBtn')) $('viewsBtn').onclick = function () {
+    var box = $('viewsList'); box.hidden = !box.hidden;
+    $('viewsBtn').setAttribute('aria-expanded', String(!box.hidden));
+    if (!box.hidden) renderViews();
+  };
   function loadActivity(msgs) {
     var box = $('actList'); if (!box || !REMOTE) return;
     var ev = msgs.filter(function (m) { return m.t; }).map(function (m) { return { t: m.t, k: 'msg', s: m.song, a: m.artist }; });
     rpc('my_recent_views', {}).catch(function () { return []; }).then(function (vs) {
+      viewTimes = (vs || []).map(function (v) { return Date.parse(v); }).filter(Boolean).sort(function (a, b) { return b - a; });
+      renderViews();
       (vs || []).forEach(function (v) { var t = Date.parse(v); if (t) ev.push({ t: t, k: 'view' }); });
       ev.sort(function (a, b) { return b.t - a.t; });
       box.innerHTML = ev.length ? ev.slice(0, 15).map(function (e) {
@@ -1436,6 +1485,25 @@
     if (!window.confirm('Unblock everyone? Blocked senders will be able to message you again.')) return;
     rpc('unblock_all', {}).then(function () { toast('Everyone is unblocked.'); refreshBlocks(); }).catch(function (e) { toast(dbHint(e), true); });
   };
+
+  /* ---------- sender hints (private messages): a random tag, never a name, place or device ---------- */
+  function loadHints(m) {
+    var box = $('hintBox'); if (!box) return;
+    rpc('message_hints', { p_message_id: m.id }).then(function (h) {
+      if (!h || !h.tag || !$('hintBox')) return;
+      var row = function (k, v) { return '<div class="hint-row"><span>' + k + '</span><b>' + v + '</b></div>'; };
+      var html = '<h3>Sender hints</h3>' + row('Sender tag', esc(h.tag));
+      if (h.premium) {
+        html += row('Messages from this tag', esc(h.count)) + row('Sent in the', esc(h.time_of_day));
+        if (h.count > 1) html += row('First message', esc(ago(Date.parse(h.first_at))));
+      } else {
+        html += '<div class="hint-row lock"><span>Messages from this tag</span><b>&#128274;</b></div><div class="hint-row lock"><span>Time of day</span><b>&#128274;</b></div>' +
+          '<button type="button" class="btn ghost full" id="hintUp">Unlock with Premium</button>';
+      }
+      box.innerHTML = html; box.hidden = false;
+      if ($('hintUp')) $('hintUp').onclick = function () { tab('profile'); };
+    }).catch(function () {});
+  }
 
   /* ---------- detail view ---------- */
   function openD(id) {
@@ -1456,10 +1524,11 @@
       '<button type="button" class="btn ghost full reply-btn" id="replySong">Reply with a song</button>' +
       '<button type="button" class="btn ghost full share-btn" id="shareCard">Share as image</button>' +
       (isPublic && !m.ex && !m.bot && isUuid(m.id) && REMOTE ? '<button type="button" class="link report-link" id="reportBtn">Report this post</button><div id="reportBox" class="report-box" hidden></div>' : '') +
+      (isPrivateIn ? '<section class="hints" id="hintBox" hidden></section>' : '') +
       (isPrivateIn ? '<section class="safety"><h3>Safety</h3>' +
         '<button type="button" class="srow" id="reportBtn"><span class="sic" aria-hidden="true">!</span><span>Report this message</span><i aria-hidden="true">&rsaquo;</i></button><div id="reportBox" class="report-box" hidden></div>' +
         '<button type="button" class="srow bad" id="blockBtn"><span class="sic" aria-hidden="true">&#8856;</span><span>Block sender</span><i aria-hidden="true">&rsaquo;</i></button><div id="blockBox" class="report-box" hidden></div>' +
-        '<p class="sub safety-note">Nobody can see who sent this, including you and us. Blocking stops that sender from messaging you again. If you report it, an admin can read this message.</p></section>' : '');
+        '<p class="sub safety-note">Nobody can see who sent this, including you and us. The sender tag is a random code, not a name. Blocking stops that sender from messaging you again. If you report it, an admin can read this message.</p></section>' : '');
     SECS.forEach(function (x) { $(x).hidden = true; });
     try { if (!(history.state && history.state.t === 'detail')) history.pushState({ t: 'detail' }, ''); } catch (e) {}
     $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0); hydrateArt();
@@ -1474,6 +1543,7 @@
     if (isPublic && !m.ex && isUuid(m.id)) {
       loadReactions([m.id]).then(function () { paintReacts(m.id); });
     }
+    if (isPrivateIn) loadHints(m);
     if ($('reportBtn')) $('reportBtn').onclick = function () { openReport(m); };
     if ($('blockBtn')) $('blockBtn').onclick = function () { openBlock(m); };
     $('shareCard').onclick = function () { shareCard(m, $('shareCard')); };
