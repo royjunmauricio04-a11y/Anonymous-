@@ -207,11 +207,13 @@
   function chartSvg(days) {
     var W = 320, base = 88, maxH = 62, n = days.length, bw = 30, gap = (W - n * bw) / (n + 1);
     var mx = Math.max(1, Math.max.apply(null, days.map(function (d) { return d.messages; })));
-    var out = '<svg viewBox="0 0 ' + W + ' 112" role="img" aria-label="Messages per day, last 7 days">';
+    var out = '<svg viewBox="0 0 ' + W + ' 112" role="img" aria-label="Messages per day, last 7 days">' +
+      '<defs><linearGradient id="aBarG" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF5C8A"/><stop offset="1" stop-color="#A855F7"/></linearGradient>' +
+      '<linearGradient id="aBarT" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#E5334B"/><stop offset="1" stop-color="#4F7CFF"/></linearGradient></defs>';
     days.forEach(function (d, i) {
       var h = Math.max(d.messages ? 4 : 2, Math.round(d.messages / mx * maxH)), x = Math.round(gap + i * (bw + gap)), today = i === n - 1;
       var wd = new Date(d.day + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short' });
-      out += '<rect class="bar' + (today ? ' today' : '') + '" x="' + x + '" y="' + (base - h) + '" width="' + bw + '" height="' + h + '" rx="6"/>' +
+      out += '<rect class="bar' + (today ? ' today' : '') + '" x="' + x + '" y="' + (base - h) + '" width="' + bw + '" height="' + h + '" rx="6" fill="url(#' + (today ? 'aBarT' : 'aBarG') + ')"/>' +
         '<text class="val" x="' + (x + bw / 2) + '" y="' + (base - h - 6) + '">' + d.messages + '</text>' +
         '<text x="' + (x + bw / 2) + '" y="106">' + esc(wd) + '</text>';
     });
