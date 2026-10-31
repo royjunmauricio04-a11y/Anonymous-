@@ -754,3 +754,199 @@ body.lp main.lp-styled .res-head{opacity:.7}
 .hint-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:.92rem}
 .hint-row:last-of-type{border-bottom:0;margin-bottom:8px}
 .hint-row.lock{opacity:.6}
+
+/* =====================================================================
+   v6 design layer: glassy / gradient refresh (NGL x Instagram vibes)
+   Sits on top of everything. Same tokens, richer surfaces.
+   ===================================================================== */
+
+/* --- new identity: pink -> violet -> blue --- */
+:root{
+  --grad:linear-gradient(135deg,#FF5C8A 0%,#E5334B 30%,#A855F7 68%,#4F7CFF 100%);
+  --grad-soft:linear-gradient(135deg,rgba(255,92,138,.16),rgba(168,85,247,.14),rgba(79,124,255,.16));
+  --glow-pink:rgba(229,51,75,.35);
+  --glow-violet:rgba(168,85,247,.28);
+  --glass:color-mix(in srgb,var(--bg) 72%,transparent);
+  --glass-border:color-mix(in srgb,var(--text) 10%,transparent);
+  --card-glow:0 18px 40px -22px rgba(80,40,140,.35)
+}
+
+/* --- ambient gradient orbs behind everything --- */
+body::before{
+  content:"";position:fixed;left:-25%;top:-10%;width:70vw;height:60vh;z-index:-1;pointer-events:none;
+  background:radial-gradient(55% 65% at 45% 0%,var(--glow-pink),transparent 70%);
+  opacity:.7
+}
+body::after{
+  content:"";position:fixed;right:-30%;top:22%;width:65vw;height:55vh;z-index:-1;pointer-events:none;
+  background:radial-gradient(55% 60% at 60% 30%,var(--glow-violet),transparent 70%);
+  opacity:.55;filter:blur(6px)
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--glow-pink:rgba(255,92,138,.22);--glow-violet:rgba(168,85,247,.2)}
+}
+:root[data-theme="dark"]{--glow-pink:rgba(255,92,138,.22);--glow-violet:rgba(168,85,247,.2)}
+
+/* --- brand: gradient wordmark --- */
+h1#homeLink{background:var(--grad);-webkit-background-clip:text;background-clip:text}
+h1#homeLink{color:transparent}
+h1#homeLink .logo{fill:var(--accent)}
+
+/* --- topbar: frosted glass with gradient hairline --- */
+.topbar{
+  background:color-mix(in srgb,var(--bg) 65%,transparent);
+  -webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);
+  border-bottom:1px solid var(--glass-border)
+}
+.topbar::after{
+  content:"";position:absolute;left:18px;right:18px;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent),#A855F7,transparent);opacity:.55
+}
+.theme-toggle{
+  background:var(--glass);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border-color:var(--glass-border);
+  transition:transform .15s,box-shadow .2s
+}
+.theme-toggle:hover{box-shadow:0 6px 18px -8px var(--glow-pink)}
+
+/* --- headline: gradient ink --- */
+.headline{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+#detail .sub,.lp-hero .lp-sub{background:none;color:inherit;-webkit-text-fill-color:currentColor}
+h1#homeLink{-webkit-text-fill-color:transparent}
+.headline{-webkit-text-fill-color:transparent}
+
+/* --- cards: glass surfaces, hover lift, soft glow --- */
+.card{
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  box-shadow:var(--card-glow),inset 0 1px 0 color-mix(in srgb,#fff 8%,transparent);
+  transition:border-color .18s,transform .18s,box-shadow .25s
+}
+@media (hover:hover){
+  .card:hover{
+    transform:translateY(-2px);
+    border-color:color-mix(in srgb,var(--accent) 35%,var(--border));
+    box-shadow:0 24px 48px -20px rgba(80,40,140,.45),inset 0 1px 0 color-mix(in srgb,#fff 10%,transparent)
+  }
+}
+.card .song{background:color-mix(in srgb,var(--surface) 55%,transparent)}
+.card.new{box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 35%,transparent),var(--card-glow)}
+
+/* --- boxes / forms: frosted panels --- */
+.box,.act,.pf-safety,.prem,.hints,.daily{
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:0 12px 32px -24px rgba(0,0,0,.4),inset 0 1px 0 color-mix(in srgb,#fff 6%,transparent)
+}
+.daily{border-color:color-mix(in srgb,var(--accent) 28%,var(--glass-border));
+  background:linear-gradient(150deg,color-mix(in srgb,var(--accent) 12%,var(--bg)),color-mix(in srgb,#A855F7 8%,var(--bg)) 60%,var(--glass))}
+
+/* --- inputs: glass with gradient focus ring --- */
+input,textarea,select{
+  background:color-mix(in srgb,var(--surface) 60%,transparent);
+  border:1px solid var(--glass-border);
+  transition:border-color .18s,box-shadow .18s,background .18s
+}
+input:focus,textarea:focus,select:focus{
+  outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 15%,transparent)
+}
+button:focus-visible,a:focus-visible,summary:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px
+}
+::selection{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+
+/* --- primary buttons: gradient + shine sweep --- */
+.btn{position:relative;overflow:hidden;transition:transform .15s,box-shadow .2s,opacity .15s}
+.btn:active{transform:scale(.97);opacity:.9}
+@media (hover:hover){.btn:hover{box-shadow:0 10px 26px -12px var(--glow-pink)}}
+#home>.btn.full:not(.ghost),#send,#dailyGo,#claimBtn,.sent-actions .btn:not(.ghost),.lp-send,#cvSave{
+  box-shadow:0 14px 30px -12px var(--glow-pink),0 6px 18px -8px var(--glow-violet)
+}
+.btn.ghost{
+  background:var(--glass);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border-color:var(--glass-border)
+}
+
+/* --- bottom nav: floating glass pill, gradient active glow --- */
+.tabs{
+  background:color-mix(in srgb,var(--bg) 62%,transparent);
+  -webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);
+  border-color:var(--glass-border);
+  box-shadow:0 18px 44px -16px rgba(0,0,0,.35),inset 0 1px 0 color-mix(in srgb,#fff 10%,transparent)
+}
+.tabs button[aria-selected="true"]{
+  background:var(--grad-soft);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 25%,transparent)
+}
+
+/* --- chips / pills: glassy --- */
+.fchips button,.bsort button[data-s],.chips button,.lp-prompts button,.react-btn,.share a,.share button,.theme-btn,.gate-tab,.pf-link{
+  background:var(--glass);
+  border-color:var(--glass-border);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  transition:transform .12s,border-color .15s,background .15s
+}
+@media (hover:hover){
+  .fchips button:hover,.chips button:hover,.share a:hover,.share button:hover{border-color:color-mix(in srgb,var(--accent) 40%,var(--border));transform:translateY(-1px)}
+}
+.fchips button[aria-pressed="true"],.bsort button[aria-pressed="true"],.theme-btn[aria-pressed="true"],.gate-tab[aria-selected="true"]{
+  background:var(--grad);color:#fff;border-color:transparent;
+  box-shadow:0 8px 20px -10px var(--glow-pink)
+}
+
+/* --- toast + support FAB: glass --- */
+.toast{
+  background:color-mix(in srgb,var(--text) 88%,transparent);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border:1px solid color-mix(in srgb,#fff 12%,transparent)
+}
+.support-fab{
+  background:var(--grad);border:1px solid rgba(255,255,255,.25);
+  box-shadow:0 12px 28px -8px var(--glow-pink)
+}
+
+/* --- avatars / stats: gradient rings --- */
+.pf-av,.lp-av{position:relative}
+.pf-av::before,.steps .n{
+  background:var(--grad)
+}
+.steps .n{box-shadow:0 8px 18px -8px var(--glow-pink)}
+.hstats div{background:var(--glass);border-color:var(--glass-border)}
+.pf-boost{box-shadow:0 18px 40px -24px rgba(80,40,140,.5)}
+
+/* --- skeletons: gradient shimmer --- */
+.skel-card{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--surface) 80%,transparent) 0%,color-mix(in srgb,var(--accent) 12%,var(--border)) 50%,color-mix(in srgb,var(--surface) 80%,transparent) 100%);
+  background-size:200% 100%;animation:skelMove 1.3s linear infinite;
+  border-color:var(--glass-border)
+}
+
+/* --- success burst: gradient ink + stronger glow --- */
+.success-burst{
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  text-shadow:none;filter:drop-shadow(0 6px 26px var(--glow-pink))
+}
+
+/* --- badges / pills glow --- */
+.badge{box-shadow:0 4px 12px -4px var(--glow-pink)}
+.new-pill{box-shadow:0 14px 28px -10px var(--glow-pink)}
+
+/* --- react chips: glass pop --- */
+.react-btn.on{
+  background:var(--grad-soft);
+  border-color:color-mix(in srgb,var(--accent) 45%,transparent)
+}
+
+/* --- smooth theme change --- */
+body,main,.topbar,.tabs,.card,.box,input,textarea{
+  transition-property:background-color,border-color,color;
+  transition-duration:.25s
+}
+
+/* --- keep motion optional --- */
+@media (prefers-reduced-motion:reduce){
+  .card,.btn,.tabs button,.react-btn,.share a,.share button{transition:none}
+  body::after{filter:none}
+}
