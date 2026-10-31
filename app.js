@@ -84,7 +84,23 @@
     return freshP;
   }
   function fresh() { return refreshSession(false).then(function () {}); }
-  function api(path, opt) { return fresh().then(function () { return api0(path, opt); }); }
+  /* transient network trouble (weak signal, server busy): a short, polite auto-retry for safe GET requests */
+  function withRetry(make, tries) {
+    return make().catch(function (e) {
+      tries = tries || 0;
+      var net = !e || !e.status;
+      var busy = e && (e.status === 429 || e.status >= 500);
+      if (tries < 2 && (net || busy)) {
+        return new Promise(function (res) { setTimeout(res, 700 * (tries + 1) * (tries + 1)); }).then(function () { return withRetry(make, tries + 1); });
+      }
+      throw e;
+    });
+  }
+  function api(path, opt) {
+    var m = String((opt && opt.method) || 'GET').toUpperCase();
+    var go = function () { return fresh().then(function () { return api0(path, opt); }); };
+    return m === 'GET' ? withRetry(go) : go();
+  }
   function rpc(name, args) { return api('rpc/' + name, { method: 'POST', body: JSON.stringify(args) }); }
   /* Public things (Browse, search, link page, counts) must load even when the saved login is refused or stale.
      Private things (Inbox) never fall back, so you can never be shown "no messages" by mistake. */
@@ -969,7 +985,7 @@
     }).catch(function () {});
   }
   setInterval(function () { if (!document.hidden && cur !== 'mybox') checkInbox(false); }, 45000);
-  var feedTop = null, feedAll = [], feedMore = false, feedExpanded = false, feedQ = '', feedSort = 'new', feedPending = null, feedGen = 0, bqT;
+  var feedTop = null, feedAll = [], feedMore = false, feedExpanded = false, feedQ = '', feedSort = 'new', feedPending = null, feedGen = 0, bqT, feedObs = null;
   function sortedFeed(list) {
     if (feedSort !== 'hot') return list;
     return list.map(function (m, i) { return { m: m, i: i, n: reactTotal(reactCache[m.id]) }; })
@@ -982,6 +998,7 @@
       if (feedMore) {
         $('feed').insertAdjacentHTML('beforeend', '<button type="button" class="btn ghost full" id="feedMore">Load older messages</button>');
         $('feedMore').onclick = loadMoreFeed;
+        autoFeed();
       }
     }
     if (feedSort === 'hot' && ids.length) loadReactions(ids).then(go); else go();
@@ -994,6 +1011,22 @@
       feedAll = feedAll.concat(a.filter(function (m) { return !have[m.id]; }));
       feedMore = a.length >= 50; feedExpanded = true; paintFeed();
     }).catch(function () { b.disabled = false; b.textContent = 'Could not load. Tap to try again.'; });
+  }
+  /* infinite scroll: the Load-older button stays as a fallback, but it also fires by itself when you scroll near the end */
+  function autoFeed() {
+    if (!('IntersectionObserver' in window)) return;
+    var b = $('feedMore'); if (!b || b.dataset.io) return;
+    b.dataset.io = '1';
+    if (!feedObs) {
+      feedObs = new IntersectionObserver(function (ents) {
+        ents.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          feedObs.unobserve(en.target);
+          if (!feedPending && !en.target.disabled) loadMoreFeed();
+        });
+      }, { rootMargin: '240px 0px' });
+    }
+    feedObs.observe(b);
   }
   function applyFeed(a) {
     feedTop = a[0] && a[0].id; feedReady = true; feedAll = a; feedMore = REMOTE && a.length >= 50; paintFeed();
