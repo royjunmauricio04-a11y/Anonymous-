@@ -1483,35 +1483,54 @@
         .catch(function (e) { tb.disabled = false; toast(dbHint(e), true); loadPremium(); });
     };
   }
-  var viewTimes = [];
-  function renderViews() {
-    var box = $('viewsList'); if (!box) return;
-    box.innerHTML = viewTimes.length ? viewTimes.slice(0, 50).map(function (t) {
-      return '<div class="act-row"><span class="act-ic" aria-hidden="true">&#128065;</span><div><b>Someone opened your link</b><span>' + esc(ago(t)) + '</span></div></div>';
-    }).join('') : '<p class="sub" style="margin:0">No views yet. Share your link and they will show up here.</p>';
-    var total = profile && profile.views != null ? Number(profile.views) : 0;
-    if (prem && !prem.active && total > viewTimes.length) {
-      box.innerHTML += '<p class="sub prem-lock" style="margin:10px 0 0">&#128274; ' + (total - viewTimes.length) + ' older views are hidden. Unlock them with Premium.</p>';
-    }
+  var viewTimes = [], actEv = [];
+  /* ---------- Views page (NGL-style): one button on Profile, a page of its own ---------- */
+  function viewClue(t) {                    /* an honest clue: only WHEN they opened it, never who */
+    var h = new Date(t).getHours();
+    if (h < 5) return 'late at night';
+    if (h < 11) return 'in the morning';
+    if (h < 13) return 'around noon';
+    if (h < 18) return 'in the afternoon';
+    if (h < 22) return 'in the evening';
+    return 'late at night';
   }
-  if ($('viewsBtn')) $('viewsBtn').onclick = function () {
-    var box = $('viewsList'); box.hidden = !box.hidden;
-    $('viewsBtn').setAttribute('aria-expanded', String(!box.hidden));
-    if (!box.hidden) renderViews();
-  };
+  function renderViews() {                  /* updates the Profile badge, and the page too if it is open */
+    var n = viewTimes.length, b = $('voN');
+    if (b) { b.textContent = n; b.hidden = !n; }
+    var h = $('voHint');
+    if (h) h.textContent = n ? n + (n === 1 ? ' person' : ' people') + ' opened your link' : 'Who opened it and when';
+    if ($('vBack')) openViews();
+  }
+  function openViews() {
+    var total = profile && profile.views != null ? Number(profile.views) : 0;
+    var rows = actEv.slice(0, 50).map(function (e) {
+      var msg = e.k === 'msg';
+      return '<div class="act-row"><span class="act-ic' + (msg ? ' m' : '') + '" aria-hidden="true">' + (msg ? '&#9993;' : '&#128065;') + '</span><div><b>' +
+        (msg ? 'New private message' : 'Someone opened your link') + '</b><span>' + (msg ? esc(e.s) + ' &middot; ' + esc(ago(e.t)) : esc(ago(e.t)) + ' &middot; ' + viewClue(e.t)) + '</span></div></div>';
+    }).join('');
+    $('detail').innerHTML = '<button class="back" id="vBack">&larr; Back</button>' +
+      '<div class="vp-hero"><span class="vp-eye" aria-hidden="true">&#128065;</span><h2 class="hi" style="margin:12px 0 4px">Who viewed your link</h2>' +
+      '<p class="sub" style="text-align:center;margin:0">' + (viewTimes.length ? '<b>' + viewTimes.length + '</b> ' + (viewTimes.length === 1 ? 'person has' : 'people have') + ' opened it recently.' : 'Nobody yet. Share your link and views will show up here.') + '</p></div>' +
+      '<div class="act">' + (rows || '<p class="sub" style="margin:0">No views yet.</p>') + '</div>' +
+      (prem && !prem.active && total > viewTimes.length ? '<div class="prem" style="margin-top:14px"><div class="prem-h"><span class="prem-tag">&#128274; Premium</span></div><p class="sub" style="margin:10px 0 0">' + (total - viewTimes.length) + ' older views are hidden. Premium unlocks your full view history.</p></div>' : '') +
+      '<p class="sub safety-note" style="text-align:center;margin:14px 0 0">Views stay anonymous. You see when they visited, never who they are.</p>';
+    SECS.forEach(function (x) { $(x).hidden = true; });
+    try { if (!(history.state && history.state.t === 'detail')) history.pushState({ t: 'detail' }, ''); } catch (e) {}
+    $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0);
+    $('vBack').onclick = function () {
+      if (history.state && history.state.t === 'detail') history.back(); else tab(cur, true);
+    };
+  }
+  if ($('viewsBtn')) $('viewsBtn').onclick = openViews;
   function loadActivity(msgs) {
-    var box = $('actList'); if (!box || !REMOTE) return;
+    if (!REMOTE) return;
     var ev = msgs.filter(function (m) { return m.t; }).map(function (m) { return { t: m.t, k: 'msg', s: m.song, a: m.artist }; });
     rpc('my_recent_views', {}).catch(function () { return []; }).then(function (vs) {
       viewTimes = (vs || []).map(function (v) { return Date.parse(v); }).filter(Boolean).sort(function (a, b) { return b - a; });
-      renderViews();
       (vs || []).forEach(function (v) { var t = Date.parse(v); if (t) ev.push({ t: t, k: 'view' }); });
       ev.sort(function (a, b) { return b.t - a.t; });
-      box.innerHTML = ev.length ? ev.slice(0, 15).map(function (e) {
-        var msg = e.k === 'msg';
-        return '<div class="act-row"><span class="act-ic' + (msg ? ' m' : '') + '" aria-hidden="true">' + (msg ? '&#9993;' : '&#128065;') + '</span><div><b>' +
-          (msg ? 'New private message' : 'Someone opened your link') + '</b><span>' + (msg ? esc(e.s) + ' &middot; ' + esc(e.a) + ' &middot; ' : '') + esc(ago(e.t)) + '</span></div></div>';
-      }).join('') : '<p class="sub" style="margin:0">Nothing yet. Share your link and it will show up here.</p>';
+      actEv = ev;
+      renderViews();
     });
   }
   $('unblockAll').onclick = function () {
