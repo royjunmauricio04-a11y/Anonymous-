@@ -986,3 +986,10 @@ body,main,.topbar,.tabs,.card,.box,input,textarea{
   box-shadow:0 12px 30px -22px rgba(0,0,0,.4),inset 0 1px 0 color-mix(in srgb,#fff 5%,transparent)}
 .vp-hero .sub b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
 @media (prefers-reduced-motion:reduce){.views-open{transition:none}}
+
+/* ---------- v6.2: Views page stat chips (weekly count, busiest time, repeat days) ---------- */
+.vp-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+.vp-chip{display:inline-flex;align-items:center;gap:5px;font:600 .78rem 'Plus Jakarta Sans',sans-serif;color:var(--text);
+  background:var(--glass);border:1px solid var(--glass-border);border-radius:999px;padding:6px 13px;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.vp-chip b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
