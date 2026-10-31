@@ -950,3 +950,39 @@ body,main,.topbar,.tabs,.card,.box,input,textarea{
   .card,.btn,.tabs button,.react-btn,.share a,.share button{transition:none}
   body::after{filter:none}
 }
+
+/* =====================================================================
+   v6.1: NGL-style Views button + dedicated views page
+   ===================================================================== */
+.views-open{
+  display:flex;align-items:center;gap:12px;width:100%;margin:16px 0 14px;padding:14px 16px;
+  border-radius:18px;cursor:pointer;text-align:left;font:inherit;color:var(--text);
+  background:var(--glass);border:1px solid var(--glass-border);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  box-shadow:0 12px 30px -22px rgba(80,40,140,.4),inset 0 1px 0 color-mix(in srgb,#fff 6%,transparent);
+  transition:transform .16s,border-color .16s,box-shadow .2s
+}
+.views-open:active{transform:scale(.99)}
+@media (hover:hover){
+  .views-open:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent) 35%,var(--border));
+    box-shadow:0 20px 40px -22px rgba(80,40,140,.5)}
+}
+.vo-ic{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:1.15rem;
+  background:var(--grad);color:#fff;box-shadow:0 8px 18px -8px var(--glow-pink)}
+.vo-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.vo-txt b{font-size:.98rem}
+.vo-txt small{color:var(--muted);font-size:.8rem}
+.vo-n{flex:none;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--grad);color:#fff;
+  font:700 .74rem/22px 'Plus Jakarta Sans',sans-serif;text-align:center;box-shadow:0 4px 12px -4px var(--glow-pink)}
+.views-open i{flex:none;color:var(--muted);font-style:normal;font-size:1.2rem}
+
+/* the page itself */
+.vp-hero{text-align:center;margin:6px 0 18px}
+.vp-eye{display:inline-grid;place-items:center;width:76px;height:76px;border-radius:50%;font-size:2.1rem;
+  background:var(--grad);color:#fff;box-shadow:0 18px 36px -14px var(--glow-pink)}
+.vp-hero .hi{font-size:1.5rem}
+#detail .act{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:6px 14px;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  box-shadow:0 12px 30px -22px rgba(0,0,0,.4),inset 0 1px 0 color-mix(in srgb,#fff 5%,transparent)}
+.vp-hero .sub b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+@media (prefers-reduced-motion:reduce){.views-open{transition:none}}
