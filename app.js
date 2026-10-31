@@ -589,6 +589,7 @@
     $('tabs').hidden = t === 'admin' || (t === 'submit' && isDirectLink());
     if (t === 'submit') $('directHead').hidden = !isDirectLink();
     if ($('supportFab')) $('supportFab').hidden = false;
+    if ($('viewsTop')) $('viewsTop').hidden = !profile;
     if ($('supportOverlay') && !$('supportOverlay').hidden) { $('supportOverlay').hidden = true; document.body.style.overflow = ''; }
     [].forEach.call($('tabs').children, function (b) { b.setAttribute('aria-selected', b.dataset.t === t); });
     if (t !== 'submit' && $('sentActions')) $('sentActions').hidden = true;
@@ -1494,12 +1495,14 @@
     if (h < 22) return 'in the evening';
     return 'late at night';
   }
-  function renderViews() {                  /* updates the Profile badge, and the page too if it is open */
-    var n = viewTimes.length, b = $('voN');
+  function renderViews() {                  /* updates the topbar badge, and the page too while it is really open */
+    var n = viewTimes.length, b = $('voTopN');
     if (b) { b.textContent = n; b.hidden = !n; }
-    var h = $('voHint');
-    if (h) h.textContent = n ? n + (n === 1 ? ' person' : ' people') + ' opened your link' : 'Who opened it and when';
-    if ($('vBack')) openViews();
+    var t = $('viewsTop');
+    if (t) t.hidden = !(profile && profile.username);
+    /* bug fix: refresh the open page ONLY while it is visible — the old check found a leftover
+       vBack inside the hidden #detail section and re-opened the page, hijacking the Back button */
+    if ($('vBack') && !$('detail').hidden) openViews();
   }
   function openViews() {
     var total = profile && profile.views != null ? Number(profile.views) : 0;
@@ -1541,7 +1544,7 @@
       if (history.state && history.state.t === 'detail') history.back(); else tab(cur, true);
     };
   }
-  if ($('viewsBtn')) $('viewsBtn').onclick = openViews;
+  if ($('viewsTop')) $('viewsTop').onclick = openViews;
   function loadActivity(msgs) {
     if (!REMOTE) return;
     var ev = msgs.filter(function (m) { return m.t; }).map(function (m) { return { t: m.t, k: 'msg', s: m.song, a: m.artist }; });
