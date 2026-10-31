@@ -26,6 +26,10 @@
   <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0-5a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 17a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zM3 11a1 1 0 1 1 0 2H2a1 1 0 1 1 0-2h1zm19 0a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2h1zM5.64 5.64a1 1 0 0 1 1.41 0l.71.7a1 1 0 1 1-1.41 1.42l-.7-.71a1 1 0 0 1 0-1.41zm12.02 12.02a1 1 0 0 1 1.41 0l.71.71a1 1 0 0 1-1.41 1.41l-.71-.71a1 1 0 0 1 0-1.41zM5.64 18.36a1 1 0 0 1 0-1.41l.7-.71a1 1 0 1 1 1.42 1.41l-.71.71a1 1 0 0 1-1.41 0zm12.02-12.02a1 1 0 0 1 0-1.41l.71-.71a1 1 0 0 1 1.41 1.41l-.71.71a1 1 0 0 1-1.41 0z"/></svg>
   <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
  </button>
+ <button type="button" id="viewsTop" class="views-top" aria-label="Who viewed your link" title="Who viewed your link" hidden>
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>
+  <span class="vo-n" id="voTopN" hidden></span>
+ </button>
 </div>
 <nav class="tabs" role="tablist" id="tabs" aria-label="Main">
  <button role="tab" data-t="submit" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.2-4.2L16.5 4.5a2 2 0 0 1 2.8 0l.2.2a2 2 0 0 1 0 2.8L8.2 18.8z"/><path d="M14 7l3 3"/></svg><span class="tl">Submit</span></button>
@@ -123,7 +127,6 @@
     <div><b id="stRep">0</b><span>Replies</span></div>
     <div><b id="stSong">0</b><span>Songs</span></div>
    </div>
-   <button type="button" class="views-open" id="viewsBtn"><span class="vo-ic" aria-hidden="true">&#128065;</span><span class="vo-txt"><b>Views on your link</b><small id="voHint">Who opened it and when</small></span><span class="vo-n" id="voN" hidden></span><i aria-hidden="true">&rsaquo;</i></button>
    <div class="prem" id="premCard" hidden></div>
    <h3 class="pf-h">Safety</h3>
    <div class="pf-safety"><p class="sub" id="blkTxt" style="margin:0 0 10px"></p><button type="button" class="btn ghost small" id="unblockAll" hidden>Unblock everyone</button></div>
