@@ -589,6 +589,7 @@
     $('tabs').hidden = t === 'admin' || (t === 'submit' && isDirectLink());
     if (t === 'submit') $('directHead').hidden = !isDirectLink();
     if ($('supportFab')) $('supportFab').hidden = false;
+    if ($('viewsTop')) $('viewsTop').hidden = !profile;
     if ($('supportOverlay') && !$('supportOverlay').hidden) { $('supportOverlay').hidden = true; document.body.style.overflow = ''; }
     [].forEach.call($('tabs').children, function (b) { b.setAttribute('aria-selected', b.dataset.t === t); });
     if (t !== 'submit' && $('sentActions')) $('sentActions').hidden = true;
@@ -1494,24 +1495,46 @@
     if (h < 22) return 'in the evening';
     return 'late at night';
   }
-  function renderViews() {                  /* updates the Profile badge, and the page too if it is open */
-    var n = viewTimes.length, b = $('voN');
+  function renderViews() {                  /* updates the topbar badge, and the page too while it is really open */
+    var n = viewTimes.length, b = $('voTopN');
     if (b) { b.textContent = n; b.hidden = !n; }
-    var h = $('voHint');
-    if (h) h.textContent = n ? n + (n === 1 ? ' person' : ' people') + ' opened your link' : 'Who opened it and when';
-    if ($('vBack')) openViews();
+    var t = $('viewsTop');
+    if (t) t.hidden = !(profile && profile.username);
+    /* bug fix: refresh the open page ONLY while it is visible — the old check found a leftover
+       vBack inside the hidden #detail section and re-opened the page, hijacking the Back button */
+    if ($('vBack') && !$('detail').hidden) openViews();
   }
   function openViews() {
     var total = profile && profile.views != null ? Number(profile.views) : 0;
-    var rows = actEv.slice(0, 50).map(function (e) {
-      var msg = e.k === 'msg';
-      return '<div class="act-row"><span class="act-ic' + (msg ? ' m' : '') + '" aria-hidden="true">' + (msg ? '&#9993;' : '&#128065;') + '</span><div><b>' +
-        (msg ? 'New private message' : 'Someone opened your link') + '</b><span>' + (msg ? esc(e.s) + ' &middot; ' + esc(ago(e.t)) : esc(ago(e.t)) + ' &middot; ' + viewClue(e.t)) + '</span></div></div>';
+    /* stats: this week, busiest time of day, days with repeat visits */
+    var wkAgo = Date.now() - 7 * 864e5, week = viewTimes.filter(function (t) { return t > wkAgo; }).length;
+    var bucket = {}, bn = 0, busiest = '';
+    viewTimes.forEach(function (t) { var c = viewClue(t); bucket[c] = (bucket[c] || 0) + 1; if (bucket[c] > bn) { bn = bucket[c]; busiest = c; } });
+    var perDay = {};
+    viewTimes.forEach(function (t) { var k = new Date(t).toDateString(); (perDay[k] = perDay[k] || []).push(t); });
+    var repeatDays = Object.keys(perDay).filter(function (k) { return perDay[k].length > 1; }).length;
+    var chips = viewTimes.length ? '<div class="vp-chips">' +
+      '<span class="vp-chip"><b>' + week + '</b> this week</span>' +
+      (busiest ? '<span class="vp-chip">busiest <b>' + esc(busiest) + '</b></span>' : '') +
+      (repeatDays ? '<span class="vp-chip"><b>' + repeatDays + '</b> day' + (repeatDays === 1 ? '' : 's') + ' with repeat visits</span>' : '') +
+      '</div>' : '';
+    /* view rows grouped per day (an eager visitor is visible without ever naming them) */
+    var vrows = Object.keys(perDay).map(function (k) { return perDay[k][0]; }).sort(function (a, b) { return b - a; }).map(function (first) {
+      var ts = perDay[new Date(first).toDateString()], n = ts.length;
+      var wd = new Date(first).toLocaleDateString(undefined, { weekday: 'long' });
+      var c2 = {}; ts.forEach(function (t) { var c = viewClue(t); c2[c] = (c2[c] || 0) + 1; });
+      var top = ''; Object.keys(c2).forEach(function (c) { if (!top || c2[c] > c2[top]) top = c; });
+      if (n === 1) return '<div class="act-row"><span class="act-ic" aria-hidden="true">&#128065;</span><div><b>Someone opened your link</b><span>' + esc(ago(first)) + ' &middot; ' + viewClue(first) + '</span></div></div>';
+      return '<div class="act-row"><span class="act-ic" aria-hidden="true">&#128065;</span><div><b>' + n + ' views on ' + wd + '</b><span>first ' + esc(ago(first)) + ' &middot; mostly ' + top + '</span></div></div>';
+    }).join('');
+    var mrows = actEv.filter(function (e) { return e.k === 'msg'; }).slice(0, 20).map(function (e) {
+      return '<div class="act-row"><span class="act-ic m" aria-hidden="true">&#9993;</span><div><b>New private message</b><span>' + esc(e.s) + ' &middot; ' + esc(ago(e.t)) + '</span></div></div>';
     }).join('');
     $('detail').innerHTML = '<button class="back" id="vBack">&larr; Back</button>' +
       '<div class="vp-hero"><span class="vp-eye" aria-hidden="true">&#128065;</span><h2 class="hi" style="margin:12px 0 4px">Who viewed your link</h2>' +
-      '<p class="sub" style="text-align:center;margin:0">' + (viewTimes.length ? '<b>' + viewTimes.length + '</b> ' + (viewTimes.length === 1 ? 'person has' : 'people have') + ' opened it recently.' : 'Nobody yet. Share your link and views will show up here.') + '</p></div>' +
-      '<div class="act">' + (rows || '<p class="sub" style="margin:0">No views yet.</p>') + '</div>' +
+      '<p class="sub" style="text-align:center;margin:0">' + (viewTimes.length ? '<b>' + viewTimes.length + '</b> ' + (viewTimes.length === 1 ? 'person has' : 'people have') + ' opened it recently.' : 'Nobody yet. Share your link and views will show up here.') + '</p>' + chips + '</div>' +
+      '<div class="act">' + (vrows || '<p class="sub" style="margin:0">No views yet.</p>') + '</div>' +
+      (mrows ? '<h3 class="pf-h" style="margin:18px 0 8px">New messages</h3><div class="act">' + mrows + '</div>' : '') +
       (prem && !prem.active && total > viewTimes.length ? '<div class="prem" style="margin-top:14px"><div class="prem-h"><span class="prem-tag">&#128274; Premium</span></div><p class="sub" style="margin:10px 0 0">' + (total - viewTimes.length) + ' older views are hidden. Premium unlocks your full view history.</p></div>' : '') +
       '<p class="sub safety-note" style="text-align:center;margin:14px 0 0">Views stay anonymous. You see when they visited, never who they are.</p>';
     SECS.forEach(function (x) { $(x).hidden = true; });
@@ -1521,7 +1544,7 @@
       if (history.state && history.state.t === 'detail') history.back(); else tab(cur, true);
     };
   }
-  if ($('viewsBtn')) $('viewsBtn').onclick = openViews;
+  if ($('viewsTop')) $('viewsTop').onclick = openViews;
   function loadActivity(msgs) {
     if (!REMOTE) return;
     var ev = msgs.filter(function (m) { return m.t; }).map(function (m) { return { t: m.t, k: 'msg', s: m.song, a: m.artist }; });
@@ -1955,6 +1978,37 @@
       }
     });
   };
+
+  /* ---------- realtime: live Browse + Inbox (Supabase Realtime; needs messages table replication ON) ---------- */
+  var liveCh = null, liveSb = null;
+  function liveStart() {
+    if (!REMOTE || !window.supabase || !C.SUPABASE_URL) return;   /* no library, no problem: polling keeps working */
+    try {
+      liveSb = window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    } catch (e) { liveSb = null; return; }
+    function join() {
+      var sess = sessionGet(); if (!sess || !sess.access_token || liveCh) return;
+      try { liveSb.realtime.setAuth(sess.access_token); } catch (e) {}
+      liveCh = liveSb.channel('anon-live')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, function (p) {
+          try {
+            var row = (p && p.new) || {};
+            if (row.delivery_type === 'public') { if (cur === 'browse' && !document.hidden && !feedQ) loadFeed(); }
+            else { checkInbox(false); }
+          } catch (e) {}
+        })
+        .subscribe(function () {});
+    }
+    join();
+    setInterval(function () {           /* keep the socket's token fresh */
+      refreshSession(false).then(function () { var s = sessionGet(); if (s && liveCh) { try { liveSb.realtime.setAuth(s.access_token); } catch (e) {} } });
+    }, 5 * 60 * 1000);
+    setInterval(function () {           /* (re)connect after login / logout */
+      if (sessionGet() && !liveCh) join();
+      if (!sessionGet() && liveCh) { try { liveSb.removeChannel(liveCh); } catch (e) {} liveCh = null; }
+    }, 30 * 1000);
+  }
+  try { liveStart(); } catch (e) {}
 
   restoreDraft(); updCount();
   boot();
