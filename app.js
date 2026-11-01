@@ -1203,7 +1203,7 @@
       ['Share your link', 30, shared, function () { $('pfLink').click(); }],
       ['Reply to a message', 20, msgs.some(function (m) { return m.parent; }), function () { tab('mybox'); }],
       ['Add a PIN', 20, profile.has_pin !== false, function () { $('pinNew').scrollIntoView({ behavior: 'smooth', block: 'center' }); }],
-      ['Customize your card', 20, !!profile.card, function () { $('cvSw').scrollIntoView({ behavior: 'smooth', block: 'center' }); }]
+      ['Customize your card', 20, !!profile.card, function () { openCustom(); }]
     ];
     var pct = steps.reduce(function (n, x) { return n + (x[2] ? x[1] : 0); }, 0);
     $('pfPct').textContent = pct + '%'; $('pfBar').style.width = pct + '%';
@@ -1213,6 +1213,14 @@
     }).join('');
     $('pfList').onclick = function (e) { var b = e.target.closest('button'); if (b) steps[+b.dataset.i][3](); };
     styleCards($('mine'), profile.card);
+    if ($('cvMiniBox')) styleCards($('cvMiniBox'), profile.card);
+    if ($('pgMini')) {
+      CardStyle.hero($('pgMini'), profile.page);
+      $('pgMiniName').textContent = '@' + u;
+      var ma = $('pgMiniAv');
+      ma.textContent = profile.avatar ? '' : u.charAt(0).toUpperCase();
+      ma.style.background = profile.avatar ? 'url(' + profile.avatar + ') center/cover' : '';
+    }
     cardDraft = profile.card ? JSON.parse(JSON.stringify(profile.card)) : null;
     drawCustom();
     initPage(); pageDraft = profile.page ? JSON.parse(JSON.stringify(profile.page)) : null; drawPage();
@@ -1264,6 +1272,7 @@
   function initProfile() {
     if (!$('pf') || $('pf').dataset.on) return; $('pf').dataset.on = 1;
     $('pfAv').onclick = function () { $('pfFile').click(); };
+    if ($('custBtn')) $('custBtn').onclick = openCustom;
     $('pfFile').onchange = function () {
       var f = this.files[0]; this.value = ''; if (!f) return;
       shrink(f, 320, 0.8).then(function (d) {
@@ -1530,6 +1539,7 @@
     var mrows = actEv.filter(function (e) { return e.k === 'msg'; }).slice(0, 20).map(function (e) {
       return '<div class="act-row"><span class="act-ic m" aria-hidden="true">&#9993;</span><div><b>New private message</b><span>' + esc(e.s) + ' &middot; ' + esc(ago(e.t)) + '</span></div></div>';
     }).join('');
+    custHome();
     $('detail').innerHTML = '<button class="back" id="vBack">&larr; Back</button>' +
       '<div class="vp-hero"><span class="vp-eye" aria-hidden="true">&#128065;</span><h2 class="hi" style="margin:12px 0 4px">Who viewed your link</h2>' +
       '<p class="sub" style="text-align:center;margin:0">' + (viewTimes.length ? '<b>' + viewTimes.length + '</b> ' + (viewTimes.length === 1 ? 'person has' : 'people have') + ' opened it recently.' : 'Nobody yet. Share your link and views will show up here.') + '</p>' + chips + '</div>' +
@@ -1556,6 +1566,31 @@
     };
   }
   if ($('viewsTop')) $('viewsTop').onclick = openViews;
+
+  /* ---------- customize page: both editors live on one page, off the profile ---------- */
+  function custHome() {
+    var w = $('customWrap');
+    if (!w) return;
+    /* if the editors were left inside #detail (hidden), move them back to their home */
+    [].forEach.call(document.querySelectorAll('#detail .pf-cust'), function (x) { w.appendChild(x); });
+  }
+  function openCustom() {
+    if (!profile) { tab('profile', true); return; }
+    custHome();
+    $('detail').innerHTML = '<button class="back" id="cBack">&larr; Back</button>' +
+      '<div class="vp-hero"><span class="vp-eye" aria-hidden="true">&#127912;</span><h2 class="hi" style="margin:12px 0 4px">Customize your look</h2>' +
+      '<p class="sub" style="text-align:center;margin:0">Your message card and your link page, together on one page.</p></div>' +
+      '<div id="custMount"></div>';
+    var m = $('custMount'), w = $('customWrap');
+    while (w && w.firstChild) m.appendChild(w.firstChild);
+    SECS.forEach(function (x) { $(x).hidden = true; });
+    try { if (!(history.state && history.state.t === 'detail')) history.pushState({ t: 'detail' }, ''); } catch (e) {}
+    $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0);
+    $('cBack').onclick = function () {
+      custHome();
+      if (history.state && history.state.t === 'detail') history.back(); else tab(cur, true);
+    };
+  }
   function loadActivity(msgs) {
     if (!REMOTE) return;
     var ev = msgs.filter(function (m) { return m.t; }).map(function (m) { return { t: m.t, k: 'msg', s: m.song, a: m.artist }; });
@@ -1600,6 +1635,7 @@
     var isPrivateIn = m.type === 'direct' && !m.bot && !m.ex && isUuid(m.id) && REMOTE && !!profile;
     var subTxt = m.bot ? 'A song picked by the Anonymous bot.' :
       (m.type === 'direct' ? 'Someone sent you a song. They want you to hear this one.' : 'An anonymous note on Browse.') + (m.t && !m.ex ? ' ' + ago(m.t) + '.' : '');
+    custHome();
     $('detail').innerHTML = '<button class="back" id="back">&larr; Back</button><h2 class="hi">Hello, ' + esc(m.to) + '</h2>' +
       '<p class="sub" style="text-align:center">' + subTxt + '</p>' +
       '<div class="dstage" id="dstage"><div class="dcard">' + big +
