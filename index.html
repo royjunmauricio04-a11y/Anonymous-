@@ -137,37 +137,15 @@
    </div>
    <h3 class="pf-h">Basics</h3>
    <ul class="pf-list" id="pfList"></ul>
-   <div class="pf-cust">
-    <h3 class="pf-h">Message card style</h3>
-    <p class="sub" style="margin:0 0 12px">Pick how your message cards look. It shows in your Inbox, in the Submit preview and on the posts you send.</p>
-    <div class="cv-sw" id="cvSw"></div>
-    <div class="card" id="cvPrev" style="margin-top:14px">
-     <div class="top"><div class="thead"><span class="to">To: you</span><span class="stamp">From: ???</span><time class="when">just now</time></div><p class="hand">this is how your messages will look</p></div>
-     <div class="song"><span class="art" style="background:#E5334B"></span><span><b>Your song</b><span>Your artist</span></span></div>
+   <div class="cust-mini">
+    <h3 class="pf-h">Customize</h3>
+    <div class="cust-row">
+     <div class="cust-tile"><b>Message card</b><div id="cvMiniBox"><div class="card"><div class="top"><p class="hand">your card</p></div><div class="song"><span class="art" style="background:var(--accent)"></span><span><b>Your song</b><span>Your artist</span></span></div></div></div></div>
+     <div class="cust-tile"><b>Link page</b><div class="lp-hero pg-prev" id="pgMini"><div class="lp-av" id="pgMiniAv"></div><h4 class="lp-name" id="pgMiniName"></h4><p class="lp-sub">send me a song</p></div></div>
     </div>
-    <label class="cv-opt"><input type="checkbox" id="cvSend"> <span>Use my design on posts I send. Everyone who sees the post sees the design.</span></label>
-    <label for="cvDim" hidden>Photo darkness</label><input type="range" id="cvDim" min="0" max="70" value="35" hidden>
-    <div class="row" style="margin-top:12px;gap:8px">
-     <button type="button" class="btn ghost" id="cvUp">Use my photo</button>
-     <input type="file" id="cvFile" accept="image/*" hidden>
-     <button type="button" class="btn ghost" id="cvClr">Reset</button>
-     <button type="button" class="btn" id="cvSave">Save</button>
-    </div>
+    <button type="button" class="btn full" id="custBtn">Customize &rarr;</button>
    </div>
   </div>
-   <div class="pf-cust" id="pgBox">
-    <h3 class="pf-h">Link page background</h3>
-    <p class="sub" style="margin:0 0 12px">The top of your link page, what people see when they open your link. Your photo shows whole, not cropped.</p>
-    <div class="cv-sw" id="pgSw"></div>
-    <div class="lp-hero pg-prev" id="pgPrev"><div class="lp-av" id="pgAv"></div><h4 class="lp-name" id="pgName"></h4><p class="lp-sub">send me an anonymous song</p></div>
-    <label for="pgDim" id="pgDimL" hidden>Photo darkness</label><input type="range" id="pgDim" min="0" max="70" value="30" hidden>
-    <div class="row" style="margin-top:12px;gap:8px">
-     <button type="button" class="btn ghost" id="pgUp">Use my photo</button>
-     <input type="file" id="pgFile" accept="image/*" hidden>
-     <button type="button" class="btn ghost" id="pgClr">Reset</button>
-     <button type="button" class="btn" id="pgSave">Save</button>
-    </div>
-   </div>
   <div class="box" id="who" hidden>
   <p class="who" id="whoName"></p>
   <p class="sub" style="margin:0">This is your link. Share your link so people can send you a song without a name.</p>
@@ -236,6 +214,39 @@
  <p class="sub" id="maintNote"></p>
 </section>
 
+<!-- Customize page: both editors live here; openCustom() shows them as one page -->
+<div id="customWrap" hidden>
+   <div class="pf-cust" id="cvBox">
+    <h3 class="pf-h">Message card style</h3>
+    <p class="sub" style="margin:0 0 12px">Pick how your message cards look. It shows in your Inbox, in the Submit preview and on the posts you send.</p>
+    <div class="cv-sw" id="cvSw"></div>
+    <div class="card" id="cvPrev" style="margin-top:14px">
+     <div class="top"><div class="thead"><span class="to">To: you</span><span class="stamp">From: ???</span><time class="when">just now</time></div><p class="hand">this is how your messages will look</p></div>
+     <div class="song"><span class="art" style="background:#E5334B"></span><span><b>Your song</b><span>Your artist</span></span></div>
+    </div>
+    <label class="cv-opt"><input type="checkbox" id="cvSend"> <span>Use my design on posts I send. Everyone who sees the post sees the design.</span></label>
+    <label for="cvDim" hidden>Photo darkness</label><input type="range" id="cvDim" min="0" max="70" value="35" hidden>
+    <div class="row" style="margin-top:12px;gap:8px">
+     <button type="button" class="btn ghost" id="cvUp">Use my photo</button>
+     <input type="file" id="cvFile" accept="image/*" hidden>
+     <button type="button" class="btn ghost" id="cvClr">Reset</button>
+     <button type="button" class="btn" id="cvSave">Save</button>
+    </div>
+   </div>
+   <div class="pf-cust" id="pgBox">
+    <h3 class="pf-h">Link page background</h3>
+    <p class="sub" style="margin:0 0 12px">The top of your link page, what people see when they open your link. Your photo shows whole, not cropped.</p>
+    <div class="cv-sw" id="pgSw"></div>
+    <div class="lp-hero pg-prev" id="pgPrev"><div class="lp-av" id="pgAv"></div><h4 class="lp-name" id="pgName"></h4><p class="lp-sub">send me an anonymous song</p></div>
+    <label for="pgDim" id="pgDimL" hidden>Photo darkness</label><input type="range" id="pgDim" min="0" max="70" value="30" hidden>
+    <div class="row" style="margin-top:12px;gap:8px">
+     <button type="button" class="btn ghost" id="pgUp">Use my photo</button>
+     <input type="file" id="pgFile" accept="image/*" hidden>
+     <button type="button" class="btn ghost" id="pgClr">Reset</button>
+     <button type="button" class="btn" id="pgSave">Save</button>
+    </div>
+   </div>
+</div>
 <section id="detail" hidden></section>
 <div id="toast" class="toast" role="status" hidden></div>
 <footer class="foot">
