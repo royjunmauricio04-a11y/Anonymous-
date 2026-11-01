@@ -1001,3 +1001,107 @@ body,main,.topbar,.tabs,.card,.box,input,textarea{
 @media (hover:hover){.views-top:hover{box-shadow:0 6px 18px -8px var(--glow-pink)}}
 .views-top:active{transform:scale(.94)}
 .views-top .vo-n{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;line-height:18px;font-size:.64rem;box-shadow:0 0 0 2px var(--bg)}
+
+/* =====================================================================
+   v7 — "Paper & Ink": a hand-crafted identity, not a template.
+   Warm paper, ink borders, solid offset shadows, wavy accents, stickers.
+   ===================================================================== */
+:root{
+  --bg:#F7F3EA;--surface:#FFFCF4;--border:#262019;--text:#262019;--muted:#8A7F6E;
+  --accent:#E5334B;--info:#F0ECE0;--info-b:#262019;--info-t:#5B5142;--dcard:#262019;
+  --glass:var(--surface);--glass-border:var(--border);
+  --grad:linear-gradient(135deg,#E5334B 0%,#FF7A50 100%);
+}
+:root[data-theme="dark"]{--bg:#1D1813;--surface:#26201A;--border:#EFE7D7;--text:#F3EDE0;--muted:#B0A48F;--info:#2B241D;--info-b:#EFE7D7;--info-t:#E8E0CF;--dcard:#0F0C09}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1D1813;--surface:#26201A;--border:#EFE7D7;--text:#F3EDE0;--muted:#B0A48F;--info:#2B241D;--info-b:#EFE7D7;--info-t:#E8E0CF;--dcard:#0F0C09}}
+
+/* paper texture instead of glow orbs */
+body::before{left:0;right:0;top:0;height:100%;opacity:1;filter:none;
+  background:radial-gradient(color-mix(in srgb,var(--text) 8%,transparent) 1.1px,transparent 1.1px);
+  background-size:22px 22px}
+body::after{display:none}
+
+/* topbar: solid ink rule, plain wordmark */
+.topbar{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;border-bottom:2px solid var(--border)}
+.topbar::after{display:none}
+h1#homeLink{background:none;color:var(--text);-webkit-text-fill-color:currentColor}
+.headline{background:none;color:var(--accent);-webkit-text-fill-color:currentColor;
+  text-decoration:underline wavy;text-decoration-color:color-mix(in srgb,var(--accent) 65%,transparent);
+  text-decoration-thickness:3px;text-underline-offset:10px}
+
+/* ink buttons with offset shadows */
+.btn{border:2px solid var(--border);font-weight:800;border-radius:14px 18px 12px 20px;
+  box-shadow:4px 4px 0 color-mix(in srgb,var(--text) 85%,transparent);transition:transform .12s,box-shadow .12s}
+.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 color-mix(in srgb,var(--text) 85%,transparent)}
+@media (hover:hover){.btn:hover{box-shadow:5px 5px 0 color-mix(in srgb,var(--text) 85%,transparent)}}
+.btn.ghost{background:transparent;color:var(--text);border-style:dashed;box-shadow:none}
+.btn.ghost:active{transform:translate(2px,2px)}
+#home>.btn.full:not(.ghost),#send,#dailyGo,#claimBtn,.sent-actions .btn:not(.ghost),.lp-send,#cvSave{
+  background:var(--grad);color:#fff;border-color:var(--border);box-shadow:4px 4px 0 var(--border)}
+
+/* cards & boxes: paper, ink, solid offset */
+.card{background:var(--surface);border:2px solid var(--border);border-radius:16px 20px 15px 22px;
+  box-shadow:5px 5px 0 color-mix(in srgb,var(--text) 14%,transparent);-webkit-backdrop-filter:none;backdrop-filter:none}
+@media (hover:hover){.card:hover{transform:translate(-1px,-1px);
+  box-shadow:6px 6px 0 color-mix(in srgb,var(--text) 18%,transparent);border-color:var(--border)}}
+.card:active{background:var(--surface);transform:translate(2px,2px);box-shadow:2px 2px 0 color-mix(in srgb,var(--text) 12%,transparent)}
+.card .song{background:color-mix(in srgb,var(--bg) 55%,var(--surface));border-top:2px solid var(--border)}
+.card .to,.card .stamp,.chip{background:var(--bg);border:1.5px solid var(--border);color:var(--text)}
+.box,.act,.prem,.hints,.pf-safety{background:var(--surface);border:2px solid var(--border);
+  border-radius:16px 20px 15px 22px;box-shadow:4px 4px 0 color-mix(in srgb,var(--text) 12%,transparent);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.daily{background:var(--surface);border:2px dashed var(--accent);border-radius:18px 22px 16px 24px;box-shadow:none}
+.hstats div,.pf-boost{background:var(--surface);border:2px solid var(--border);box-shadow:3px 3px 0 color-mix(in srgb,var(--text) 12%,transparent);border-radius:14px 18px 13px 19px}
+
+/* forms: ink outlines, offset shadow focus */
+input,textarea,select{background:var(--surface);border:2px solid var(--border);
+  border-radius:12px 15px 11px 16px;box-shadow:3px 3px 0 color-mix(in srgb,var(--text) 10%,transparent)}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);outline:none;
+  box-shadow:3px 3px 0 color-mix(in srgb,var(--accent) 70%,transparent)}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+
+/* bottom nav: a paper pill */
+.tabs{background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none;
+  border:2px solid var(--border);border-radius:20px;box-shadow:5px 5px 0 color-mix(in srgb,var(--text) 16%,transparent)}
+.tabs button[aria-selected="true"]{background:var(--accent);color:#fff;border-radius:14px;box-shadow:none}
+
+/* topbar icon buttons + views button */
+.theme-toggle,.views-top{background:var(--surface);border:2px solid var(--border);border-radius:12px 14px 11px 15px;
+  box-shadow:3px 3px 0 color-mix(in srgb,var(--text) 16%,transparent)}
+.theme-toggle:active,.views-top:active{transform:translate(2px,2px);box-shadow:1px 1px 0 color-mix(in srgb,var(--text) 16%,transparent)}
+
+/* chips & pills: stamped */
+.fchips button,.bsort button[data-s],.chips button,.lp-prompts button,.react-btn,.share a,.share button,
+.theme-btn,.gate-tab,.pf-link,.cv-sw button{background:var(--surface);border:2px solid var(--border);
+  border-radius:999px;box-shadow:2px 2px 0 color-mix(in srgb,var(--text) 14%,transparent);
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.fchips button[aria-pressed="true"],.bsort button[aria-pressed="true"],.theme-btn[aria-pressed="true"],
+.gate-tab[aria-selected="true"]{background:var(--accent);color:#fff;border-color:var(--border);box-shadow:2px 2px 0 var(--border)}
+.fchips button:active,.chips button:active,.react-btn:active{transform:translate(2px,2px);box-shadow:none}
+
+/* badges, tags, toast, fab */
+.badge,.vo-n,.a-pip,.prem-tag{background:var(--accent);color:#fff;border:1.5px solid var(--border);
+  box-shadow:2px 2px 0 var(--border)}
+.toast{background:var(--text);color:var(--bg);border:2px solid var(--border);border-radius:12px 16px 11px 15px;
+  box-shadow:4px 4px 0 color-mix(in srgb,var(--accent) 60%,transparent);-webkit-backdrop-filter:none;backdrop-filter:none}
+.support-fab{background:var(--accent);border:2px solid var(--border);box-shadow:4px 4px 0 var(--border)}
+.new-pill{border:2px solid var(--border);box-shadow:3px 3px 0 var(--border);background:var(--accent)}
+
+/* views page & profile bits */
+.vp-eye{background:var(--accent);border:2px solid var(--border);box-shadow:4px 4px 0 var(--border);color:#fff}
+.vp-chip,.vp-hero .sub b{background:none;-webkit-text-fill-color:currentColor;color:var(--text)}
+.vp-chip b{background:none;-webkit-text-fill-color:currentColor;color:var(--accent)}
+.pf-av{border:2px solid var(--border);box-shadow:4px 4px 0 var(--border)}
+.pf-bar{background:var(--bg);border:1.5px solid var(--border)}
+.steps .n{background:var(--accent);border:2px solid var(--border);box-shadow:2px 2px 0 var(--border)}
+.success-burst{background:none;color:var(--accent);-webkit-text-fill-color:currentColor;filter:none}
+#detail .act{border-radius:14px 18px 13px 19px;border-width:2px}
+.warn{border-style:dashed;border-width:2px}
+.announce{border-style:dashed;border-width:2px;border-radius:14px 16px 13px 18px}
+
+/* link page: warmer hero */
+body.lp{background:#E5334B linear-gradient(165deg,#F0475F 0%,#E5334B 44%,#C9243E 100%)}
+body.lp .lp-sheet{border:2px solid var(--border);box-shadow:6px 6px 0 rgba(0,0,0,.25)}
+
+/* keep motion optional */
+@media (prefers-reduced-motion:reduce){.btn,.card,.tabs button{transition:none}}
