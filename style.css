@@ -1105,3 +1105,96 @@ body.lp .lp-sheet{border:2px solid var(--border);box-shadow:6px 6px 0 rgba(0,0,0
 
 /* keep motion optional */
 @media (prefers-reduced-motion:reduce){.btn,.card,.tabs button{transition:none}}
+
+/* =====================================================================
+   v8 — professional polish: calmer ink, tighter type, tidy rhythm.
+   Same Paper & Ink identity — less play, more precision.
+   ===================================================================== */
+:root{--ink-sh:3px 3px 0 color-mix(in srgb,var(--text) 15%,transparent);
+  --ink-sh-lg:4px 4px 0 color-mix(in srgb,var(--text) 16%,transparent)}
+
+/* calmer, consistent offsets everywhere */
+.btn{border-radius:12px;box-shadow:var(--ink-sh);font-weight:700}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 color-mix(in srgb,var(--text) 15%,transparent)}
+@media (hover:hover){.btn:hover{box-shadow:3px 3px 0 color-mix(in srgb,var(--text) 24%,transparent)}}
+.btn.ghost:active{transform:translate(1px,1px)}
+#home>.btn.full:not(.ghost),#send,#dailyGo,#claimBtn,.sent-actions .btn:not(.ghost),.lp-send,#cvSave,#pgSave{box-shadow:var(--ink-sh-lg)}
+#home>.btn.full:not(.ghost):active,#send:active,#dailyGo:active,#claimBtn:active,.lp-send:active,#cvSave:active,#pgSave:active{box-shadow:1px 1px 0 var(--border)}
+.card,.box,.act,.prem,.hints,.pf-safety{border-radius:16px;box-shadow:var(--ink-sh)}
+@media (hover:hover){.card:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 color-mix(in srgb,var(--text) 18%,transparent)}}
+.tabs{border-radius:18px;box-shadow:var(--ink-sh)}
+.tabs button[aria-selected="true"]{border-radius:14px;box-shadow:none}
+.theme-toggle,.views-top{border-radius:11px;box-shadow:2px 2px 0 color-mix(in srgb,var(--text) 16%,transparent)}
+.theme-toggle:active,.views-top:active{transform:translate(1px,1px);box-shadow:1px 1px 0 color-mix(in srgb,var(--text) 16%,transparent)}
+.toast{border-radius:12px;box-shadow:3px 3px 0 color-mix(in srgb,var(--accent) 55%,transparent)}
+.support-fab{box-shadow:var(--ink-sh)}
+.vp-eye{box-shadow:var(--ink-sh-lg)}
+input,textarea,select{border-radius:11px;box-shadow:none}
+input:focus,textarea:focus,select:focus{box-shadow:3px 3px 0 color-mix(in srgb,var(--accent) 40%,transparent)}
+.skel-card{border-radius:16px}
+.fchips button,.bsort button[data-s],.chips button,.lp-prompts button,.react-btn,.share a,.share button,.theme-btn,.gate-tab,.pf-link,.cv-sw button{box-shadow:2px 2px 0 color-mix(in srgb,var(--text) 12%,transparent)}
+.fchips button:active,.chips button:active,.react-btn:active,.bsort button[data-s]:active{transform:translate(1px,1px);box-shadow:none}
+.badge,.vo-n,.prem-tag{box-shadow:1.5px 1.5px 0 var(--border)}
+.new-pill{box-shadow:2px 2px 0 var(--border)}
+.steps .n{box-shadow:1.5px 1.5px 0 var(--border)}
+.pf-av{box-shadow:var(--ink-sh-lg)}
+
+/* typography: editorial, restrained */
+body{font-size:15.5px;line-height:1.55}
+.headline{font-size:2.45rem;letter-spacing:-.02em;text-decoration-thickness:2px;text-underline-offset:9px}
+.pf-name{font-size:1.35rem;letter-spacing:-.01em}
+.hi{font-size:1.4rem;letter-spacing:-.01em}
+h1{font-size:1.08rem;letter-spacing:-.005em}
+.pf-h,.daily-k,.res-head{font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.pf-h{font-size:.74rem;color:var(--muted)}
+.daily-k{font-size:.66rem;letter-spacing:.16em}
+.daily-q{font-size:1.75rem}
+.sub{font-size:.93rem}
+.fine{font-size:.74rem}
+.warn{font-size:.88rem;border-radius:12px}
+.who{font-size:1.05rem}
+
+/* layout rhythm */
+.foot{margin-top:44px;padding-top:18px;border-top:2px solid var(--border)}
+.pf-stats{gap:2px}
+.pf-stats b{font-size:1.45rem}
+.steps li{gap:12px}
+.steps .n{width:28px;height:28px;font-size:.8rem}
+.steps p{font-size:.88rem}
+.daily{padding:18px 18px 15px}
+.pf-list button{border-radius:14px}
+.pf-boost{color:var(--text)}
+.pf-boost p{color:var(--muted)}
+.pf-bt em,.pf-list em{background:var(--accent)}
+.pf-bar{background:var(--bg)}
+.pf-bar i{background:var(--accent)}
+.pf-list .done .ck{background:var(--accent)}
+.pf-safety{padding:16px}
+.hstats div{border-radius:14px}
+
+/* ---------- Profile: Customize preview tiles ---------- */
+.cust-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:2px 0 4px}
+.cust-tile{display:flex;flex-direction:column;gap:8px;min-width:0}
+.cust-tile>b{font:800 .68rem 'Plus Jakarta Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.cust-tile .card{margin:0;cursor:default;box-shadow:2px 2px 0 color-mix(in srgb,var(--text) 12%,transparent)}
+.cust-tile .card:active,.cust-tile .card:hover{transform:none;background:var(--surface);box-shadow:2px 2px 0 color-mix(in srgb,var(--text) 12%,transparent)}
+.cust-tile .card .top{padding:12px 12px 10px}
+.cust-tile .card .hand{font-size:1.02rem;margin:0}
+.cust-tile .card .song{padding:9px 12px;gap:9px}
+.cust-tile .card .song b{font-size:.8rem}
+.cust-tile .card .song span{font-size:.7rem}
+.cust-tile .card .art{width:28px;height:28px;border-radius:7px}
+.cust-tile .pg-prev{padding:14px 10px 12px;border:2px solid var(--border);border-radius:14px;margin-top:0;box-shadow:2px 2px 0 color-mix(in srgb,var(--text) 12%,transparent)}
+.cust-tile .pg-prev .lp-av{width:38px;height:38px;font-size:1.05rem;margin:0 auto 6px;box-shadow:0 0 0 3px rgba(255,255,255,.28)}
+.cust-tile .pg-prev .lp-name{font-size:.9rem}
+.cust-tile .pg-prev .lp-sub{font-size:.95rem;margin:2px 0 0}
+#custBtn{margin-top:10px}
+
+/* ---------- the Customize page: both editors as tidy cards ---------- */
+#detail #custMount .pf-cust,#customWrap .pf-cust{background:var(--surface);border:2px solid var(--border);border-radius:16px;box-shadow:var(--ink-sh);padding:18px;margin:0 0 18px}
+#detail #custMount .pf-cust h3.pf-h{margin:0 0 10px}
+#detail #custMount .pf-cust .sub{margin:0 0 12px;font-size:.88rem}
+.pf-cust .row #pgSave{flex-basis:100%;background:var(--grad);border-color:var(--border);color:#fff}
+
+/* keep motion optional */
+@media (prefers-reduced-motion:reduce){.btn,.card,.tabs button,.theme-toggle,.views-top{transition:none}}
