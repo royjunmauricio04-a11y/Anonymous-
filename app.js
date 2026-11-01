@@ -1534,6 +1534,7 @@
       '<div class="vp-hero"><span class="vp-eye" aria-hidden="true">&#128065;</span><h2 class="hi" style="margin:12px 0 4px">Who viewed your link</h2>' +
       '<p class="sub" style="text-align:center;margin:0">' + (viewTimes.length ? '<b>' + viewTimes.length + '</b> ' + (viewTimes.length === 1 ? 'person has' : 'people have') + ' opened it recently.' : 'Nobody yet. Share your link and views will show up here.') + '</p>' + chips + '</div>' +
       '<div class="act">' + (vrows || '<p class="sub" style="margin:0">No views yet.</p>') + '</div>' +
+      '<button class="btn full" id="vCopy" style="margin-top:14px">&#128279; Copy my link</button>' +
       (mrows ? '<h3 class="pf-h" style="margin:18px 0 8px">New messages</h3><div class="act">' + mrows + '</div>' : '') +
       (prem && !prem.active && total > viewTimes.length ? '<div class="prem" style="margin-top:14px"><div class="prem-h"><span class="prem-tag">&#128274; Premium</span></div><p class="sub" style="margin:10px 0 0">' + (total - viewTimes.length) + ' older views are hidden. Premium unlocks your full view history.</p></div>' : '') +
       '<p class="sub safety-note" style="text-align:center;margin:14px 0 0">Views stay anonymous. You see when they visited, never who they are.</p>';
@@ -1542,6 +1543,16 @@
     $('tabs').hidden = true; $('detail').hidden = false; window.scrollTo(0, 0);
     $('vBack').onclick = function () {
       if (history.state && history.state.t === 'detail') history.back(); else tab(cur, true);
+    };
+    var vcb = $('vCopy');
+    if (vcb) vcb.onclick = function () {
+      var u = profile && profile.username; if (!u) return;
+      var base = C.SITE_URL ? C.SITE_URL.replace(/\/+$/, '') + '/' : location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
+      var l = C.SHORT_LINKS ? base + encodeURIComponent(u) : base + 'send.html?to=' + encodeURIComponent(u);
+      var ok = function () { toast('Your link is copied. Share it!'); };
+      var legacy = function () { try { var t = document.createElement('textarea'); t.value = l; t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); } catch (e) {} };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(l).then(ok, function () { legacy(); ok(); });
+      else { legacy(); ok(); }
     };
   }
   if ($('viewsTop')) $('viewsTop').onclick = openViews;
