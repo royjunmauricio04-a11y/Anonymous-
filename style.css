@@ -1265,3 +1265,34 @@ h1{font-size:1.08rem;letter-spacing:-.005em}
   .ad-card,.badge,.support-fab,.daily::after{animation:none!important}
   .success-burst.show::before,.success-burst.show::after{animation:none!important;display:none}
 }
+
+/* =====================================================================
+   v10 — round 2: Trending chart, sender badges, AdSense slots
+   ===================================================================== */
+
+/* --- Trending now strip (Browse) --- */
+#trending{margin:0 0 16px}
+.tr-head{display:flex;align-items:center;gap:6px;font:800 .74rem 'Plus Jakarta Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.tr-flame{font-size:1rem}
+.tr-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}
+.tr-row::-webkit-scrollbar{display:none}
+.tr-chip{flex:none;display:flex;align-items:center;gap:8px;background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:8px 12px;cursor:pointer;box-shadow:2px 2px 0 color-mix(in srgb,var(--text) 12%,transparent);transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+@media (hover:hover){.tr-chip:hover{transform:translateY(-2px) rotate(-1deg)}}
+.tr-chip:active{transform:scale(.96)}
+.tr-chip i{font-style:normal;font-size:1.05rem;width:22px;height:22px;display:grid;place-items:center}
+.tr-chip i .tr-n{font-size:.72rem;color:var(--muted)}
+.tr-chip span{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+.tr-chip b{font-size:.82rem;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr-chip em{font-style:normal;font-size:.68rem;color:var(--muted)}
+
+/* --- sender badges (Profile) --- */
+#pfBadges{margin-top:14px}
+.bdgs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.bdg-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:2px solid var(--border);border-radius:999px;padding:5px 11px;font:700 .72rem 'Plus Jakarta Sans',sans-serif;box-shadow:1.5px 1.5px 0 var(--border);transform:rotate(-.8deg)}
+.bdg-chip:nth-child(even){transform:rotate(.8deg)}
+.bdg-chip i{font-style:normal;font-size:.95rem}
+.bdg-chip.locked{opacity:.4;filter:grayscale(1)}
+.bdg-chip.streak{background:var(--accent);color:#fff;border-color:var(--border)}
+
+/* --- AdSense real-ad slot (when ADSENSE_ID is set in config.js) --- */
+.ad-slot{margin:14px 0;border-radius:16px;overflow:hidden}
