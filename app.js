@@ -995,7 +995,8 @@
   function paintFeed() {
     var ids = feedAll.filter(function (m) { return isUuid(m.id); }).map(function (m) { return m.id; });
     function go() {
-      show($('feed'), sortedFeed(feedAll), feedQ ? 'No notes match “' + esc(feedQ) + '”. Try another word.' : 'No messages yet. Send the first one.', false);
+      show($('feed'), sortedFeed(feedAll), feedQ ? 'No notes match “' + esc(feedQ) + '”. Try another word.' : 'No messages yet. Be the brave one — send the first song &#127925;', false);
+      injectFeedAds();
       if (feedMore) {
         $('feed').insertAdjacentHTML('beforeend', '<button type="button" class="btn ghost full" id="feedMore">Load older messages</button>');
         $('feedMore').onclick = loadMoreFeed;
@@ -1114,10 +1115,11 @@
     if (!u) return;
     $('mine').innerHTML = skel(2);
     fetchMsgs(u).then(function (a) {
-      show($('mine'), a, 'No direct messages yet. Share your personal link (Profile tab) so someone can send you one.', false);
+      show($('mine'), a, 'Your inbox is quiet... for now &#127769; Share your link — someone out there has a song for you.', false);
       lset(SEEN, a.map(function (m) { return m.id; }).slice(0, 200)); setInboxBadge(0);
       lastInbox = a;
       styleCards($('mine'), profile && profile.card);
+      injectInboxAds();
     }).catch(function (e) {
       $('mine').innerHTML = '<div class="empty">' + esc(dbHint(e)) + '</div>';
     });
@@ -1469,7 +1471,7 @@
   function loadPremium() {
     if (!REMOTE || !profile) return Promise.resolve(null);
     return rpc('premium_status', {}).then(function (p) { prem = p; return p; }).catch(function () { prem = null; return null; })
-      .then(function (p) { paintPremium(); renderViews(); return p; });
+      .then(function (p) { paintPremium(); renderViews(); injectHomeAds(); return p; });
   }
   function paintPremium() {
     var c = $('premCard'); if (!c) return;
@@ -1483,7 +1485,7 @@
       return;
     }
     c.innerHTML = '<div class="prem-h"><b>Premium</b>' + (price ? '<span class="prem-tag">' + price + '</span>' : '') + '</div>' +
-      '<p class="sub" style="margin:6px 0 10px">See more hints on private messages (how many came from the same sender, when they were sent) and your full Recent views. You still never see who it is.</p>' +
+      '<p class="sub" style="margin:6px 0 10px">No ads anywhere, extra sender hints on private messages (how many came from the same sender, when they were sent) and your full Recent views. You still never see who it is.</p>' +
       (prem.trial_available ? '<button type="button" class="btn full" id="premTrial">Try free for ' + esc(prem.trial_days) + (prem.trial_days === 1 ? ' day' : ' days') + '</button>'
         : '<p class="sub" style="margin:0">' + (prem.trial_used ? 'Your free trial has ended. ' : '') + esc(prem.pay_note || '') + '</p>');
     var tb = $('premTrial');
@@ -1493,6 +1495,72 @@
         .catch(function (e) { tb.disabled = false; toast(dbHint(e), true); loadPremium(); });
     };
   }
+  /* ---------- house ads: free users see fun promos; Premium removes every ad ---------- */
+  var AD_POOL = [
+    { ic: '&#128250;', t: 'Tired of ads already?', d: 'Premium removes every ad on Anonymous and unlocks sender hints.', cta: 'Remove ads', act: 'prem' },
+    { ic: '&#128065;', t: 'Someone keeps opening your link', d: 'Premium unlocks your full view history — every visit, every day.', cta: 'Unlock views', act: 'prem' },
+    { ic: '&#10024;', t: 'Your page could look this fun', d: 'Card styles, link backgrounds, your own photos — one Customize page.', cta: 'Customize', act: 'cust' },
+    { ic: '&#128279;', t: 'Your link is your secret mailbox', d: 'Share it anywhere. Songs arrive anonymously.', cta: 'Copy my link', act: 'link' },
+    { ic: '&#9889;', t: 'Keep the party running', d: 'Premium keeps Anonymous alive and gives you no ads + extra sender hints.', cta: 'See Premium', act: 'prem' }
+  ];
+  var adTick = 0;
+  function adsOn() { return !(prem && prem.active); }
+  function nextAd() { adTick++; return AD_POOL[adTick % AD_POOL.length]; }
+  function adCard(ad) {
+    return '<div class="ad-card" role="complementary" aria-label="Sponsored">' +
+      '<span class="ad-pill">AD</span><span class="ad-ic" aria-hidden="true">' + ad.ic + '</span>' +
+      '<b>' + ad.t + '</b><p>' + ad.d + '</p>' +
+      '<button type="button" class="btn small" data-ad="' + ad.act + '">' + ad.cta + '</button></div>';
+  }
+  function bindAds(root) {
+    [].forEach.call((root || document).querySelectorAll('.ad-card button[data-ad]'), function (b) {
+      b.onclick = function () {
+        var a = b.dataset.ad;
+        if (a === 'prem') {
+          if (!profile) { tab('profile'); return; }
+          tab('mybox');
+          setTimeout(function () { var c = $('premCard'); if (c) { c.hidden = false; paintPremium(); c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.classList.add('prem-flash'); setTimeout(function () { c.classList.remove('prem-flash'); }, 1600); } }, 200);
+        } else if (a === 'cust') { openCustom(); }
+        else if (a === 'link') {
+          if (!profile) { tab('profile'); return; }
+          var base = C.SITE_URL ? C.SITE_URL.replace(/\/+$/, '') + '/' : location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
+          var l = C.SHORT_LINKS ? base + encodeURIComponent(profile.username) : base + 'send.html?to=' + encodeURIComponent(profile.username);
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(l).then(function () { toast('Your link is copied. Share it!'); });
+          else toast('Copy your link from the Profile tab.', true);
+        }
+      };
+    });
+  }
+  function injectFeedAds() {
+    if (!adsOn()) return;
+    var f = $('feed'); if (!f) return;
+    var cards = f.querySelectorAll('.card');
+    [2, 7].forEach(function (pos) {
+      if (cards.length > pos) {
+        var host = document.createElement('div');
+        host.innerHTML = adCard(nextAd());
+        cards[pos - 1].after(host.firstChild);
+      }
+    });
+    bindAds(f);
+  }
+  function injectInboxAds() {
+    if (!adsOn() || !profile) return;
+    var m = $('mine'); if (!m) return;
+    if (!m.querySelectorAll('.card').length) return;   /* keep a first-run empty inbox clean */
+    m.insertAdjacentHTML('beforeend', adCard(nextAd()));
+    bindAds(m);
+  }
+  function injectHomeAds() {
+    var h = $('home'); if (!h) return;
+    var old = $('homeAd'); if (old) old.remove();
+    if (!adsOn()) return;
+    var daily = h.querySelector('.daily');
+    if (!daily) return;
+    daily.insertAdjacentHTML('afterend', '<div id="homeAd">' + adCard(nextAd()) + '</div>');
+    bindAds($('homeAd'));
+  }
+
   var viewTimes = [], actEv = [];
   /* ---------- Views page (NGL-style): one button on Profile, a page of its own ---------- */
   function viewClue(t) {                    /* an honest clue: only WHEN they opened it, never who */
@@ -1923,7 +1991,7 @@
         $('gateSub').textContent = 'You are signed in. Choose a username to finish.';
         return;
       }
-      tab('home'); checkInbox(false);
+      tab('home'); checkInbox(false); loadPremium();
     }).catch(function (e) {
       if (!(e && e.status && e.status >= 400 && e.status < 500)) { profile = null; setGateMode('name'); showGate(); $('cmsg').className = 'msg err'; $('cmsg').textContent = 'Could not reach the server. Check your connection and reload. You are not signed out.'; return; }
       sessionSet(null); currentUser = null; profile = null; setGateMode('name'); showGate();
@@ -2059,6 +2127,7 @@
 
   restoreDraft(); updCount();
   boot();
+  injectHomeAds();
 
 })();
 
