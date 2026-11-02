@@ -1198,3 +1198,70 @@ h1{font-size:1.08rem;letter-spacing:-.005em}
 
 /* keep motion optional */
 @media (prefers-reduced-motion:reduce){.btn,.card,.tabs button,.theme-toggle,.views-top{transition:none}}
+
+/* =====================================================================
+   v9 — fun layer: bouncy, joyful, alive. Paper & Ink bones, party clothes.
+   ===================================================================== */
+:root{--gold:#F2D06B;--teal:#3AAFA9;--violet:#A855F7}
+
+/* --- house ad cards (Premium removes them) --- */
+.ad-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+  background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:16px 16px 14px;margin:14px 0;
+  box-shadow:var(--ink-sh);transform:rotate(-.7deg);animation:cardIn .35s cubic-bezier(.2,.8,.2,1) both}
+.ad-card:nth-of-type(even){transform:rotate(.7deg)}
+#homeAd .ad-card{margin:16px 0 0}
+.ad-pill{position:absolute;top:-11px;right:14px;background:var(--accent);color:#fff;border:2px solid var(--border);
+  font:700 .6rem 'Plus Jakarta Sans',sans-serif;letter-spacing:.14em;padding:2px 8px;border-radius:6px;
+  box-shadow:1.5px 1.5px 0 var(--border);transform:rotate(3deg)}
+.ad-ic{font-size:1.6rem;line-height:1}
+.ad-card b{font-size:.98rem;letter-spacing:-.01em}
+.ad-card p{margin:0;font-size:.84rem;color:var(--muted)}
+.ad-card .btn{margin-top:8px}
+
+/* premium card flashes when an ad sends you there */
+.prem-flash{animation:premflash9 1.5s ease 1}
+@keyframes premflash9{0%,100%{outline:0 solid transparent}30%{outline:3px solid var(--accent);outline-offset:3px}}
+
+/* --- bouncy everything --- */
+.btn{transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .15s ease}
+@media (hover:hover){.btn:hover{transform:translate(-1px,-2px)}}
+.tabs button{transition:transform .2s cubic-bezier(.34,1.56,.64,1),background .15s,color .15s}
+@media (hover:hover){.tabs button:hover{transform:translateY(-2px)}}
+.card{transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s ease}
+@media (hover:hover){.card:hover{transform:translateY(-3px) rotate(-.4deg)}}
+.gate-tab{transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+.gate-tab:active{transform:scale(.95)}
+.badge{animation:popIn9 .35s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes popIn9{from{transform:scale(0)}to{transform:scale(1)}}
+
+/* --- confetti sparks on the "sent!" burst --- */
+.success-burst.show::before,.success-burst.show::after{content:'';position:absolute;top:30%;width:9px;height:9px;border-radius:2px;border:1.5px solid var(--border)}
+.success-burst.show::before{left:18%;background:var(--gold);animation:spark9 .8s ease-out both}
+.success-burst.show::after{left:82%;background:var(--teal);animation:spark9 .8s ease-out .09s both}
+@keyframes spark9{from{transform:translate(0,0) rotate(0);opacity:1}to{transform:translate(-30px,-46px) rotate(220deg);opacity:0}}
+
+/* --- washi tape on the Daily prompt (sticker vibes) --- */
+.daily{position:relative}
+.daily::after{content:'';position:absolute;top:-10px;left:50%;width:92px;height:20px;border-radius:2px;
+  transform:translateX(-50%) rotate(-2.5deg);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 75%,transparent),color-mix(in srgb,var(--gold) 55%,transparent));
+  box-shadow:0 1px 2px rgba(0,0,0,.12);opacity:.95}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .daily::after{opacity:.5}}
+:root[data-theme="dark"] .daily::after{opacity:.5}
+
+/* --- headline gets a party dot --- */
+.headline::after{content:'';display:inline-block;width:.5em;height:.5em;margin-left:.16em;border-radius:50%;
+  background:var(--accent);border:2px solid var(--border);box-shadow:1.5px 1.5px 0 var(--border);transform:rotate(8deg)}
+
+/* --- support FAB gets a gentle idle wiggle --- */
+.support-fab{animation:fabWiggle9 5s ease-in-out 3s infinite}
+@keyframes fabWiggle9{0%,88%,100%{transform:none}92%{transform:rotate(-7deg) scale(1.06)}96%{transform:rotate(5deg) scale(1.06)}}
+
+/* --- fun tone: slightly bigger hand script, peppier daily prompt --- */
+.daily-q{font-size:1.9rem}
+
+/* keep motion optional */
+@media (prefers-reduced-motion:reduce){
+  .ad-card,.badge,.support-fab,.daily::after{animation:none!important}
+  .success-burst.show::before,.success-burst.show::after{animation:none!important;display:none}
+}
