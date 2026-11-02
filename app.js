@@ -984,7 +984,7 @@
   }
   function cardH(m, isNew) {
     return '<div class="card' + (isNew ? ' new' : '') + '" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Open message to ' + esc(m.to) + '">' +
-      '<div class="top"><div class="thead"><span class="to">To: ' + esc(m.to) + '</span><span class="stamp">' + (m.ex ? 'Sample' : m.bot ? 'Bot' : m.parent ? 'Reply' : 'From: ???') + '</span>' + (m.t && !m.ex ? '<time class="when">' + esc(ago(m.t)) + '</time>' : '') + '</div><p class="hand clip">' + esc(m.text) + '</p></div>' +
+      '<div class="top"><div class="thead"><span class="to">To: ' + esc(m.to) + '</span><span class="stamp' + (m.bot ? ' bot' : '') + '">' + (m.ex ? 'Sample' : m.bot ? '&#129302; Bot' : m.parent ? 'Reply' : 'From: ???') + '</span>' + (m.t && !m.ex ? '<time class="when">' + esc(ago(m.t)) + '</time>' : '') + '</div><p class="hand clip">' + esc(m.text) + '</p></div>' +
       '<div class="song">' + art(m.color, m.song + ' ' + m.artist) + '<span><b>' + esc(m.song) + '</b><span>' + esc(m.artist) + '</span></span>' + pbtn(m, '') + '</div>' +
       reactBar(m) + '</div>';
   }
