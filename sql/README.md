@@ -11,6 +11,7 @@ Patakbuhin sa **Supabase > SQL Editor**, isang beses lang, sunod-sunod:
 7. `premium-upgrade.sql` — Premium + trial *(opsyonal, kung gagamitin)*
 8. `chat-pause.sql` — pause ng Support chat *(opsyonal)*
 9. `reply-upgrade.sql` — anonymous replies: sagot ang nagpadala sa'yo ng private song, papunta sa Inbox nila *(recommended)*
+10. `bot-upgrade.sql` — feed bots: extra cute lines, buhay agad ang Browse, at naka-ON na sila *(recommended para lively ang feed)*
 
 ## Diagnosis / pag-aayos
 - `check-card.sql` — tseke kung kumpleto ang card design setup (print ng OK o MISSING)
