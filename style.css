@@ -1296,3 +1296,9 @@ h1{font-size:1.08rem;letter-spacing:-.005em}
 
 /* --- AdSense real-ad slot (when ADSENSE_ID is set in config.js) --- */
 .ad-slot{margin:14px 0;border-radius:16px;overflow:hidden}
+
+/* =====================================================================
+   v11 — bot badge: clearly labeled, but cute
+   ===================================================================== */
+.stamp.bot{border-style:solid;border-color:var(--info-b);background:var(--info);color:var(--info-t);font-weight:700}
+.has-style .card .stamp.bot,.card.has-style .stamp.bot{background:rgba(255,255,255,.28);border-color:rgba(255,255,255,.55);color:var(--card-fg,#fff)}
