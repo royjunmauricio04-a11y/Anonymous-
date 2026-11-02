@@ -10,6 +10,7 @@ Patakbuhin sa **Supabase > SQL Editor**, isang beses lang, sunod-sunod:
 6. `card-share-upgrade.sql` — shared card designs (mabilis na Browse)
 7. `premium-upgrade.sql` — Premium + trial *(opsyonal, kung gagamitin)*
 8. `chat-pause.sql` — pause ng Support chat *(opsyonal)*
+9. `reply-upgrade.sql` — anonymous replies: sagot ang nagpadala sa'yo ng private song, papunta sa Inbox nila *(recommended)*
 
 ## Diagnosis / pag-aayos
 - `check-card.sql` — tseke kung kumpleto ang card design setup (print ng OK o MISSING)
