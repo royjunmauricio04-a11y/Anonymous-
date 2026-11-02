@@ -752,12 +752,96 @@
   };
 
   /* ---------- send ---------- */
+  /* ---------- sender streaks & badges (kept on this device) ---------- */
+  var STK = 'anon-streak';
+  function streakData() { return lget(STK, { days: [], sends: 0, night: 0, weekend: 0 }); }
+  function dayKey(ts) { try { return new Date(ts).toDateString(); } catch (e) { return ''; } }
+  function streakLen(s) {
+    var n = 0, d = new Date();
+    for (var i = 0; i < 21; i++) {
+      if (s.days.indexOf(d.toDateString()) >= 0) { n++; d.setDate(d.getDate() - 1); }
+      else break;
+    }
+    return n;
+  }
+  function bumpStreak() {
+    var s = streakData(), k = dayKey(Date.now());
+    if (s.days.indexOf(k) < 0) s.days.push(k);
+    s.days = s.days.filter(function (d) { return Date.parse(d) > Date.now() - 21 * 864e5; }).slice(-10);
+    s.sends = (s.sends || 0) + 1;
+    var h = new Date().getHours();
+    if (h < 5) s.night = (s.night || 0) + 1;
+    var wd = new Date().getDay();
+    if (wd === 0 || wd === 6) s.weekend = (s.weekend || 0) + 1;
+    lset(STK, s);
+    return s;
+  }
+  function streakMilestone() {
+    var before = streakLen(streakData());
+    var s = bumpStreak();
+    var after = streakLen(s);
+    if (after > before && (after === 2 || after === 3 || after === 7 || after === 14)) {
+      toast('🔥 ' + after + '-day streak! Keep it going.');
+    }
+  }
+  function badgeList() {
+    var s = streakData(), st = streakLen(s);
+    return [
+      { ic: '🎵', t: 'First note', ok: s.sends >= 1 },
+      { ic: '✉️', t: 'Regular · 5', ok: s.sends >= 5 },
+      { ic: '🚀', t: 'Machine · 25', ok: s.sends >= 25 },
+      { ic: '🔥', t: '3-day streak', ok: st >= 3 },
+      { ic: '⭐', t: '7-day streak', ok: st >= 7 },
+      { ic: '🦉', t: 'Night owl', ok: (s.night || 0) >= 1 },
+      { ic: '🎉', t: 'Weekend warrior', ok: (s.weekend || 0) >= 2 }
+    ];
+  }
+  function renderBadges() {
+    var pf = $('pf'); if (!pf) return;
+    var bd = $('pfBadges');
+    if (!bd) {
+      var stats = pf.querySelector('.pf-stats');
+      if (!stats) return;
+      bd = document.createElement('div'); bd.id = 'pfBadges';
+      stats.insertAdjacentElement('afterend', bd);
+    }
+    var s = streakData(), st = streakLen(s);
+    bd.innerHTML = '<h3 class="pf-h">Your badges</h3><div class="bdgs">' +
+      badgeList().map(function (b) {
+        return '<span class="bdg-chip' + (b.ok ? '' : ' locked') + '"><i aria-hidden="true">' + b.ic + '</i>' + esc(b.t) + '</span>';
+      }).join('') +
+      '<span class="bdg-chip streak"><i aria-hidden="true">🔥</i>' + st + '-day streak</span></div>';
+  }
+
   $('backMain').onclick = function () { location.hash = ''; tab('home'); };
   $('send').onclick = function () {
     var to = $('to').value.trim(), tx = $('text').value.trim(), m = $('msg');
     var direct = !!(location.hash.match(/(?:^#|&)to=/));
     if (!profile) { showGate(); return; }
     if (!pick && $('q').value.trim()) { var t = $('q').value.trim().split(' - '); pick = [t[0], t[1] || 'Unknown artist', '#999', '']; }
+    /* anonymous reply to an Inbox sender: delivered by the server, the sender never sees a name */
+    if (replyPrivate && replyParent) {
+      if (!tx) { m.className = 'msg err'; m.textContent = 'Write a message.'; return; }
+      if (!pick) { m.className = 'msg err'; m.textContent = 'Pick a song from the list, or type one and press Send.'; return; }
+      $('send').disabled = true;
+      rpc('send_reply', { p_parent_id: replyParent, p_body: tx, p_song: pick[0], p_artist: pick[1], p_art: pick[2], p_preview: pick[3] || '' }).then(function (id) {
+        var o2 = { id: id || ('l' + Date.now()), to: 'reply', key: 'reply', type: 'direct', text: tx, song: pick[0], artist: pick[1], color: pick[2], prev: pick[3] || '', t: Date.now(), parent: replyParent };
+        var sent = pruneHistory(); sent.unshift(o2); lset(SENT, sent.slice(0, 100));
+        m.className = 'msg ok-pop';
+        m.textContent = 'Reply sent anonymously. It will appear in their Inbox.';
+        $('text').value = ''; pick = null; $('picked').innerHTML = ''; $('q').hidden = false;
+        replyParent = null; replyPrivate = false; lastSent = o2; clearDraft(); updCount(); $('text').placeholder = TEXT_PH;
+        $('sentActions').hidden = false; $('seeBrowse').hidden = true;
+        celebrateSend(); streakMilestone();
+      }).catch(function (e) {
+        m.className = 'msg err';
+        m.textContent = dbHint(e);
+        if (e && (e.status === 404 || (function () { try { return JSON.parse(e.text).code === 'PGRST202'; } catch (x) { return false; } })())) {
+          m.textContent = 'Replies are almost ready — the site owner needs to run sql/reply-upgrade.sql in Supabase.';
+        }
+      }).then(function () { $('send').disabled = false; });
+      return;
+    }
     var miss = !to ? (direct ? 'The personal link is missing its recipient.' : 'Add a name or nickname for the public post.') : !tx ? 'Write a message.' : !pick ? 'Pick a song from the list, or type one and press Send.' : '';
     if (miss) { m.className = 'msg err'; m.textContent = miss; return; }
     var o = { id: 'l' + Date.now(), to: to, key: direct ? norm(to) : 'public', type: direct ? 'direct' : 'public', text: tx, song: pick[0], artist: pick[1], color: pick[2], prev: pick[3] || '', t: Date.now() };
@@ -769,15 +853,16 @@
       m.className = 'msg ok-pop';
       m.textContent = direct ? 'Sent anonymously. Only the owner of that personal link can see it in their Inbox.' : 'Posted anonymously to Browse. The named person will not receive an Inbox message.';
       $('to').value = direct ? $('to').value : ''; $('text').value = ''; pick = null; $('picked').innerHTML = ''; $('q').hidden = false;
-      replyParent = null; lastSent = o; clearDraft(); updCount(); $('text').placeholder = TEXT_PH;
+      replyParent = null; replyPrivate = false; lastSent = o; clearDraft(); updCount(); $('text').placeholder = TEXT_PH;
       $('sentActions').hidden = false; $('seeBrowse').hidden = direct;
       celebrateSend();
+      streakMilestone();
       if (!direct) loadFeed();
     }).catch(function (e) { m.className = 'msg err'; m.textContent = (e && e.msg) || dbHint(e); })
       .then(function () { $('send').disabled = false; });
   };
 
-  var replyParent = null;
+  var replyParent = null, replyPrivate = false;
   function celebrateSend() {
     try { if (navigator.vibrate) navigator.vibrate([18, 40, 18]); } catch (e) {}
     var burst = $('successBurst');
@@ -992,11 +1077,46 @@
     return list.map(function (m, i) { return { m: m, i: i, n: reactTotal(reactCache[m.id]) }; })
       .sort(function (a, b) { return b.n - a.n || a.i - b.i; }).map(function (x) { return x.m; });
   }
+  /* ---------- Trending now: the songs people keep sending ---------- */
+  function drawTrending() {
+    var f = $('feed'); if (!f) return;
+    var t = $('trending');
+    if (!t) { t = document.createElement('div'); t.id = 'trending'; f.parentNode.insertBefore(t, f); }
+    var counts = {};
+    feedAll.forEach(function (m) {
+      if (m.bot) return;
+      var sg = String(m.song || '').trim(), ar = String(m.artist || '').trim();
+      if (!sg) return;
+      var k = sg.toLowerCase() + '|' + ar.toLowerCase();
+      if (!counts[k]) counts[k] = { n: 0, song: sg, artist: ar };
+      counts[k].n++;
+    });
+    var list = Object.keys(counts).map(function (k) { return counts[k]; })
+      .sort(function (a, b) { return b.n - a.n; }).slice(0, 5)
+      .filter(function (x, i) { return i === 0 ? x.n >= 2 : true; });
+    if (!list.length) { t.hidden = true; return; }
+    t.hidden = false;
+    var medal = ['&#129351;', '&#129352;', '&#129353;'];
+    t.innerHTML = '<div class="tr-head"><span class="tr-flame" aria-hidden="true">&#128293;</span> Trending now</div>' +
+      '<div class="tr-row">' + list.map(function (x, i) {
+        return '<button type="button" class="tr-chip" data-song="' + esc(x.song) + '">' +
+          '<i aria-hidden="true">' + (medal[i] || ('<b class="tr-n">' + (i + 1) + '</b>')) + '</i>' +
+          '<span><b>' + esc(x.song) + '</b><em>' + esc(x.artist) + ' &middot; ' + x.n + '&times;</em></span></button>';
+      }).join('') + '</div>';
+    t.onclick = function (e) {
+      var b = e.target.closest('button[data-song]'); if (!b) return;
+      $('bq').value = b.dataset.song;
+      runSearch();
+      $('bq').focus();
+    };
+  }
+
   function paintFeed() {
     var ids = feedAll.filter(function (m) { return isUuid(m.id); }).map(function (m) { return m.id; });
     function go() {
       show($('feed'), sortedFeed(feedAll), feedQ ? 'No notes match “' + esc(feedQ) + '”. Try another word.' : 'No messages yet. Be the brave one — send the first song &#127925;', false);
       injectFeedAds();
+      drawTrending();
       if (feedMore) {
         $('feed').insertAdjacentHTML('beforeend', '<button type="button" class="btn ghost full" id="feedMore">Load older messages</button>');
         $('feedMore').onclick = loadMoreFeed;
@@ -1215,6 +1335,7 @@
     }).join('');
     $('pfList').onclick = function (e) { var b = e.target.closest('button'); if (b) steps[+b.dataset.i][3](); };
     styleCards($('mine'), profile.card);
+    renderBadges();
     if ($('cvMiniBox')) styleCards($('cvMiniBox'), profile.card);
     if ($('pgMini')) {
       CardStyle.hero($('pgMini'), profile.page);
@@ -1505,6 +1626,16 @@
   ];
   var adTick = 0;
   function adsOn() { return !(prem && prem.active); }
+  function adsenseInit() {
+    if (!C.ADSENSE_ID || document.getElementById('adsense-lib')) return;
+    var s = document.createElement('script');
+    s.id = 'adsense-lib'; s.async = true; s.crossOrigin = 'anonymous';
+    s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent('ca-' + C.ADSENSE_ID);
+    document.head.appendChild(s);
+  }
+  function adsenseSlot() {
+    return '<ins class="adsbygoogle ad-slot" style="display:block" data-ad-client="ca-' + esc(C.ADSENSE_ID) + '" data-ad-format="auto" data-full-width-responsive="true"></ins>';
+  }
   function nextAd() { adTick++; return AD_POOL[adTick % AD_POOL.length]; }
   function adCard(ad) {
     return '<div class="ad-card" role="complementary" aria-label="Sponsored">' +
@@ -1534,12 +1665,14 @@
   function injectFeedAds() {
     if (!adsOn()) return;
     var f = $('feed'); if (!f) return;
+    if (C.ADSENSE_ID) adsenseInit();
     var cards = f.querySelectorAll('.card');
     [2, 7].forEach(function (pos) {
       if (cards.length > pos) {
         var host = document.createElement('div');
-        host.innerHTML = adCard(nextAd());
+        host.innerHTML = C.ADSENSE_ID ? adsenseSlot() : adCard(nextAd());
         cards[pos - 1].after(host.firstChild);
+        if (C.ADSENSE_ID) { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {} }
       }
     });
     bindAds(f);
@@ -1743,9 +1876,10 @@
     };
     $('replySong').onclick = function () {
       replyParent = (isPublic && !m.ex && isUuid(m.id)) ? m.id : null;
+      replyPrivate = !isPublic && isPrivateIn && !m.bot && !m.ex;
       var seed = isPublic
         ? ('Replying to an anonymous note about “' + m.song + '”. ')
-        : ('Someone sent me “' + m.song + '”. Here is my anonymous reply on Browse. ');
+        : ('Someone sent me “' + m.song + '”. This reply goes straight to their Inbox. ');
       tab('submit');
       $('to').value = m.to || 'someone';
       $('text').value = seed; updCount();
