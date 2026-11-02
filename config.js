@@ -6,5 +6,5 @@ window.APP_CONFIG = {
   SITE_URL: "https://anonymous-ztsp.onrender.com", // after hosting, paste your public link, e.g. https://anonymous.onrender.com
   SHORT_LINKS: true, // true = share links like https://your-site.onrender.com/username (NGL style). First add the Rewrite rule from README (Render: Redirects/Rewrites, /* -> /send.html)
   SUPPORT_EMAIL: "royjunmauricio04@gmail.com", // optional: shows a Send feedback link
-  ADSENSE_ID: "" // optional: your Google AdSense publisher ID (e.g. "1234567890123456"). When set, real ads replace the house promos in the Browse feed. Premium users never see ads.
+  ADSENSE_ID: "pub-5406214154079167" // your Google AdSense publisher ID, format "pub-XXXXXXXXXXXXXXXX" (the app adds the ca- prefix). Real ads replace the house promos in the Browse feed. Premium users never see ads.
 };
