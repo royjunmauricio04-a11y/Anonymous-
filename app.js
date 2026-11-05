@@ -2288,7 +2288,7 @@
     if (stF) { stF.hidden = !fba || fba.hidden; if (fba) stF.onclick = function () { fba.click(); }; }
     if ($('stCopy')) $('stCopy').onclick = function () {
       if (!profile) return;
-      var base = C.SITE_URL ? C.SITE_URL.replace(/\\/+$/, '') + '/' : location.href.split('#')[0].split('?')[0].replace(/[^\\/]*$/, '');
+      var base = C.SITE_URL ? C.SITE_URL.replace(/\/+$/, '') + '/' : location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
       var l = C.SHORT_LINKS ? base + encodeURIComponent(profile.username) : base + 'send.html?to=' + encodeURIComponent(profile.username);
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(l).then(function () { toast('Your link is copied. Share it!'); }, function () { toast('Copy did not work on this browser.'); });
       else toast('Copy did not work on this browser.');
