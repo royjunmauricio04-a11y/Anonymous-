@@ -1329,3 +1329,25 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 /* --- one identical press feel on every small button --- */
 .gate-tab,.bsort button[data-s],.share a,.share button,.cv-sw button{transition:transform .12s,opacity .12s}
 .gate-tab:active,.bsort button[data-s]:active,.share a:active,.share button:active,.cv-sw button:active{transform:scale(.96)}
+
+/* =====================================================================
+   v13 — Settings tab
+   ===================================================================== */
+.st-h{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:2px 0 14px}
+.st-box{margin-bottom:12px}
+.st-box h3{margin:0 0 4px;font-size:1.02rem}
+.st-who{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.st-at{font-weight:700;font-size:1.05rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-seg{display:flex;gap:4px;padding:3px;background:var(--surface);border-radius:12px}
+.st-seg button{flex:1;border:0;background:none;color:var(--muted);font:600 .85rem 'Plus Jakarta Sans',sans-serif;padding:9px 6px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.st-seg button[aria-pressed="true"]{background:var(--bg);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.st-links{display:flex;flex-direction:column;padding:0;overflow:hidden;margin-bottom:12px}
+.st-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:0;border-bottom:1px solid var(--border);background:none;color:var(--text);font:600 .95rem 'Plus Jakarta Sans',sans-serif;padding:14px 20px;cursor:pointer;text-decoration:none}
+.st-row:last-child{border-bottom:0}
+.st-row i{color:var(--muted);font-style:normal}
+.st-row:active{background:var(--surface)}
+.st-note{color:var(--muted);font-size:.82rem;margin:8px 0 0}
+.st-danger .btn{color:var(--accent);border-color:var(--accent)}
+.st-about{text-align:center;color:var(--muted);font-size:.8rem;margin:18px 0 6px}
+.st-seg button,.st-row{transition:transform .12s,opacity .12s}
+.st-seg button:active,.st-row:active{transform:scale(.97)}
