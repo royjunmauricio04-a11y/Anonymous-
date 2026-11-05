@@ -4,7 +4,7 @@
   var REMOTE = !!(C.SUPABASE_URL && C.SUPABASE_KEY);
   var $ = function (i) { return document.getElementById(i); };
   var LS = 'anon-msgs', US = 'anon-user', SENT = 'anon-sent';
-  var SECS = ['gate', 'maint', 'home', 'submit', 'browse', 'mybox', 'profile', 'history', 'detail'];
+  var SECS = ['gate', 'maint', 'home', 'submit', 'browse', 'mybox', 'profile', 'history', 'settings', 'detail'];
   var cache = {}, cur = 'submit', pick = null, last = [], tmr, seen = {}, feedReady = false;
   var CAT = [
     ["Tingin", "Cup of Joe, Janine", "#3F6B55"],
@@ -581,7 +581,7 @@
   function isDirectLink() { return /(?:^#|&)to=/.test(location.hash); }
   function tab(t, fromPop) {
     if (maint !== null && t !== 'admin') { showMaint(); return; }
-    if (!profile && ['submit', 'mybox', 'profile', 'history'].indexOf(t) > -1) { showGate(); return; }
+    if (!profile && ['submit', 'mybox', 'profile', 'history', 'settings'].indexOf(t) > -1) { showGate(); return; }
     if (typeof au !== 'undefined') { au.pause(); rst(); }
     cur = t; window.scrollTo(0, 0);
     if (!fromPop) navTo(t);
@@ -600,6 +600,7 @@
     if (t === 'submit') { try { drawSubPv(); } catch (e) {} }
     if (t === 'mybox') openInbox();
     if (t === 'profile') openProfile();
+    if (t === 'settings') openSettings();
   }
   $('tabs').onclick = function (e) { var b = e.target.closest('button'); if (b) tab(b.dataset.t); };
 
@@ -2258,6 +2259,46 @@
     }, 30 * 1000);
   }
   try { liveStart(); } catch (e) {}
+
+  /* ---------- Settings tab ---------- */
+  function openSettings() {
+    if ($('stUser') && profile) $('stUser').textContent = '@' + profile.username;
+    var seg = $('stTheme');
+    if (seg) {
+      var mode = lget(THEME_KEY, 'system');
+      [].forEach.call(seg.children, function (b) { b.setAttribute('aria-pressed', b.dataset.th === mode); });
+      seg.onclick = function (e) {
+        var b = e.target.closest('button[data-th]'); if (!b) return;
+        applyTheme(b.dataset.th);
+        [].forEach.call(seg.children, function (x) { x.setAttribute('aria-pressed', x === b); });
+      };
+    }
+    var nb = $('stNotif'), nt = $('stNotifTxt');
+    function notifState() {
+      if (!nb || !nt) return;
+      if (!('Notification' in window)) { nb.hidden = true; nt.textContent = 'Notifications are not supported on this device.'; return; }
+      if (Notification.permission === 'granted') { nb.hidden = true; nt.textContent = 'On. You will get a heads-up when a new song lands in your Inbox.'; }
+      else if (Notification.permission === 'denied') { nb.hidden = true; nt.textContent = 'Notifications are blocked for this site. Turn them on in your browser site settings.'; }
+      else { nb.hidden = false; nt.textContent = 'Get a heads-up when a new anonymous song lands in your Inbox.'; }
+    }
+    notifState();
+    if (nb) nb.onclick = function () { try { Notification.requestPermission().catch(function () {}); } catch (e) {} setTimeout(notifState, 500); };
+    if ($('stSupport')) $('stSupport').onclick = openSupport;
+    var fba = $('fb'), stF = $('stFeedback');
+    if (stF) { stF.hidden = !fba || fba.hidden; if (fba) stF.onclick = function () { fba.click(); }; }
+    if ($('stCopy')) $('stCopy').onclick = function () {
+      if (!profile) return;
+      var base = C.SITE_URL ? C.SITE_URL.replace(/\\/+$/, '') + '/' : location.href.split('#')[0].split('?')[0].replace(/[^\\/]*$/, '');
+      var l = C.SHORT_LINKS ? base + encodeURIComponent(profile.username) : base + 'send.html?to=' + encodeURIComponent(profile.username);
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(l).then(function () { toast('Your link is copied. Share it!'); }, function () { toast('Copy did not work on this browser.'); });
+      else toast('Copy did not work on this browser.');
+    };
+    if ($('stLogout')) $('stLogout').onclick = function () {
+      if (!window.confirm('Log out on this device? You will need your PIN or email login to come back. Your Inbox stays safe on your username.')) return;
+      sessionSet(null); currentUser = null; profile = null;
+      location.reload();
+    };
+  }
 
   restoreDraft(); updCount();
   boot();
