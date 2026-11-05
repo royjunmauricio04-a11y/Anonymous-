@@ -38,6 +38,7 @@
  <button role="tab" data-t="mybox" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 13l2.2-6.2A2 2 0 0 1 7.6 5.5h8.8a2 2 0 0 1 1.9 1.3L20.5 13v4.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M3.5 13H8l1 2h6l1-2h4.5"/></svg><span class="tl">Inbox</span></button>
  <button role="tab" data-t="profile" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="3.5"/><path d="M5 19.5c1.5-3.2 4-5 7-5s5.5 1.8 7 5"/></svg><span class="tl">Profile</span></button>
  <button role="tab" data-t="history" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span class="tl">History</span></button>
+ <button role="tab" data-t="settings" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="tl">Settings</span></button>
 </nav>
 
 <section id="gate" hidden>
@@ -248,6 +249,34 @@
     </div>
    </div>
 </div>
+<section id="settings" hidden>
+ <h2 class="st-h">Settings</h2>
+ <div class="box st-box">
+  <div class="st-who"><span class="st-at" id="stUser"></span><button type="button" class="btn ghost" id="stCopy">Copy my link</button></div>
+ </div>
+ <div class="box st-box">
+  <h3>Appearance</h3>
+  <p class="sub" style="margin:0 0 10px">How Anonymous looks on this phone.</p>
+  <div class="st-seg" id="stTheme"><button type="button" data-th="system">System</button><button type="button" data-th="light">Light</button><button type="button" data-th="dark">Dark</button></div>
+ </div>
+ <div class="box st-box">
+  <h3>Notifications</h3>
+  <p class="sub" style="margin:0 0 12px" id="stNotifTxt">Get a heads-up when a new anonymous song lands in your Inbox.</p>
+  <button type="button" class="btn ghost" id="stNotif">Turn on notifications</button>
+ </div>
+ <div class="box st-links">
+  <button type="button" class="st-row" id="stSupport"><span>Support &amp; FAQ</span><i aria-hidden="true">&rsaquo;</i></button>
+  <a class="st-row" href="/install"><span>Install the app</span><i aria-hidden="true">&rsaquo;</i></a>
+  <button type="button" class="st-row" id="stFeedback" hidden><span>Send feedback</span><i aria-hidden="true">&rsaquo;</i></button>
+  <a class="st-row" href="admin.html"><span>Maintenance Center</span><i aria-hidden="true">&rsaquo;</i></a>
+ </div>
+ <div class="box st-box st-danger">
+  <h3>Account</h3>
+  <button type="button" class="btn ghost" id="stLogout">Log out</button>
+  <p class="st-note">You will need your PIN (or email login) to come back. Your Inbox stays safe on your username.</p>
+ </div>
+ <p class="st-about">Anonymous &middot; send a song, stay unknown</p>
+</section>
 <section id="detail" hidden></section>
 <div id="toast" class="toast" role="status" hidden></div>
 <footer class="foot">
