@@ -86,8 +86,8 @@
   }
 
   /* ---- iTunes song search ---- */
-  function itunes(term, limit) {
-    var url = 'https://itunes.apple.com/search?media=music&entity=song&limit=' + limit + '&term=' + encodeURIComponent(term);
+  function itunes(term, limit, country) {
+    var url = 'https://itunes.apple.com/search?media=music&entity=song&country=' + (country || 'PH') + '&limit=' + limit + '&term=' + encodeURIComponent(term);
     return fetch(url).then(function (r) { return r.json(); }).catch(function () {
       return new Promise(function (res, rej) {
         var cb = 'it' + Date.now() + Math.floor(Math.random() * 1e4), el = document.createElement('script');
@@ -183,6 +183,14 @@
     if (b) b.innerHTML = '&#9654;';
   }
   au.onended = stopAudio;
+  /* iOS Safari: the first play() must happen inside a real tap or it is blocked. One silent blip on the first touch unlocks it. */
+  var SILENT_WAV = 'UklGRiYAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQIAAAAAAA==';
+  document.addEventListener('touchend', function () {
+    try {
+      au.src = 'data:audio/wav;base64,' + SILENT_WAV;
+      au.play().then(function () { if (String(au.src).indexOf('data:audio') === 0) { au.pause(); au.currentTime = 0; } }).catch(function () {});
+    } catch (e) {}
+  }, { once: true, passive: true });
   function fillPickMeta(done) {
     if (pick[2] && pick[3]) { if (done) done(); return; }
     var k = recKey(pick[0], pick[1]);
