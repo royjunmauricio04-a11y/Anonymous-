@@ -629,8 +629,8 @@
 
   /* ---------- song search ---------- */
   /* iTunes search: normal request first, JSONP as a backup if the browser blocks it */
-  function itunes(term, limit) {
-    var url = 'https://itunes.apple.com/search?media=music&entity=song&limit=' + limit + '&term=' + encodeURIComponent(term);
+  function itunes(term, limit, country) {
+    var url = 'https://itunes.apple.com/search?media=music&entity=song&country=' + (country || 'PH') + '&limit=' + limit + '&term=' + encodeURIComponent(term);
     return fetch(url).then(function (r) { return r.json(); }).catch(function () {
       return new Promise(function (res, rej) {
         var cb = 'it' + Date.now() + Math.floor(Math.random() * 1e4), el = document.createElement('script');
@@ -1930,10 +1930,23 @@
     }
   }
   au.onended = rst;
+  au.onerror = function () { if (pb && pb.dataset) { delete pb.dataset.src; } rst(); };
+  /* iOS Safari: the first play() must happen inside a real tap or it is blocked.
+     One silent blip on the very first touch unlocks audio for all previews. */
+  var SILENT_WAV = 'UklGRiYAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQIAAAAAAA==';
+  document.addEventListener('touchend', function () {
+    try {
+      au.src = 'data:audio/wav;base64,' + SILENT_WAV;
+      au.play().then(function () { if (String(au.src).indexOf('data:audio') === 0) { au.pause(); au.currentTime = 0; } }).catch(function () {});
+    } catch (e) {}
+  }, { once: true, passive: true });
   function getSrc(b) {
     if (b.dataset.src) return Promise.resolve(b.dataset.src);
-    return itunes(b.dataset.q, 1)
-      .then(function (d) { var u = d.results && d.results[0] && d.results[0].previewUrl; if (!u) throw 0; b.dataset.src = u; return u; });
+    var pv = function (d) { return d && d.results && d.results[0] && d.results[0].previewUrl; };
+    return itunes(b.dataset.q, 1, 'PH').then(function (d) {
+      var u = pv(d); if (u) return u;
+      return itunes(b.dataset.q, 1, 'US').then(function (d2) { var u2 = pv(d2); if (!u2) throw 0; return u2; });
+    }).then(function (u) { b.dataset.src = u; return u; });
   }
   document.addEventListener('click', function (e) {
     var b = e.target.closest('.play'); if (!b) return;
@@ -1943,7 +1956,8 @@
     rst(); pb = b; b.textContent = c ? '...' : 'Loading...';
     getSrc(b).then(function (u) { au.src = u; return au.play(); })
       .then(function () { b.innerHTML = c ? '&#10073;&#10073;' : '&#10073;&#10073; Pause'; })
-      .catch(function () {
+      .catch(function (err) {
+        if (err && err.name === 'NotAllowedError') { rst(); if (c && $('pnote')) $('pnote').textContent = 'Tap Play again to start the preview.'; return; }
         b.dataset.fail = '1'; b.innerHTML = c ? '&#8599;' : 'Open in Spotify'; pb = null;
         if (c && $('pnote')) $('pnote').textContent = 'No preview found. Tap the arrow to open in Spotify.';
       });
