@@ -1,6 +1,8 @@
 /* send.html: the personal-link page. Visitors do not need an account:
    the page quietly gives them an anonymous session so the database can accept the message. */
 (function () {
+  var I_PLAY = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13L18 12z" fill="currentColor"/></svg>';
+  var I_PAUSE = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg>';
   'use strict';
   var C = window.APP_CONFIG || {};
   var REMOTE = !!(C.SUPABASE_URL && C.SUPABASE_KEY);
@@ -180,7 +182,7 @@
   function stopAudio() {
     au.pause(); playing = null;
     var b = document.getElementById('spl');
-    if (b) b.innerHTML = '&#9654;';
+    if (b) b.innerHTML = I_PLAY;
   }
   au.onended = stopAudio;
   /* iOS Safari: the first play() must happen inside a real tap or it is blocked. One silent blip on the first touch unlocks it. */
@@ -216,7 +218,7 @@
       '<div class="lp-pick">' +
         art(pick[2]) +
         '<div class="pt"><b>' + esc(pick[0]) + '</b><span>' + esc(pick[1]) + '</span></div>' +
-        '<button type="button" id="spl" class="lp-play" aria-label="Play 30 second preview">&#9654;</button>' +
+        '<button type="button" id="spl" class="lp-play" aria-label="Play 30 second preview">' + I_PLAY + '</button>' +
         '<button type="button" class="x" id="sx" aria-label="Remove song">×</button>' +
       '</div>';
     $('sx').onclick = function () { stopAudio(); pick = null; renderPick(); };
@@ -225,7 +227,7 @@
       function go(u) {
         if (!u) return;
         au.src = u; playing = true;
-        var b = $('spl'); if (b) b.innerHTML = '&#10073;&#10073;';
+        var b = $('spl'); if (b) b.innerHTML = I_PAUSE;
         au.play().catch(function () { stopAudio(); });
       }
       if (pick[3] && /^https:\/\//.test(pick[3])) { go(pick[3]); return; }
