@@ -2,6 +2,10 @@
   /* play / pause icons are drawn (not text characters) so they sit in the exact centre on every phone */
   var I_PLAY = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13L18 12z" fill="currentColor"/></svg>';
   var I_PAUSE = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg>';
+  var I_OPEN = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M17 7H9M17 7v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var I_X = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  var I_SPIN = '<svg class="ico spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+
   'use strict';
   var C = window.APP_CONFIG || {};
   var REMOTE = !!(C.SUPABASE_URL && C.SUPABASE_KEY);
@@ -649,12 +653,12 @@
   var ARTC = lget('anon-art', {}), artTried = {}, artBusy = false;
   function art(c, q) {
     var u = /^https:\/\//.test(c || '') ? c : (q && ARTC[q]) || '';
-    if (u) return '<img class="art" alt="" src="' + esc(u) + '">';
+    if (u) return '<img class="art" alt="" loading="lazy" decoding="async" src="' + esc(u) + '">';
     return '<span class="art"' + (q ? ' data-q="' + esc(q) + '"' : '') + ' style="background:' + esc(/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#999') + '"></span>';
   }
   function swapArt(n, u) {
     var big = n.classList.contains('bigart'), i = document.createElement('img');
-    i.className = big ? 'bigart' : 'art'; i.alt = ''; i.src = big ? u.replace('100x100', '600x600') : u; n.replaceWith(i);
+    i.className = big ? 'bigart' : 'art'; i.alt = ''; i.loading = 'lazy'; i.decoding = 'async'; i.src = big ? u.replace('100x100', '600x600') : u; n.replaceWith(i);
   }
   /* sample and bot messages only have a colour: look up the real album cover from iTunes */
   function hydrateArt() {
@@ -725,7 +729,7 @@
     $('picked').innerHTML = '<div class="pick song-pick">' + art(pick[2], pick[0] + ' ' + pick[1]) +
       '<div class="pt"><b>' + esc(pick[0]) + '</b><span>' + esc(pick[1]) + '</span></div>' +
       '<button type="button" class="play-pick" id="pickPlay" aria-label="Play 30s preview">' + I_PLAY + '</button>' +
-      '<button type="button" class="x" id="x" aria-label="Remove song">×</button></div>';
+      '<button type="button" class="x" id="x" aria-label="Remove song">' + I_X + '</button></div>';
     $('x').onclick = function () {
       if (typeof au !== 'undefined') { au.pause(); rst(); }
       pick = null; $('picked').innerHTML = ''; $('q').hidden = false;
@@ -735,7 +739,7 @@
       if (pb === b) { au.pause(); rst(); return; }
       if (pb) rst();
       function playUrl(u) {
-        if (!u) { toast('No 30s preview for this song.', true); return; }
+        if (!u) { toast('No 30s preview for this song.', true); b.innerHTML = I_PLAY; return; }
         pick[3] = u;
         pb = b; b.innerHTML = I_PAUSE;
         au.src = u;
@@ -746,7 +750,7 @@
         return;
       }
       /* fetch preview from iTunes when recommendation had no URL yet */
-      b.disabled = true;
+      b.disabled = true; b.innerHTML = I_SPIN;
       itunes(pick[0] + ' ' + pick[1], 1).then(function (d) {
         var u = d.results && d.results[0] && d.results[0].previewUrl;
         if (u) pick[3] = u;
@@ -1462,10 +1466,15 @@
     $('pinHint').hidden = mode !== 'name';
     $('claimBtn').textContent = mode === 'name' ? 'Continue' : mode === 'back' ? 'Log in' : 'Sign in';
     $('cmsg').textContent = ''; $('reuse').hidden = true;
+    setTimeout(function () { try { var fl = mode === 'login' ? $('email') : $('un'); if (fl && !$('gate').hidden) fl.focus({ preventScroll: true }); } catch (e) {} }, 140);
   }
   $('gateName').onclick = function () { setGateMode('name'); };
   $('gateBack').onclick = function () { setGateMode('back'); };
   $('gateLogin').onclick = function () { setGateMode('login'); };
+  ['un', 'pin', 'email', 'password'].forEach(function (id) {
+    var el = $(id); if (!el) return;
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); $('claimBtn').click(); } });
+  });
   function gateErr(t) { $('cmsg').className = 'msg err'; $('cmsg').textContent = t; $('claimBtn').disabled = false; }
   var RECOVER_ERR = { wrong_username_or_pin: 'Wrong username or PIN.', too_many_attempts: 'Too many wrong tries. Please wait 15 minutes, then try again.', already_has_username: 'This device already has a username. Sign out first.' };
   $('claimBtn').onclick = function () {
@@ -1956,12 +1965,12 @@
     var c = b.classList.contains('circle');
     if (b.dataset.fail) { window.open('https://open.spotify.com/search/' + encodeURIComponent(b.dataset.q), '_blank', 'noopener'); return; }
     if (pb === b) { au.pause(); rst(); return; }
-    rst(); pb = b; b.textContent = c ? '...' : 'Loading...';
+    rst(); pb = b; b.innerHTML = c ? I_SPIN : I_SPIN + 'Loading...';
     getSrc(b).then(function (u) { au.src = u; return au.play(); })
       .then(function () { b.innerHTML = c ? I_PAUSE : I_PAUSE + 'Pause'; })
       .catch(function (err) {
         if (err && err.name === 'NotAllowedError') { rst(); if (c && $('pnote')) $('pnote').textContent = 'Tap Play again to start the preview.'; return; }
-        b.dataset.fail = '1'; b.innerHTML = c ? '&#8599;' : 'Open in Spotify'; pb = null;
+        b.dataset.fail = '1'; b.innerHTML = c ? I_OPEN : 'Open in Spotify'; pb = null;
         if (c && $('pnote')) $('pnote').textContent = 'No preview found. Tap the arrow to open in Spotify.';
       });
   });
