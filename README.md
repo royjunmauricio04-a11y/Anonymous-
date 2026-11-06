@@ -1,3 +1,40 @@
+# v14: premium pass - SVG icons lahat, spinner, mas mabilis (walang SQL na kailangan)
+Mga pagbabago sa code lang ito (app.js, send.js, index.html, send.html, style.css). I-deploy ulit sa Render, tapos i-hard refresh. WALANG SQL na kailangang i-run.
+
+## Mga icon: lahat SVG na, perpekto ang alignment
+- Bago: may mga text character pa na icons (↻, ✎, ×, ›, ↗) na iba ang tayo sa bawat phone. Ngayon: lahat ay tunay na SVG drawings na nasa gitnang-gitna sa lahat ng device.
+- Pinalitan: refresh button sa Browse, pencil sa profile photo, close sa Support Buddy, chevron sa Settings rows, arrow sa "Open in Spotify", at ang × sa remove-song (Submit at link page).
+- Kasama na rito ang dating SVG play/pause icons (v10 alignment layer) - naka-merge lahat, hindi na text glyph ang natitira.
+
+## Core systems
+- **Login/Signup:** pindutin ang Enter sa keyboard = agad mag-submit (gumagana sa username, PIN, email, password). Auto-focus sa tamang field kapag lumipat ng tab. Sa mobile, "Go" ang lalabas sa keyboard.
+- **Song preview:** habang naglo-load ang 30-second preview, may spinning icon (hindi na blank). Kung walang preview, bumabalik agad sa play icon.
+- **Bilis:** preconnect sa iTunes servers (mabilis mag-load ang album covers at previews), lazy-loading ang mga cover art (tipid data, smooth scroll).
+
+## Fix: song previews (kabilangan ng PH)
+- Ang preview search ayun sa **Philippine iTunes store** (may fallback sa US store kung wala sa PH).
+- **iOS audio unlock:** may silent sound na pinapatugtog sa unang tap, para gumana agad ang susunod na preview sa iPhone.
+- Kapag na-block ang autoplay, may "Tap Play again" na paalala at hindi na ito error.
+- Gumagana ito sa main app at sa personal link page (send.js).
+
+## Bots at replies (server-side, 24/7)
+- **bot-upgrade.sql + reply-upgrade.sql** (naka-run na): may `bot_tick()` na tumatakbo kada minuto via pg_cron (`anonymous-bot` job), kaya nagpo-post ang bots kahit walang bukas na app.
+- 8 seed posts ng bots sa Browse, may cute **BOT badge** sa feed cards.
+- **send_reply():** pwedeng magsagot ng anonymous song reply sa nagpadala sa Inbox mo (hindi mo matutukoy kung sino).
+
+## Round 2 features
+- **Trending songs chart** (Browse), **sender streaks at badges** (naka-save sa device), **anonymous replies**, at **AdSense slots** (ilagay ang publisher ID sa config.js para magka-live ads).
+
+## Settings page (v13)
+- Bagong Settings tab: theme picker (light/dark/system), notifications toggle, copy link, feedback, logout.
+
+## Paano i-deploy ang v14
+1. Render Dashboard > ang Static Site mo > **Manual Deploy** > Deploy latest commit (o awtomatiko na kapag naka-auto-deploy sa GitHub).
+2. Maghintay ng 1-2 minuto, tapos **i-hard refresh** (Ctrl+Shift+R sa computer; sa mobile, isara nang buo ang browser/app then buksan ulit).
+3. Subukan: pindutin ang Enter sa login (dapat mag-submit agad), mag-play ng preview (dapat may spinner habang naglo-load), at tingnan ang mga icon sa Browse at Settings (pare-pareho ang tayo sa lahat ng phone).
+
+---
+
 # Fix: "Please log in again to do that." sa Browse (v9)
 
 ## Ano ang nangyari
