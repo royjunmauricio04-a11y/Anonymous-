@@ -1375,3 +1375,17 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 /* support button: icon centred, right edge lines up with the navigation bar */
 .support-fab{display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1}
 .support-fab svg{display:block}
+
+/* =====================================================================
+   v14 - premium pass: crisp SVG icons everywhere, spinner while a preview loads
+   ===================================================================== */
+.spin{animation:icoSpin .7s linear infinite}
+@keyframes icoSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.pick .x .ico,.lp-pick .x .ico{width:1.05em;height:1.05em}
+.support-close svg{width:16px;height:16px;display:block}
+.st-row i svg{width:18px;height:18px;display:block}
+.bsort .rf svg{width:1.25em;height:1.25em;display:block}
+.pf-av i svg{width:15px;height:15px;display:block}
+img.art,img.bigart{background:var(--surface)}
+.gate-tab,.bsort,.share,.react-main,.react-btn,.st-seg,.tabs,.res button,.lp-prompts,.chips,.fchips{-webkit-user-select:none;user-select:none}
