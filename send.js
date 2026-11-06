@@ -3,6 +3,10 @@
 (function () {
   var I_PLAY = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13L18 12z" fill="currentColor"/></svg>';
   var I_PAUSE = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg>';
+  var I_OPEN = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M17 7H9M17 7v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var I_X = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  var I_SPIN = '<svg class="ico spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+
   'use strict';
   var C = window.APP_CONFIG || {};
   var REMOTE = !!(C.SUPABASE_URL && C.SUPABASE_KEY);
@@ -103,7 +107,7 @@
   }
   function art(c) {
     return /^https:\/\//.test(c || '')
-      ? '<img class="art" alt="" src="' + esc(c) + '">'
+      ? '<img class="art" alt="" loading="lazy" decoding="async" src="' + esc(c) + '">'
       : '<span class="art art-ph" aria-hidden="true"></span>';
   }
   var REC = [
@@ -219,19 +223,19 @@
         art(pick[2]) +
         '<div class="pt"><b>' + esc(pick[0]) + '</b><span>' + esc(pick[1]) + '</span></div>' +
         '<button type="button" id="spl" class="lp-play" aria-label="Play 30 second preview">' + I_PLAY + '</button>' +
-        '<button type="button" class="x" id="sx" aria-label="Remove song">×</button>' +
+        '<button type="button" class="x" id="sx" aria-label="Remove song">' + I_X + '</button>' +
       '</div>';
     $('sx').onclick = function () { stopAudio(); pick = null; renderPick(); };
     $('spl').onclick = function () {
       if (playing) { stopAudio(); return; }
       function go(u) {
-        if (!u) return;
+        if (!u) { var bb = $('spl'); if (bb) bb.innerHTML = I_PLAY; return; }
         au.src = u; playing = true;
         var b = $('spl'); if (b) b.innerHTML = I_PAUSE;
         au.play().catch(function () { stopAudio(); });
       }
       if (pick[3] && /^https:\/\//.test(pick[3])) { go(pick[3]); return; }
-      var btn = $('spl'); if (btn) btn.disabled = true;
+      var btn = $('spl'); if (btn) { btn.disabled = true; btn.innerHTML = I_SPIN; }
       fillPickMeta(function () {
         if (btn) btn.disabled = false;
         /* update cover in place without resetting play state */
