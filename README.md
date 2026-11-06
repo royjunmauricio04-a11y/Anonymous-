@@ -35,6 +35,36 @@ Mga pagbabago sa code lang ito (app.js, send.js, index.html, send.html, style.cs
 
 ---
 
+# v13: Settings page
+- Bagong **Settings tab** sa navigation: theme picker (light / dark / system), notifications toggle, **Copy link** button, Send feedback, at shortcut sa Support & FAQ.
+- May **Account** box: Log out button at paalala na kailangan ang PIN (o email login) para bumalik, pero ligtas ang Inbox sa username mo.
+- Naka-wire na lahat: buong Settings page gumagana kasama ng logout, theme picker, at notifications.
+
+# v12: precision pass - drawn icons + song preview fix
+- **Icon alignment system:** centered play/pause buttons, `.ico` sizing layer sa style.css, hindi na gumagalaw ang bottom navigation sa tap. Pro polish sa buong app.
+- **SVG play/pause icons:** drawn na SVG (hindi text character) sa main app at sa personal link page, nasa gitnang-gitna sa lahat ng phone.
+- **Song preview fix:** ang preview search ay **PH iTunes store** na (may US fallback), may **iOS silent-audio unlock** para gumana agad ang preview sa iPhone, at may "Tap Play again" na paalala kapag na-block ang autoplay (hindi na error).
+- Kasama sa fix ang link page (send.js) at Settings copy-link bug (double-backslash regex na nag-freeze ng app).
+
+# v11: bots + BOT badge
+- **bot-upgrade.sql** (naka-run na): may `bot_tick()` na tumatakbo **kada minuto** via pg_cron (job name `anonymous-bot`), kaya nagpo-post ang bots 24/7 kahit walang bukas na app. 90-minuto ang interval ng bawat bot.
+- 8 seed posts ng bots sa Browse, may cute pool lines.
+- **BOT badge chip** sa feed cards para kita agad kung alin ang bot posts.
+- **reply-upgrade.sql** (naka-run na): `send_reply()` - pwedeng magsagot ng anonymous song reply sa nagpadala sa Inbox mo (walang maturukang sender).
+
+# v10: Trending, badges, AdSense + service worker
+- **Trending songs chart** sa Browse (Trending chips) at **sender streaks & badges** (saves sa device mo).
+- **AdSense-ready ad slots:** ilagay ang publisher ID sa `config.js` (ADSENSE_ID) para magka-live ads; kung wala, house ads ang lumalabas.
+- Bagong **service worker** (mas magaling mag-cache). Kapag luma ang itsura pagkatapos mag-update: i-clear ang site data o i-hard refresh.
+- Kasama rito ang Round 2 features: anonymous replies sa Inbox senders, sender badge pills, at Trending styles.
+
+# v9: fun layer + login fix
+- **Fun layer:** sticker-style house ads, bouncy spring animations, confetti burst, washi-tape daily card, at party-dot headline.
+- **Fix sa "Please log in again to do that.":** token refresh at retry, at naglo-load na bilang guest ang public posts (Browse, search, link page) kahit mag-expire ang login. Hindi ka na rin basta nalolo-logout kapag mahina ang signal.
+- (Detalye ng v9 login fix: nakasama pa rin sa ibaba ang buong paliwanag.)
+
+---
+
 # Fix: "Please log in again to do that." sa Browse (v9)
 
 ## Ano ang nangyari
