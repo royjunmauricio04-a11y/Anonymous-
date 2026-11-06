@@ -1,4 +1,7 @@
 (function () {
+  /* play / pause icons are drawn (not text characters) so they sit in the exact centre on every phone */
+  var I_PLAY = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13L18 12z" fill="currentColor"/></svg>';
+  var I_PAUSE = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg>';
   'use strict';
   var C = window.APP_CONFIG || {};
   var REMOTE = !!(C.SUPABASE_URL && C.SUPABASE_KEY);
@@ -721,7 +724,7 @@
     /* Same circular play button as send.html (personal link page) */
     $('picked').innerHTML = '<div class="pick song-pick">' + art(pick[2], pick[0] + ' ' + pick[1]) +
       '<div class="pt"><b>' + esc(pick[0]) + '</b><span>' + esc(pick[1]) + '</span></div>' +
-      '<button type="button" class="play-pick" id="pickPlay" aria-label="Play 30s preview">&#9654;</button>' +
+      '<button type="button" class="play-pick" id="pickPlay" aria-label="Play 30s preview">' + I_PLAY + '</button>' +
       '<button type="button" class="x" id="x" aria-label="Remove song">×</button></div>';
     $('x').onclick = function () {
       if (typeof au !== 'undefined') { au.pause(); rst(); }
@@ -734,7 +737,7 @@
       function playUrl(u) {
         if (!u) { toast('No 30s preview for this song.', true); return; }
         pick[3] = u;
-        pb = b; b.innerHTML = '&#10073;&#10073;';
+        pb = b; b.innerHTML = I_PAUSE;
         au.src = u;
         au.play().catch(function () { rst(); toast('Could not play preview.', true); });
       }
@@ -877,7 +880,7 @@
 
   /* ---------- cards, feed, inbox search ---------- */
   function pbtn(m, cls) {
-    return '<button class="play' + cls + '" aria-label="Play preview" data-src="' + esc(/^https:\/\//.test(m.prev) ? m.prev : '') + '" data-q="' + esc(m.song + ' ' + m.artist) + '">' + (cls ? '&#9654;' : '&#9654; Play') + '</button>';
+    return '<button class="play' + cls + '" aria-label="Play preview" data-src="' + esc(/^https:\/\//.test(m.prev) ? m.prev : '') + '" data-q="' + esc(m.song + ' ' + m.artist) + '">' + (cls ? I_PLAY : I_PLAY + 'Play') + '</button>';
   }
   var REACT_EMOJIS = ['❤️', '🔥', '🥺', '✨', '👏'];
   var reactCache = {}; /* id -> { counts: {emoji:n}, mine: emoji|null } */
@@ -1924,8 +1927,8 @@
   var au = new Audio(), pb = null;
   function rst() {
     if (pb) {
-      if (pb.classList.contains('circle') || pb.classList.contains('play-pick')) pb.innerHTML = '&#9654;';
-      else pb.innerHTML = '&#9654; Play';
+      if (pb.classList.contains('circle') || pb.classList.contains('play-pick')) pb.innerHTML = I_PLAY;
+      else pb.innerHTML = I_PLAY + 'Play';
       pb = null;
     }
   }
@@ -1955,7 +1958,7 @@
     if (pb === b) { au.pause(); rst(); return; }
     rst(); pb = b; b.textContent = c ? '...' : 'Loading...';
     getSrc(b).then(function (u) { au.src = u; return au.play(); })
-      .then(function () { b.innerHTML = c ? '&#10073;&#10073;' : '&#10073;&#10073; Pause'; })
+      .then(function () { b.innerHTML = c ? I_PAUSE : I_PAUSE + 'Pause'; })
       .catch(function (err) {
         if (err && err.name === 'NotAllowedError') { rst(); if (c && $('pnote')) $('pnote').textContent = 'Tap Play again to start the preview.'; return; }
         b.dataset.fail = '1'; b.innerHTML = c ? '&#8599;' : 'Open in Spotify'; pb = null;
