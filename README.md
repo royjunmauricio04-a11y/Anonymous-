@@ -1,3 +1,17 @@
+# v15.1: Fix - nawala ang mga button, ayaw gumana ang site
+## Ano ang nangyari
+Pagkatapos ng v15 (Animated Messages at Love Letters), ay lumabas na ayaw mag-click ng kahit anong button, at tulog ang site (red na bilog na may clock). Hindi load ang Browse, Inbox, Submit - parang frozen.
+## Ano ang sanhi (isang maliit na `}` lang!)
+Sa `app.js`, sa code ng copy button sa Profile, may kulang na closing brace (`}`) sa `if ($('copy')) {` block na nilikha ng v15 update. Dahil sa kulang na brace, may SYNTAX ERROR ang buong app.js ("Unexpected token ')'"), kaya hindi tumakbo ang JavaScript SA BUONG PAGE. Kaya nga hindi gumagana ang LAHAT ng button kahit na isa lang ang sira.
+## Ano ang inayos (app.js)
+Idinagdag ang kulang na `}`, inayos ang indentation, at na-verify na maganda ang buong code bago i-push (compile check: OK). Buong v15 features (Animated Messages, Love Letters, copy/share buttons sa Profile) ay buo pa rin at gumagana, kasama ang mga naunang fixes (Settings tab, PH iTunes store, spinner, Enter key sa login).
+## Paano ayusin sa phone mo
+I-deploy ulit sa Render (Manual Deploy > Deploy latest commit), maghintay ng 1-2 minuto, tapos buuin mong isara ang browser/app at buksan ulit. Kung luma pa rin ang itsura, i-clear ang site data (v15 na ang service worker, kaya kusang magpapalit ang mga file pagkatapos ng deploy).
+## Aral (para sa mga susunod na update)
+Ang app mo ay ISANG malaking JavaScript file: kung may maliit na syntax error man lang, humihinto ANG LAHAT (hindi lang ang bahagi na may mali). Kaya bago bawat push, ginagawa ko ng compile check ang buong file.
+
+---
+
 # v14: premium pass - SVG icons lahat, spinner, mas mabilis (walang SQL na kailangan)
 Mga pagbabago sa code lang ito (app.js, send.js, index.html, send.html, style.css). I-deploy ulit sa Render, tapos i-hard refresh. WALANG SQL na kailangang i-run.
 
