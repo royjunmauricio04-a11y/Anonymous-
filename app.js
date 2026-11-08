@@ -2012,10 +2012,11 @@
   // swap button removed - functionality moved to settings or other area
   if ($('copy')) {
     $('copy').onclick = function () {
-    var b = $('copy');
-    navigator.clipboard.writeText($('link').value).then(function () { b.textContent = 'Copied'; }, function () { $('link').select(); b.textContent = 'Select, copy'; });
-    setTimeout(function () { b.textContent = 'Copy'; }, 1500);
-  };
+      var b = $('copy');
+      navigator.clipboard.writeText($('link').value).then(function () { b.textContent = 'Copied'; }, function () { $('link').select(); b.textContent = 'Select, copy'; });
+      setTimeout(function () { b.textContent = 'Copy'; }, 1500);
+    };
+  }
 
   /* ---------- report a public post ---------- */
   var REASONS = [['hate', 'Hate or discrimination'], ['harassment', 'Bullying or harassment'], ['sexual', 'Sexual content'], ['selfharm', 'Self-harm'], ['spam', 'Spam'], ['other', 'Something else']];
