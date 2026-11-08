@@ -47,6 +47,7 @@
 
   /* ---------- auth + data layer ---------- */
   var AUTH = 'anon-auth', currentUser = null, profile = null;
+  var myLink = '';   /* the share link, kept in memory now that the link box is gone from Profile */
 
   function errInfo(e) { var c = ''; try { c = JSON.parse(e.text).code || ''; } catch (x) {} return e && e.status ? 'Error ' + e.status + (c ? ' ' + c : '') : 'No connection'; }
   function dbHint(e) {
@@ -1626,21 +1627,12 @@
   /* link box + PIN nudge live on the Profile tab */
   function fillLinkBox() {
     var u = profile && profile.username;
-    $('who').hidden = !u;
+    $('who').hidden = !u || !(profile && profile.has_pin === false);   /* the box only shows the Add-a-PIN reminder now */
     if (!u) return null;
     var base = C.SITE_URL ? C.SITE_URL.replace(/\/+$/, '') + '/' : location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
     var l = base + 'send.html?to=' + encodeURIComponent(u);
     if (C.SHORT_LINKS) l = base + encodeURIComponent(u);   /* NGL-style short link; needs the rewrite rule in README */
-    var local = !C.SITE_URL && !/^https:/.test(location.protocol);
-    $('linkNote').hidden = !local;
-    if (local) $('linkNote').textContent = 'This link only works on this device. After you host the app, set SITE_URL in config.js.';
-    $('whoName').textContent = '@' + u; $('link').value = l;
-    $('share').innerHTML = '<a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(l) + '">Facebook</a><button id="nat">Share to IG, Messenger, more</button><button id="storyBtn">Share link as story</button>';
-    $('storyBtn').onclick = function () { shareStory(u, l, profile && profile.avatar, $('storyBtn')); };
-    $('nat').onclick = function () {
-      if (navigator.share) navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: l }).catch(function () {});
-      else $('copy').click();
-    };
+    myLink = l;
     $('pinNudge').hidden = !(profile && profile.has_pin === false);
     return u;
   }
@@ -1726,7 +1718,7 @@
     $('pf').hidden = false;
     var u = profile.username;
     $('pfName').textContent = '@' + u;
-    $('pfLink').textContent = ($('link').value || '').replace(/^https?:\/\//, '');
+    $('pfLink').textContent = (myLink || '').replace(/^https?:\/\//, '');
     var av = $('pfAv'); $('pfInit').textContent = profile.avatar ? '' : u.charAt(0).toUpperCase();
     av.style.backgroundImage = profile.avatar ? 'url(' + profile.avatar + ')' : '';
     if ($('stView')) $('stView').textContent = (profile.views != null ? profile.views : 0);
@@ -1841,20 +1833,18 @@
     };
     // Update pfLink to just show the link
     $('pfLink').onclick = function () {
-      var l = $('link').value; if (!l) return;
-      // Just show the link, share functionality moved to separate buttons
+      if (myLink && navigator.share) navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: myLink }).catch(function () {});
     };
     
     // New copy button in profile head
     if ($('copyBtn')) {
       $('copyBtn').onclick = function () {
-        var l = $('link').value; if (!l) return;
+        var l = myLink; if (!l) return;
         navigator.clipboard.writeText(l).then(function () {
           toast('Link copied!');
           lset('anon-shared', true); refreshProfile();
         }).catch(function () {
-          $('link').select();
-          toast('Select and copy manually');
+          toast('Copy did not work on this browser.');
         });
       };
     }
@@ -1862,7 +1852,7 @@
     // New share button in profile head
     if ($('shareBtn')) {
       $('shareBtn').onclick = function () {
-        var l = $('link').value; if (!l) return;
+        var l = myLink; if (!l) return;
         var popup = $('sharePopup');
         if (!popup) {
           popup = document.createElement('div');
@@ -1878,6 +1868,8 @@
           
           // Generate share buttons
           shareContent.innerHTML = '<a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(l) + '">Facebook</a><button id="nat">Share to IG, Messenger, more</button><button id="storyBtn">Share link as story</button>';
+          var sb2 = shareContent.querySelector('#storyBtn'); if (sb2) sb2.onclick = function () { shareStory(profile.username, l, profile && profile.avatar, sb2); };
+          var nb2 = shareContent.querySelector('#nat'); if (nb2) nb2.onclick = function () { if (navigator.share) navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: l }).catch(function () {}); };
         }
         
         // Toggle popup
@@ -2009,15 +2001,6 @@
       .catch(function (e) { toast(dbHint(e), true); });
   };
   $('welcomeOk').onclick = function () { $('welcome').hidden = true; };
-  // swap button removed - functionality moved to settings or other area
-  if ($('copy')) {
-    $('copy').onclick = function () {
-      var b = $('copy');
-      navigator.clipboard.writeText($('link').value).then(function () { b.textContent = 'Copied'; }, function () { $('link').select(); b.textContent = 'Select, copy'; });
-      setTimeout(function () { b.textContent = 'Copy'; }, 1500);
-    };
-  }
-
   /* ---------- report a public post ---------- */
   var REASONS = [['hate', 'Hate or discrimination'], ['harassment', 'Bullying or harassment'], ['sexual', 'Sexual content'], ['selfharm', 'Self-harm'], ['spam', 'Spam'], ['other', 'Something else']];
   function openReport(m) {
