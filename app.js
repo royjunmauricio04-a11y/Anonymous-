@@ -237,6 +237,389 @@
       return profile;
     });
   }
+  
+  /* ---------- Animated Messages System ---------- */
+  var userAnimations = null, animBusy = false, activeAnimation = null;
+  
+  // Animation templates
+  var ANIMATION_TEMPLATES = [
+    { id: 'fade', name: 'Fade In', description: 'Gently fades in', type: 'fade', color: '#9C8F7A', isPremium: false, icon: '🌫️' },
+    { id: 'slide', name: 'Slide Up', description: 'Slides up from bottom', type: 'slide', color: '#228B22', isPremium: false, icon: '⬆️' },
+    { id: 'bounce', name: 'Bounce', description: 'Bounces into view', type: 'bounce', color: '#4169E1', isPremium: false, icon: '🎯' },
+    { id: 'heart', name: 'Floating Hearts', description: 'Hearts float up', type: 'heart', color: '#FF6B6B', isPremium: false, icon: '❤️' },
+    { id: 'confetti', name: 'Confetti', description: 'Colorful confetti', type: 'confetti', color: '#FFD700', isPremium: false, icon: '🎉' },
+    { id: 'sparkle', name: 'Sparkle', description: 'Sparkles shimmer', type: 'sparkle', color: '#FF69B4', isPremium: false, icon: '✨' },
+    { id: 'typewriter', name: 'Typewriter', description: 'Types out message', type: 'typewriter', color: '#E5334B', isPremium: false, icon: '⌨️' },
+    { id: 'love_letter', name: 'Love Letter', description: 'Beautiful love letter', type: 'love_letter', color: '#8B0000', isPremium: false, icon: '💌' },
+    { id: 'petals', name: 'Rose Petals', description: 'Petals fall around', type: 'petals', color: '#FF1493', isPremium: true, icon: '🌹' },
+    { id: 'fireworks', name: 'Fireworks', description: 'Fireworks display', type: 'fireworks', color: '#FF4500', isPremium: true, icon: '🎆' },
+    { id: 'golden', name: 'Golden Letter', description: 'Gold foil effect', type: 'golden', color: '#FFD700', isPremium: true, icon: '🏆' },
+    { id: 'scroll', name: 'Vintage Scroll', description: 'Unfurls like scroll', type: 'scroll', color: '#8B4513', isPremium: true, icon: '📜' }
+  ];
+  
+  // Load user's animations
+  function loadAnimations() {
+    if (!REMOTE || !sessionGet() || !profile || animBusy) return Promise.resolve(null);
+    
+    animBusy = true;
+    var s = sessionGet();
+    if (!s || !s.user || !s.user.id) { animBusy = false; return Promise.resolve(null); }
+    
+    return rpc('get_user_animations', { p_user_id: s.user.id })
+      .then(function (data) {
+        userAnimations = data;
+        updateAnimationsDisplay();
+        return userAnimations;
+      })
+      .catch(function (e) {
+        try { console.warn('[anonymous] animations not initialized:', e); } catch (x) {}
+        return null;
+      })
+      .then(function () { animBusy = false; });
+  }
+  
+  // Initialize animations for user
+  function initAnimations() {
+    if (!REMOTE || !sessionGet() || !profile) return Promise.resolve();
+    
+    var s = sessionGet();
+    if (!s || !s.user || !s.user.id) return Promise.resolve();
+    
+    // For demo mode, just load animations without RPC
+    if (!REMOTE) {
+      userAnimations = {
+        templates: ANIMATION_TEMPLATES.map(function (t) {
+          return {
+            id: t.id,
+            name: t.name,
+            description: t.description,
+            animation_type: t.type,
+            color_scheme: t.color,
+            is_premium: t.isPremium,
+            is_unlocked: !t.isPremium, // All non-premium unlocked in demo
+            is_active: false
+          };
+        }),
+        active_template: null
+      };
+      updateAnimationsDisplay();
+      return Promise.resolve();
+    }
+    
+    return rpc('init_animated_templates', {})
+      .then(function () { return loadAnimations(); })
+      .catch(function () { return loadAnimations(); });
+  }
+  
+  // Activate an animation template
+  function activateAnimation(templateId, isActive) {
+    if (!REMOTE || !sessionGet() || !profile || animBusy) {
+      // Demo mode - just update locally
+      if (!REMOTE) {
+        if (userAnimations && userAnimations.templates) {
+          userAnimations.templates.forEach(function (t) {
+            if (t.id === templateId) {
+              t.is_active = isActive;
+            } else if (isActive) {
+              t.is_active = false;
+            }
+          });
+        }
+        activeAnimation = isActive ? templateId : null;
+        updateAnimationsDisplay();
+      }
+      return Promise.resolve();
+    }
+    
+    animBusy = true;
+    var s = sessionGet();
+    if (!s || !s.user || !s.user.id) { animBusy = false; return Promise.resolve(); }
+    
+    return rpc('activate_animation_template', {
+      p_user_id: s.user.id,
+      p_template_id: templateId,
+      p_is_active: isActive
+    })
+      .then(function () {
+        if (userAnimations && userAnimations.templates) {
+          userAnimations.templates.forEach(function (t) {
+            if (t.id === templateId) {
+              t.is_active = isActive;
+            } else if (isActive) {
+              t.is_active = false;
+            }
+          });
+        }
+        activeAnimation = isActive ? templateId : null;
+        updateAnimationsDisplay();
+        return true;
+      })
+      .catch(function () { return false; })
+      .then(function () { animBusy = false; });
+  }
+  
+  // Update animations display
+  function updateAnimationsDisplay() {
+    var gridEl = $('animTemplatesGrid');
+    var countEl = $('animUnlockedCount');
+    
+    if (!gridEl) return;
+    
+    if (!userAnimations) {
+      userAnimations = { templates: [], active_template: null };
+    }
+    
+    var templates = userAnimations.templates || [];
+    var html = '';
+    var unlockedCount = 0;
+    
+    ANIMATION_TEMPLATES.forEach(function (template) {
+      var userTemplate = templates.find(function (t) { return t.id === template.id; });
+      var isUnlocked = userTemplate ? userTemplate.is_unlocked : !template.isPremium;
+      var isActive = userTemplate && userTemplate.is_active;
+      var isPremium = template.isPremium;
+      
+      if (isUnlocked) unlockedCount++;
+      
+      var lockedClass = isUnlocked ? '' : 'locked';
+      var selectedClass = isActive ? 'selected' : '';
+      var premiumBadge = isPremium ? '<span class="anim-premium-badge">★</span>' : '';
+      var lockIcon = isUnlocked ? '' : '<span class="anim-lock-icon">🔒</span>';
+      
+      html += '<div class="anim-template ' + lockedClass + ' ' + selectedClass + ' ' + template.id + '-template" ';
+      html += 'data-template="' + template.id + '" data-unlocked="' + isUnlocked + '" data-premium="' + isPremium + '" title="' + esc(template.description) + '">';
+      html += '<div class="anim-icon">' + template.icon + '</div>';
+      html += '<div class="anim-name">' + esc(template.name) + '</div>';
+      html += premiumBadge + lockIcon + '</div>';
+    });
+    
+    gridEl.innerHTML = html;
+    
+    if (countEl) {
+      countEl.textContent = unlockedCount;
+    }
+    
+    // Add click handlers
+    gridEl.querySelectorAll('.anim-template').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var templateId = this.dataset.template;
+        var isUnlocked = this.dataset.unlocked === 'true';
+        var isPremium = this.dataset.premium === 'true';
+        
+        if (!isUnlocked) {
+          if (isPremium) {
+            toast('Premium animation! Unlock with premium subscription.', true);
+          } else {
+            toast('Complete achievements to unlock this animation!', true);
+          }
+          return;
+        }
+        
+        // Toggle activation
+        var isActive = this.classList.contains('selected');
+        activateAnimation(templateId, !isActive);
+      });
+    });
+  }
+  
+  // Get active animation for current user
+  function getActiveAnimation() {
+    if (!userAnimations || !userAnimations.active_template) return null;
+    return userAnimations.active_template.animation_type || activeAnimation;
+  }
+  
+  /* ---------- Love Letter System ---------- */
+  var userLoveLetters = null, llBusy = false, activeLoveLetter = null;
+  
+  // Love letter templates
+  var LOVE_LETTER_TEMPLATES = [
+    { id: 'classic', name: 'Classic', description: 'Traditional red love letter', bgColor: '#FFF0F5', textColor: '#8B0000', borderColor: '#DC143C', sealColor: '#FF6B6B', sealIcon: '❤️', isPremium: false, icon: '❤️' },
+    { id: 'pink_rose', name: 'Pink Rose', description: 'Soft pink with rose', bgColor: '#FFE4E1', textColor: '#DB7093', borderColor: '#FF69B4', sealColor: '#FF1493', sealIcon: '🌹', isPremium: false, icon: '🌹' },
+    { id: 'golden', name: 'Golden', description: 'Elegant gold on cream', bgColor: '#FFF8DC', textColor: '#8B4513', borderColor: '#FFD700', sealColor: '#FFA500', sealIcon: '💍', isPremium: false, icon: '💍' },
+    { id: 'purple', name: 'Purple', description: 'Deep purple passion', bgColor: '#F0E6FF', textColor: '#4B0082', borderColor: '#800080', sealColor: '#9370DB', sealIcon: '💜', isPremium: false, icon: '💜' },
+    { id: 'blue', name: 'Blue', description: 'Cool blue romance', bgColor: '#E6F2FF', textColor: '#1E90FF', borderColor: '#4169E1', sealColor: '#6495ED', sealIcon: '💙', isPremium: false, icon: '💙' },
+    { id: 'vintage', name: 'Vintage', description: 'Ancient parchment', bgColor: '#F5F5DC', textColor: '#8B4513', borderColor: '#A0522D', sealColor: '#D2691E', sealIcon: '📜', isPremium: false, icon: '📜' },
+    { id: 'sunset', name: 'Sunset', description: 'Warm sunset colors', bgColor: '#FFE4B5', textColor: '#FF4500', borderColor: '#FF8C00', sealColor: '#FFD700', sealIcon: '🌅', isPremium: false, icon: '🌅' },
+    { id: 'moonlight', name: 'Moonlight', description: 'Cool moonlight', bgColor: '#F0F8FF', textColor: '#708090', borderColor: '#2F4F4F', sealColor: '#A9A9A9', sealIcon: '🌙', isPremium: false, icon: '🌙' },
+    { id: 'royal', name: 'Royal', description: 'Regal purple & gold', bgColor: '#F8F0FF', textColor: '#4B0082', borderColor: '#9400D3', sealColor: '#FFD700', sealIcon: '👑', isPremium: true, icon: '👑' },
+    { id: 'diamond', name: 'Diamond', description: 'Sparkling diamond', bgColor: '#FFFFFF', textColor: '#000000', borderColor: '#C0C0C0', sealColor: '#FFFFFF', sealIcon: '✨', isPremium: true, icon: '✨' },
+    { id: 'eternal', name: 'Eternal', description: 'Timeless black & gold', bgColor: '#000000', textColor: '#FFD700', borderColor: '#FFD700', sealColor: '#FFD700', sealIcon: '∞', isPremium: true, icon: '∞' },
+    { id: 'secret', name: 'Secret', description: 'Mysterious dark', bgColor: '#1A1A2E', textColor: '#E94560', borderColor: '#16213E', sealColor: '#E94560', sealIcon: '👁️', isPremium: true, icon: '👁️' }
+  ];
+  
+  // Load user's love letters
+  function loadLoveLetters() {
+    if (!REMOTE || !sessionGet() || !profile || llBusy) return Promise.resolve(null);
+    
+    llBusy = true;
+    var s = sessionGet();
+    if (!s || !s.user || !s.user.id) { llBusy = false; return Promise.resolve(null); }
+    
+    return rpc('get_user_love_letters', { p_user_id: s.user.id })
+      .then(function (data) {
+        userLoveLetters = data;
+        updateLoveLettersDisplay();
+        return userLoveLetters;
+      })
+      .catch(function (e) {
+        try { console.warn('[anonymous] love letters not initialized:', e); } catch (x) {}
+        return null;
+      })
+      .then(function () { llBusy = false; });
+  }
+  
+  // Initialize love letters for user
+  function initLoveLetters() {
+    if (!REMOTE || !sessionGet() || !profile) return Promise.resolve();
+    
+    var s = sessionGet();
+    if (!s || !s.user || !s.user.id) return Promise.resolve();
+    
+    // For demo mode, just load love letters without RPC
+    if (!REMOTE) {
+      userLoveLetters = {
+        templates: LOVE_LETTER_TEMPLATES.map(function (t) {
+          return {
+            id: t.id,
+            name: t.name,
+            description: t.description,
+            background_color: t.bgColor,
+            text_color: t.textColor,
+            border_color: t.borderColor,
+            seal_color: t.sealColor,
+            seal_icon: t.sealIcon,
+            is_premium: t.isPremium,
+            is_unlocked: !t.isPremium, // All non-premium unlocked in demo
+            is_active: false
+          };
+        }),
+        active_template: null
+      };
+      updateLoveLettersDisplay();
+      return Promise.resolve();
+    }
+    
+    return rpc('init_love_letter_templates', {})
+      .then(function () { return loadLoveLetters(); })
+      .catch(function () { return loadLoveLetters(); });
+  }
+  
+  // Activate a love letter template
+  function activateLoveLetter(templateId, isActive) {
+    if (!REMOTE || !sessionGet() || !profile || llBusy) {
+      // Demo mode - just update locally
+      if (!REMOTE) {
+        if (userLoveLetters && userLoveLetters.templates) {
+          userLoveLetters.templates.forEach(function (t) {
+            if (t.id === templateId) {
+              t.is_active = isActive;
+            } else if (isActive) {
+              t.is_active = false;
+            }
+          });
+        }
+        activeLoveLetter = isActive ? templateId : null;
+        updateLoveLettersDisplay();
+      }
+      return Promise.resolve();
+    }
+    
+    llBusy = true;
+    var s = sessionGet();
+    if (!s || !s.user || !s.user.id) { llBusy = false; return Promise.resolve(); }
+    
+    return rpc('activate_love_letter', {
+      p_user_id: s.user.id,
+      p_template_id: templateId,
+      p_is_active: isActive
+    })
+      .then(function () {
+        if (userLoveLetters && userLoveLetters.templates) {
+          userLoveLetters.templates.forEach(function (t) {
+            if (t.id === templateId) {
+              t.is_active = isActive;
+            } else if (isActive) {
+              t.is_active = false;
+            }
+          });
+        }
+        activeLoveLetter = isActive ? templateId : null;
+        updateLoveLettersDisplay();
+        return true;
+      })
+      .catch(function () { return false; })
+      .then(function () { llBusy = false; });
+  }
+  
+  // Update love letters display
+  function updateLoveLettersDisplay() {
+    var gridEl = $('llTemplatesGrid');
+    var countEl = $('llUnlockedCount');
+    
+    if (!gridEl) return;
+    
+    if (!userLoveLetters) {
+      userLoveLetters = { templates: [], active_template: null };
+    }
+    
+    var templates = userLoveLetters.templates || [];
+    var html = '';
+    var unlockedCount = 0;
+    
+    LOVE_LETTER_TEMPLATES.forEach(function (template) {
+      var userTemplate = templates.find(function (t) { return t.id === template.id; });
+      var isUnlocked = userTemplate ? userTemplate.is_unlocked : !template.isPremium;
+      var isActive = userTemplate && userTemplate.is_active;
+      var isPremium = template.isPremium;
+      
+      if (isUnlocked) unlockedCount++;
+      
+      var lockedClass = isUnlocked ? '' : 'locked';
+      var selectedClass = isActive ? 'selected' : '';
+      var premiumBadge = isPremium ? '<span class="ll-premium-badge">★</span>' : '';
+      
+      html += '<div class="ll-template ' + lockedClass + ' ' + selectedClass + ' ' + template.id + '-template" ';
+      html += 'data-template="' + template.id + '" data-unlocked="' + isUnlocked + '" data-premium="' + isPremium + '" title="' + esc(template.description) + '">';
+      html += '<div class="ll-icon">' + template.icon + '</div>';
+      html += '<div class="ll-name">' + esc(template.name) + '</div>';
+      html += premiumBadge + '</div>';
+    });
+    
+    gridEl.innerHTML = html;
+    
+    if (countEl) {
+      countEl.textContent = unlockedCount;
+    }
+    
+    // Add click handlers
+    gridEl.querySelectorAll('.ll-template').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var templateId = this.dataset.template;
+        var isUnlocked = this.dataset.unlocked === 'true';
+        var isPremium = this.dataset.premium === 'true';
+        
+        if (!isUnlocked) {
+          if (isPremium) {
+            toast('Premium love letter! Unlock with premium subscription.', true);
+          } else {
+            toast('Grow your plant to unlock this love letter!', true);
+          }
+          return;
+        }
+        
+        // Toggle activation
+        var isActive = this.classList.contains('selected');
+        activateLoveLetter(templateId, !isActive);
+      });
+    });
+  }
+  
+  // Get active love letter for current user
+  function getActiveLoveLetter() {
+    if (!userLoveLetters || !userLoveLetters.active_template) return null;
+    return userLoveLetters.active_template;
+  }
+  
   function claim(u, pin) {
     u = u.trim();
     if (!/^[A-Za-z0-9._]{3,15}$/.test(u)) return Promise.reject({ msg: 'Use 3 to 15 letters, numbers, dot or underscore. We add the number for you.' });
@@ -866,6 +1249,17 @@
       celebrateSend();
       streakMilestone();
       if (!direct) loadFeed();
+      
+      // Save animation and love letter with message
+      var activeAnim = getActiveAnimation();
+      var activeLL = getActiveLoveLetter();
+      if ((activeAnim || activeLL) && o.id) {
+        lset('anim-' + o.id, {
+          anim: activeAnim,
+          ll: activeLL,
+          color: profile && profile.card && profile.card.v || '#E5334B'
+        });
+      }
     }).catch(function (e) { m.className = 'msg err'; m.textContent = (e && e.msg) || dbHint(e); })
       .then(function () { $('send').disabled = false; });
   };
@@ -991,7 +1385,20 @@
     pop.style.top = top + 'px';
   }
   function cardH(m, isNew) {
-    return '<div class="card' + (isNew ? ' new' : '') + '" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Open message to ' + esc(m.to) + '">' +
+    // Get animation and love letter for this message
+    var animClass = '';
+    var llClass = '';
+    var animData = lget('anim-' + m.id, null);
+    if (animData) {
+      if (animData.anim) {
+        animClass = ' anim-' + animData.anim;
+      }
+      if (animData.ll) {
+        llClass = ' love-letter ' + animData.ll;
+      }
+    }
+    
+    return '<div class="card' + (isNew ? ' new' : '') + animClass + llClass + '" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Open message to ' + esc(m.to) + '">' +
       '<div class="top"><div class="thead"><span class="to">To: ' + esc(m.to) + '</span><span class="stamp' + (m.bot ? ' bot' : '') + '">' + (m.ex ? 'Sample' : m.bot ? '&#129302; Bot' : m.parent ? 'Reply' : 'From: ???') + '</span>' + (m.t && !m.ex ? '<time class="when">' + esc(ago(m.t)) + '</time>' : '') + '</div><p class="hand clip">' + esc(m.text) + '</p></div>' +
       '<div class="song">' + art(m.color, m.song + ' ' + m.artist) + '<span><b>' + esc(m.song) + '</b><span>' + esc(m.artist) + '</span></span>' + pbtn(m, '') + '</div>' +
       reactBar(m) + '</div>';
@@ -1404,18 +1811,89 @@
     if (!$('pf') || $('pf').dataset.on) return; $('pf').dataset.on = 1;
     $('pfAv').onclick = function () { $('pfFile').click(); };
     if ($('custBtn')) $('custBtn').onclick = openCustom;
+    
+    // Initialize animations and love letters
+    if ($('animTemplatesGrid')) {
+      loadAnimations();
+      initAnimations();
+    }
+    if ($('llTemplatesGrid')) {
+      loadLoveLetters();
+      initLoveLetters();
+    }
+    
+    // Show all buttons
+    if ($('showAllAnimationsBtn')) {
+      $('showAllAnimationsBtn').onclick = function () {
+        loadAnimations();
+      };
+    }
+    if ($('showAllLoveLettersBtn')) {
+      $('showAllLoveLettersBtn').onclick = function () {
+        loadLoveLetters();
+      };
+    }
     $('pfFile').onchange = function () {
       var f = this.files[0]; this.value = ''; if (!f) return;
       shrink(f, 320, 0.8).then(function (d) {
         return saveRpc('set_avatar', { p_avatar: d }, 'Profile photo saved.').then(function () { profile.avatar = d; refreshProfile(); });
       }).catch(function () {});
     };
+    // Update pfLink to just show the link
     $('pfLink').onclick = function () {
       var l = $('link').value; if (!l) return;
-      var p = navigator.share ? navigator.share({ title: 'Send me a song', text: 'Send me a song anonymously', url: l })
-        : navigator.clipboard.writeText(l).then(function () { toast('Link copied.'); });
-      Promise.resolve(p).then(function () { lset('anon-shared', true); refreshProfile(); }).catch(function () {});   /* cancelled share = not shared */
+      // Just show the link, share functionality moved to separate buttons
     };
+    
+    // New copy button in profile head
+    if ($('copyBtn')) {
+      $('copyBtn').onclick = function () {
+        var l = $('link').value; if (!l) return;
+        navigator.clipboard.writeText(l).then(function () {
+          toast('Link copied!');
+          lset('anon-shared', true); refreshProfile();
+        }).catch(function () {
+          $('link').select();
+          toast('Select and copy manually');
+        });
+      };
+    }
+    
+    // New share button in profile head
+    if ($('shareBtn')) {
+      $('shareBtn').onclick = function () {
+        var l = $('link').value; if (!l) return;
+        var popup = $('sharePopup');
+        if (!popup) {
+          popup = document.createElement('div');
+          popup.id = 'sharePopup';
+          popup.className = 'share-popup';
+          document.querySelector('.pf-head').appendChild(popup);
+          
+          // Move share content to popup
+          var shareContent = document.createElement('div');
+          shareContent.className = 'share';
+          shareContent.id = 'share';
+          popup.appendChild(shareContent);
+          
+          // Generate share buttons
+          shareContent.innerHTML = '<a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(l) + '">Facebook</a><button id="nat">Share to IG, Messenger, more</button><button id="storyBtn">Share link as story</button>';
+        }
+        
+        // Toggle popup
+        popup.classList.toggle('show');
+        
+        // Close popup when clicking outside
+        setTimeout(function () {
+          document.addEventListener('click', function closePopup(e) {
+            if (!popup.contains(e.target) && !e.target.closest('#shareBtn')) {
+              popup.classList.remove('show');
+              document.removeEventListener('click', closePopup);
+            }
+          });
+        }, 10);
+      };
+    }
     $('cvSw').onclick = function (e) {
       var b = e.target.closest('button[data-g]'); if (!b) return;
       cardDraft = { kind: 'grad', v: b.dataset.g }; drawCustom();
@@ -1531,11 +2009,9 @@
       .catch(function (e) { toast(dbHint(e), true); });
   };
   $('welcomeOk').onclick = function () { $('welcome').hidden = true; };
-  $('swap').onclick = function () {
-    if (currentUser && currentUser.is_anonymous && !confirm('You signed in with a username only. If you sign out, you cannot get this username or its Inbox back. Sign out anyway?')) return;
-    authSignOut().then(function () { setGateMode('name'); showGate(); });
-  };
-  $('copy').onclick = function () {
+  // swap button removed - functionality moved to settings or other area
+  if ($('copy')) {
+    $('copy').onclick = function () {
     var b = $('copy');
     navigator.clipboard.writeText($('link').value).then(function () { b.textContent = 'Copied'; }, function () { $('link').select(); b.textContent = 'Select, copy'; });
     setTimeout(function () { b.textContent = 'Copy'; }, 1500);
