@@ -1,3 +1,12 @@
+# v15.2: Inalis ang link box sa Profile (mas malinis)
+## Ano ang binago (index.html, app.js)
+- Inalis sa Profile tab ang lumang link box: ang "This is your link..." na teksto, ang link mismo, at ang Facebook / "Share to IG, Messenger, more" / "Share link as story" na buttons.
+- Mas malinis ngayon ang Profile. Ang pag-copy at pag-share ng link ay nasa Copy at Share buttons sa tabi ng username mo (at ang mismong link text ay pwedeng pindutin para i-share). Inayos ko rin ang Share popup: dati, walang ginagawa ang mga button sa loob nito; ngayon gumagana na ang "Share link as story" at "Share to IG".
+- Ang "Add a PIN" na paalala ay nandiyan pa rin (lalabas lang kapag wala ka pang PIN).
+- Walang SQL na kailangan. I-deploy ulit sa Render tapos i-hard refresh.
+
+---
+
 # v15.1: Fix - nawala ang mga button, ayaw gumana ang site
 ## Ano ang nangyari
 Pagkatapos ng v15 (Animated Messages at Love Letters), ay lumabas na ayaw mag-click ng kahit anong button, at tulog ang site (red na bilog na may clock). Hindi load ang Browse, Inbox, Submit - parang frozen.
