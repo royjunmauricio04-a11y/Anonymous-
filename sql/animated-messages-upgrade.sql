@@ -147,71 +147,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to unlock templates based on achievements
-CREATE OR REPLACE FUNCTION unlock_templates_by_achievement(
-    p_user_id UUID,
-    p_username TEXT
-)
-RETURNS VOID AS $$
-DECLARE
-    v_achievement_count INTEGER;
-    v_message_count INTEGER;
-    v_receive_count INTEGER;
-BEGIN
-    -- Count achievements (from plant_achievements or similar)
-    SELECT COUNT(*) INTO v_achievement_count
-    FROM plant_achievements 
-    WHERE user_id = p_user_id AND is_unlocked = true;
-    
-    -- Count messages sent
-    SELECT COUNT(*) INTO v_message_count
-    FROM plant_activities 
-    WHERE user_id = p_user_id AND activity_type = 'send_message';
-    
-    -- Count messages received
-    SELECT COUNT(*) INTO v_receive_count
-    FROM plant_activities 
-    WHERE user_id = p_user_id AND activity_type = 'receive_message';
-    
-    -- Unlock templates based on milestones
-    -- First template unlocked for everyone
-    IF v_achievement_count >= 1 OR v_message_count >= 1 THEN
-        INSERT INTO user_animated_messages (user_id, username, template_id, is_unlocked, is_active, unlock_date)
-        SELECT p_user_id, p_username, id, true, false, NOW()
-        FROM animated_message_templates 
-        WHERE template_name = 'Fade In'
-        ON CONFLICT (user_id, template_id) DO NOTHING;
-    END IF;
-    
-    -- Unlock more templates at higher levels
-    IF v_achievement_count >= 3 OR v_message_count >= 5 THEN
-        INSERT INTO user_animated_messages (user_id, username, template_id, is_unlocked, is_active, unlock_date)
-        SELECT p_user_id, p_username, id, true, false, NOW()
-        FROM animated_message_templates 
-        WHERE template_name IN ('Floating Hearts', 'Confetti Burst', 'Sparkle Effect')
-        ON CONFLICT (user_id, template_id) DO NOTHING;
-    END IF;
-    
-    -- Unlock love letter at 5 achievements or 10 messages
-    IF v_achievement_count >= 5 OR v_message_count >= 10 THEN
-        INSERT INTO user_animated_messages (user_id, username, template_id, is_unlocked, is_active, unlock_date)
-        SELECT p_user_id, p_username, id, true, false, NOW()
-        FROM animated_message_templates 
-        WHERE template_name = 'Love Letter'
-        ON CONFLICT (user_id, template_id) DO NOTHING;
-    END IF;
-    
-    -- Premium templates require premium status (would need to check that separately)
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- Grant permissions for anon role
 GRANT SELECT, INSERT, UPDATE ON animated_message_templates TO anon;
 GRANT SELECT, INSERT, UPDATE ON user_animated_messages TO anon;
 GRANT SELECT, INSERT ON sent_animated_messages TO anon;
-GRANT USAGE ON SEQUENCE animated_message_templates_id_seq TO anon;
-GRANT USAGE ON SEQUENCE user_animated_messages_id_seq TO anon;
-GRANT USAGE ON SEQUENCE sent_animated_messages_id_seq TO anon;
+
+-- Grant sequence permissions only if sequences exist
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_sequences WHERE sequencename = 'animated_message_templates_id_seq') THEN
+        GRANT USAGE ON SEQUENCE animated_message_templates_id_seq TO anon;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_sequences WHERE sequencename = 'user_animated_messages_id_seq') THEN
+        GRANT USAGE ON SEQUENCE user_animated_messages_id_seq TO anon;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_sequences WHERE sequencename = 'sent_animated_messages_id_seq') THEN
+        GRANT USAGE ON SEQUENCE sent_animated_messages_id_seq TO anon;
+    END IF;
+END;
+$$;
 
 -- Allow execution of RPC functions
 GRANT EXECUTE ON FUNCTION init_animated_templates() TO anon;
@@ -219,7 +173,6 @@ GRANT EXECUTE ON FUNCTION unlock_animation_template(UUID, TEXT, UUID) TO anon;
 GRANT EXECUTE ON FUNCTION activate_animation_template(UUID, UUID, BOOLEAN) TO anon;
 GRANT EXECUTE ON FUNCTION get_user_animations(UUID) TO anon;
 GRANT EXECUTE ON FUNCTION record_animated_message(UUID, UUID, UUID, TEXT, TEXT) TO anon;
-GRANT EXECUTE ON FUNCTION unlock_templates_by_achievement(UUID, TEXT) TO anon;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_animated_templates_name ON animated_message_templates(template_name);

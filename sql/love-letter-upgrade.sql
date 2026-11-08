@@ -47,9 +47,8 @@ CREATE TABLE IF NOT EXISTS sent_love_letters (
 CREATE OR REPLACE FUNCTION init_love_letter_templates()
 RETURNS VOID AS $$
 BEGIN
-    -- Romantic love letter templates
     INSERT INTO love_letter_templates (template_name, template_description, background_color, text_color, border_color, seal_color, seal_icon, is_premium, is_active)
-    VALUES 
+    VALUES
         ('Classic Love', 'Traditional red and white love letter', '#FFF0F5', '#8B0000', '#DC143C', '#FF6B6B', '❤️', false, true),
         ('Pink Rose', 'Soft pink with rose seal', '#FFE4E1', '#DB7093', '#FF69B4', '#FF1493', '🌹', false, true),
         ('Golden Love', 'Elegant gold on cream', '#FFF8DC', '#8B4513', '#FFD700', '#FFA500', '💍', false, true),
@@ -76,7 +75,7 @@ RETURNS VOID AS $$
 BEGIN
     INSERT INTO user_love_letters (user_id, username, template_id, is_unlocked, is_active, unlock_date)
     VALUES (p_user_id, p_username, p_template_id, true, false, NOW())
-    ON CONFLICT (user_id, template_id) 
+    ON CONFLICT (user_id, template_id)
     DO UPDATE SET is_unlocked = true, unlock_date = NOW(), updated_at = NOW();
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -89,7 +88,7 @@ CREATE OR REPLACE FUNCTION activate_love_letter(
 )
 RETURNS VOID AS $$
 BEGIN
-    UPDATE user_love_letters 
+    UPDATE user_love_letters
     SET is_active = p_is_active, updated_at = NOW()
     WHERE user_id = p_user_id AND template_id = p_template_id;
 END;
@@ -157,60 +156,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to unlock love letters based on plant growth
-CREATE OR REPLACE FUNCTION unlock_love_letters_by_growth(
-    p_user_id UUID,
-    p_username TEXT
-)
-RETURNS VOID AS $$
-DECLARE
-    v_growth_level INTEGER;
-    v_achievement_count INTEGER;
-BEGIN
-    -- Get plant growth level
-    SELECT growth_level INTO v_growth_level
-    FROM plant_profiles 
-    WHERE user_id = p_user_id;
-    
-    -- Count achievements
-    SELECT COUNT(*) INTO v_achievement_count
-    FROM plant_achievements 
-    WHERE user_id = p_user_id AND is_unlocked = true;
-    
-    -- Unlock templates based on growth level
-    IF v_growth_level >= 25 OR v_achievement_count >= 2 THEN
-        INSERT INTO user_love_letters (user_id, username, template_id, is_unlocked, is_active, unlock_date)
-        SELECT p_user_id, p_username, id, true, false, NOW()
-        FROM love_letter_templates 
-        WHERE template_name IN ('Classic Love', 'Pink Rose', 'Golden Love')
-        ON CONFLICT (user_id, template_id) DO NOTHING;
-    END IF;
-    
-    IF v_growth_level >= 50 OR v_achievement_count >= 4 THEN
-        INSERT INTO user_love_letters (user_id, username, template_id, is_unlocked, is_active, unlock_date)
-        SELECT p_user_id, p_username, id, true, false, NOW()
-        FROM love_letter_templates 
-        WHERE template_name IN ('Purple Passion', 'Blue Romance', 'Vintage Scroll')
-        ON CONFLICT (user_id, template_id) DO NOTHING;
-    END IF;
-    
-    IF v_growth_level >= 75 OR v_achievement_count >= 6 THEN
-        INSERT INTO user_love_letters (user_id, username, template_id, is_unlocked, is_active, unlock_date)
-        SELECT p_user_id, p_username, id, true, false, NOW()
-        FROM love_letter_templates 
-        WHERE template_name IN ('Sunset Love', 'Moonlight')
-        ON CONFLICT (user_id, template_id) DO NOTHING;
-    END IF;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Grant permissions
+-- Grant permissions for anon role
 GRANT SELECT, INSERT, UPDATE ON love_letter_templates TO anon;
 GRANT SELECT, INSERT, UPDATE ON user_love_letters TO anon;
 GRANT SELECT, INSERT ON sent_love_letters TO anon;
-GRANT USAGE ON SEQUENCE love_letter_templates_id_seq TO anon;
-GRANT USAGE ON SEQUENCE user_love_letters_id_seq TO anon;
-GRANT USAGE ON SEQUENCE sent_love_letters_id_seq TO anon;
+
+-- Grant sequence permissions only if sequences exist
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_sequences WHERE sequencename = 'love_letter_templates_id_seq') THEN
+        GRANT USAGE ON SEQUENCE love_letter_templates_id_seq TO anon;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_sequences WHERE sequencename = 'user_love_letters_id_seq') THEN
+        GRANT USAGE ON SEQUENCE user_love_letters_id_seq TO anon;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_sequences WHERE sequencename = 'sent_love_letters_id_seq') THEN
+        GRANT USAGE ON SEQUENCE sent_love_letters_id_seq TO anon;
+    END IF;
+END;
+$$;
 
 -- Allow execution of RPC functions
 GRANT EXECUTE ON FUNCTION init_love_letter_templates() TO anon;
@@ -218,9 +182,8 @@ GRANT EXECUTE ON FUNCTION unlock_love_letter(UUID, TEXT, UUID) TO anon;
 GRANT EXECUTE ON FUNCTION activate_love_letter(UUID, UUID, BOOLEAN) TO anon;
 GRANT EXECUTE ON FUNCTION get_user_love_letters(UUID) TO anon;
 GRANT EXECUTE ON FUNCTION record_love_letter(UUID, UUID, UUID, TEXT, TEXT) TO anon;
-GRANT EXECUTE ON FUNCTION unlock_love_letters_by_growth(UUID, TEXT) TO anon;
 
--- Create indexes
+-- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_love_letter_templates_name ON love_letter_templates(template_name);
 CREATE INDEX IF NOT EXISTS idx_user_love_letters_user_id ON user_love_letters(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_love_letters_template_id ON user_love_letters(template_id);
